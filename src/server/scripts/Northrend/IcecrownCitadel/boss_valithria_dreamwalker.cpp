@@ -24,7 +24,7 @@
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
 #include "icecrown_citadel.h"
-
+#include "BotGroupAI.h"
 enum Texts
 {
     // The Lich King
@@ -288,6 +288,7 @@ class boss_valithria_dreamwalker : public CreatureScript
 
             void Initialize()
             {
+            	botCommandTick = 3000;
                 _missedPortals = 0;
                 _under25PercentTalkDone = false;
                 _over75PercentTalkDone = false;
@@ -342,7 +343,7 @@ class boss_valithria_dreamwalker : public CreatureScript
                     me->SetLootRecipient(healer);
 
                 me->LowerPlayerDamageReq(heal);
-
+                me->SetHealth(me->GetHealth() + me->GetMaxHealth() /50); 
                 // encounter complete
                 if (me->HealthAbovePctHealed(100, heal) && !_done)
                 {
@@ -437,7 +438,16 @@ class boss_valithria_dreamwalker : public CreatureScript
                     return;
 
                 _events.Update(diff);
-
+if (botCommandTick >= 2000)
+				{
+					botCommandTick = 0;
+					SetBotCruxHealTarget();
+					if (BotAttackCreature* attCreatures = _instance->GetBotAttacksCreature(me))
+					{
+						attCreatures->UpdateNeedAttackCreatures(2000, this, false);
+					}
+				}
+				else
                 if (me->HasUnitState(UNIT_STATE_CASTING))
                     return;
 
@@ -475,6 +485,29 @@ class boss_valithria_dreamwalker : public CreatureScript
                 return 0;
             }
 
+		void SetBotCruxHealTarget()
+			{
+				if (!me->IsAlive() || me->IsFullHealth())
+					return;
+				std::list<Player*> playerBots;
+				SearchTargetPlayerAllGroup(playerBots, 80);
+				for (Player* bot : playerBots)
+				{
+					if (BotGroupAI* pGroupAI = dynamic_cast<BotGroupAI*>(bot->GetAI()))
+					{
+						pGroupAI->SetCruxHealTarget(me->GetGUID());
+						if (pGroupAI->IsHealerBotAI())
+						{
+							uint32 reviveMana = bot->GetMaxPower(POWER_MANA) / 80;
+							uint32 newMana = bot->GetPower(POWER_MANA) + reviveMana;
+							if (newMana <= bot->GetMaxPower(POWER_MANA))
+								bot->SetPower(POWER_MANA, newMana);
+						}
+					}
+				}
+			}
+
+
         private:
             EventMap _events;
             InstanceScript* _instance;
@@ -485,6 +518,7 @@ class boss_valithria_dreamwalker : public CreatureScript
             bool _over75PercentTalkDone;
             bool _justDied;
             bool _done;
+            uint32 botCommandTick;
         };
 
         CreatureAI* GetAI(Creature* creature) const override
@@ -514,9 +548,9 @@ class npc_green_dragon_combat_trigger : public CreatureScript
             {
                 if (!instance->CheckRequiredBosses(DATA_VALITHRIA_DREAMWALKER, target->ToPlayer()))
                 {
-                    EnterEvadeMode();
-                    instance->DoCastSpellOnPlayers(LIGHT_S_HAMMER_TELEPORT);
-                    return;
+//                    EnterEvadeMode();
+//                    instance->DoCastSpellOnPlayers(LIGHT_S_HAMMER_TELEPORT);
+//                    return;
                 }
 
                 me->setActive(true);

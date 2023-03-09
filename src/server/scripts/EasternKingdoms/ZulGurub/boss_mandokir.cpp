@@ -29,6 +29,7 @@ EndScriptData */
 #include "SpellAuras.h"
 #include "SpellScript.h"
 #include "zulgurub.h"
+#include "BotGroupAI.h"
 
 enum Says
 {
@@ -129,7 +130,7 @@ class boss_mandokir : public CreatureScript
                     _Reset();
                     Initialize();
                     me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC | UNIT_FLAG_IMMUNE_TO_NPC);
-                    events.ScheduleEvent(EVENT_CHECK_START, 1000);
+                    events.ScheduleEvent(EVENT_CHECK_START, 2000);
                     if (Creature* speaker = ObjectAccessor::GetCreature(*me, instance->GetGuidData(NPC_VILEBRANCH_SPEAKER)))
                         if (!speaker->IsAlive())
                             speaker->Respawn(true);
@@ -224,8 +225,20 @@ class boss_mandokir : public CreatureScript
                                         me->GetMotionMaster()->MovePoint(0, PosMandokir[1].m_positionX, PosMandokir[1].m_positionY, PosMandokir[1].m_positionZ);
                                         events.ScheduleEvent(EVENT_STARTED, 6000);
                                     }
+									else if (me->GetDistance(me->GetHomePosition()) < 5)
+									{
+										std::list<Player*> playersNearby;
+										me->GetPlayerListInGrid(playersNearby, 5);
+										if (!playersNearby.empty())
+										{
+											me->GetMotionMaster()->MovePoint(0, PosMandokir[1].m_positionX, PosMandokir[1].m_positionY, PosMandokir[1].m_positionZ);
+											events.ScheduleEvent(EVENT_STARTED, 6000);
+										}
+										else
+											events.ScheduleEvent(EVENT_CHECK_START, 2000);
+									}
                                     else
-                                        events.ScheduleEvent(EVENT_CHECK_START, 1000);
+                                        events.ScheduleEvent(EVENT_CHECK_START, 2000);
                                     break;
                                 case EVENT_STARTED:
                                     me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC | UNIT_FLAG_IMMUNE_TO_NPC);
@@ -246,40 +259,43 @@ class boss_mandokir : public CreatureScript
                 {
                     switch (eventId)
                     {
-                        case EVENT_OVERPOWER:
-                            DoCastVictim(SPELL_OVERPOWER, true);
-                            events.ScheduleEvent(EVENT_OVERPOWER, urand(6000, 12000));
-                            break;
-                        case EVENT_MORTAL_STRIKE:
-                            if (me->GetVictim() && me->EnsureVictim()->HealthBelowPct(50))
-                                DoCastVictim(SPELL_MORTAL_STRIKE, true);
-                            events.ScheduleEvent(EVENT_MORTAL_STRIKE, urand(12000, 18000));
-                            break;
+                        //case EVENT_OVERPOWER:
+                        //    DoCastVictim(SPELL_OVERPOWER, true);
+                        //    events.ScheduleEvent(EVENT_OVERPOWER, urand(6000, 12000));
+                        //    break;
+                        //case EVENT_MORTAL_STRIKE:
+                        //    if (me->GetVictim() && me->EnsureVictim()->HealthBelowPct(50))
+                        //        DoCastVictim(SPELL_MORTAL_STRIKE, true);
+                        //    events.ScheduleEvent(EVENT_MORTAL_STRIKE, urand(12000, 18000));
+                        //    break;
                         case EVENT_WHIRLWIND:
                             DoCast(me, SPELL_WHIRLWIND);
+							BotCruxFleeByRange(16);
                             events.ScheduleEvent(EVENT_WHIRLWIND, urand(22000, 26000));
                             break;
-                        case EVENT_CHECK_OHGAN:
-                            if (instance->GetBossState(DATA_OHGAN) == DONE)
-                            {
-                                DoCast(me, SPELL_FRENZY);
-                                Talk(SAY_OHGAN_DEAD);
-                            }
-                            else
-                                events.ScheduleEvent(EVENT_CHECK_OHGAN, 1000);
-                            break;
+                        //case EVENT_CHECK_OHGAN:
+                        //    if (instance->GetBossState(DATA_OHGAN) == DONE)
+                        //    {
+                        //        DoCast(me, SPELL_FRENZY);
+                        //        Talk(SAY_OHGAN_DEAD);
+                        //    }
+                        //    else
+                        //        events.ScheduleEvent(EVENT_CHECK_OHGAN, 1000);
+                        //    break;
                         case EVENT_WATCH_PLAYER:
                             if (Unit* player = SelectTarget(SELECT_TARGET_RANDOM, 0, 100, true))
                             {
                                 DoCast(player, SPELL_WATCH);
+								if (BotGroupAI* pGroupAI = dynamic_cast<BotGroupAI*>(player->GetAI()))
+									pGroupAI->AddWaitSpecialAura(SPELL_WATCH);
                                 Talk(SAY_WATCH, player);
                             }
                             events.ScheduleEvent(EVENT_WATCH_PLAYER, urand(12000, 15000));
                             break;
-                        case EVENT_CHARGE_PLAYER:
-                            DoCast(SelectTarget(SELECT_TARGET_RANDOM, 0, 40, true), SPELL_CHARGE);
-                            events.ScheduleEvent(EVENT_CHARGE_PLAYER, urand(22000, 30000));
-                            break;
+                        //case EVENT_CHARGE_PLAYER:
+                        //    DoCast(SelectTarget(SELECT_TARGET_RANDOM, 0, 40, true), SPELL_CHARGE);
+                        //    events.ScheduleEvent(EVENT_CHARGE_PLAYER, urand(22000, 30000));
+                        //    break;
                         default:
                             break;
                     }
@@ -341,11 +357,11 @@ class npc_ohgan : public CreatureScript
                 if (!UpdateVictim())
                     return;
 
-                if (SunderArmor_Timer <= diff)
-                {
-                    DoCastVictim(SPELL_SUNDERARMOR, true);
-                    SunderArmor_Timer = urand(10000, 15000);
-                } else SunderArmor_Timer -= diff;
+                //if (SunderArmor_Timer <= diff)
+                //{
+                //    DoCastVictim(SPELL_SUNDERARMOR, true);
+                //    SunderArmor_Timer = urand(10000, 15000);
+                //} else SunderArmor_Timer -= diff;
 
                 DoMeleeAttackIfReady();
             }
@@ -403,17 +419,17 @@ class npc_vilebranch_speaker : public CreatureScript
                 if (!UpdateVictim())
                     return;
 
-                if (demoralizing_Shout_Timer <= diff)
-                {
-                    DoCast(me, SPELL_DEMORALIZING_SHOUT);
-                    demoralizing_Shout_Timer = urand(22000, 30000);
-                } else demoralizing_Shout_Timer -= diff;
+                //if (demoralizing_Shout_Timer <= diff)
+                //{
+                //    DoCast(me, SPELL_DEMORALIZING_SHOUT);
+                //    demoralizing_Shout_Timer = urand(22000, 30000);
+                //} else demoralizing_Shout_Timer -= diff;
 
-                if (cleave_Timer <= diff)
-                {
-                    DoCastVictim(SPELL_CLEAVE, true);
-                    cleave_Timer = urand(6000, 9000);
-                } else cleave_Timer -= diff;
+                //if (cleave_Timer <= diff)
+                //{
+                //    DoCastVictim(SPELL_CLEAVE, true);
+                //    cleave_Timer = urand(6000, 9000);
+                //} else cleave_Timer -= diff;
 
                 DoMeleeAttackIfReady();
             }

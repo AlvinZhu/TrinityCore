@@ -95,7 +95,7 @@ public:
         ObjectGuid targetGuid = sObjectMgr->GetPlayerGUIDByName(target);
         uint32 accountId = sObjectMgr->GetPlayerAccountIdByGUID(targetGuid);
         // Target must exist and have administrative rights
-        if (!AccountMgr::HasPermission(accountId, rbac::RBAC_PERM_COMMANDS_BE_ASSIGNED_TICKET, realm.Id.Realm))
+        //if (!AccountMgr::HasPermission(accountId, rbac::RBAC_PERM_COMMANDS_BE_ASSIGNED_TICKET, realm.Id.Realm))
         {
             handler->SendSysMessage(LANG_COMMAND_TICKETASSIGNERROR_A);
             return true;

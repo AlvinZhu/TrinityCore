@@ -157,32 +157,32 @@ class boss_alar : public CreatureScript
 
             void AttackStart(Unit* who) override
             {
-                if (Phase1)
-                    AttackStartNoMove(who);
-                else
+                //if (Phase1)
+                //    AttackStartNoMove(who);
+                //else
                     ScriptedAI::AttackStart(who);
             }
 
             void DamageTaken(Unit* /*killer*/, uint32 &damage) override
             {
-                if (damage >= me->GetHealth() && Phase1)
-                {
-                    damage = 0;
-                    if (!WaitEvent)
-                    {
-                        WaitEvent = WE_DIE;
-                        WaitTimer = 0;
-                        me->SetHealth(0);
-                        me->InterruptNonMeleeSpells(true);
-                        me->RemoveAllAuras();
-                        me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
-                        me->AttackStop();
-                        me->SetTarget(ObjectGuid::Empty);
-                        me->SetSpeedRate(MOVE_RUN, 5.0f);
-                        me->GetMotionMaster()->Clear();
-                        me->GetMotionMaster()->MovePoint(0, waypoint[5][0], waypoint[5][1], waypoint[5][2]);
-                    }
-                }
+                //if (damage >= me->GetHealth() && Phase1)
+                //{
+                //    damage = 0;
+                //    if (!WaitEvent)
+                //    {
+                //        WaitEvent = WE_DIE;
+                //        WaitTimer = 0;
+                //        me->SetHealth(0);
+                //        me->InterruptNonMeleeSpells(true);
+                //        me->RemoveAllAuras();
+                //        me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+                //        me->AttackStop();
+                //        me->SetTarget(ObjectGuid::Empty);
+                //        me->SetSpeedRate(MOVE_RUN, 5.0f);
+                //        me->GetMotionMaster()->Clear();
+                //        me->GetMotionMaster()->MovePoint(0, waypoint[5][0], waypoint[5][1], waypoint[5][2]);
+                //    }
+                //}
             }
 
             void SpellHit(Unit*, const SpellInfo* spell) override
@@ -191,7 +191,6 @@ class boss_alar : public CreatureScript
                 {
                     me->ApplySpellImmune(0, IMMUNITY_SCHOOL, SPELL_SCHOOL_MASK_FIRE, true);
                     me->SetDisplayId(11686);
-                    //me->SendUpdateObjectToAllExcept(NULL);
                 }
             }
 
@@ -281,7 +280,7 @@ class boss_alar : public CreatureScript
                                 if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0))
                                 {
                                     me->RemoveAurasDueToSpell(SPELL_DIVE_BOMB_VISUAL);
-                                    DoCast(target, SPELL_DIVE_BOMB, true);
+                                    //DoCast(target, SPELL_DIVE_BOMB, true);
                                     float dist = 3.0f;
                                     if (me->IsWithinDist3d(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 5.0f))
                                         dist = 5.0f;
@@ -377,7 +376,7 @@ class boss_alar : public CreatureScript
 
                     if (MeltArmor_Timer <= diff)
                     {
-                        DoCastVictim(SPELL_MELT_ARMOR);
+                        //DoCastVictim(SPELL_MELT_ARMOR);
                         MeltArmor_Timer = 60000;
                     }
                     else
@@ -438,7 +437,7 @@ class boss_alar : public CreatureScript
                             AttackStart(target);
                         else
                         {
-                            DoCast(me, SPELL_FLAME_BUFFET, true);
+                            //DoCast(me, SPELL_FLAME_BUFFET, true);
                             me->setAttackTimer(BASE_ATTACK, 1500);
                         }
                     }
@@ -497,7 +496,7 @@ class npc_ember_of_alar : public CreatureScript
                     damage = 0;
                     DoCast(me, SPELL_EMBER_BLAST, true);
                     me->SetDisplayId(11686);
-                    me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+                    //me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
                     if (instance->GetBossState(DATA_ALAR) == IN_PROGRESS)
                     {
                         if (Unit* Alar = ObjectAccessor::GetUnit(*me, instance->GetGuidData(DATA_ALAR)))

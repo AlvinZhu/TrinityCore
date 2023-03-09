@@ -26,6 +26,7 @@ EndScriptData */
 #include "ScriptMgr.h"
 #include "ScriptedCreature.h"
 #include "zulgurub.h"
+#include "BotGroupAI.h"
 
 enum Says
 {
@@ -92,10 +93,12 @@ class boss_thekal : public CreatureScript
             {
                 Enraged = false;
                 WasDead = false;
+				BotTargetTimer = 2000;
             }
 
             bool Enraged;
             bool WasDead;
+			int32 BotTargetTimer;
 
             void Reset() override
             {
@@ -142,16 +145,31 @@ class boss_thekal : public CreatureScript
                     {
                         case EVENT_MORTALCLEAVE:
                             DoCastVictim(SPELL_MORTALCLEAVE, true);
+
+           if (irand(0,2)==1 && !me->FindNearestCreature(11361, 100.0f, true))
+{
+            if (Creature* nether = me->SummonCreature(11361, me->GetPositionX()+2, me->GetPositionY()+3, me->GetPositionZ()+0.2, 0, TEMPSUMMON_TIMED_DESPAWN, 180000))
+                nether->AI()->AttackStart(me->GetVictim());
+
+}
                             events.ScheduleEvent(EVENT_MORTALCLEAVE, urand(15000, 20000), 0, PHASE_ONE);
                             break;
                         case EVENT_SILENCE:
                             DoCastVictim(SPELL_SILENCE, true);
+             if (irand(0,2)==1 && !me->FindNearestCreature(11348, 100.0f, true))
+            if (Creature* nether = me->SummonCreature(11348, me->GetPositionX()+2, me->GetPositionY()+3, me->GetPositionZ()+0.2, 0, TEMPSUMMON_TIMED_DESPAWN, 180000))
+                nether->AI()->AttackStart(me->GetVictim());
+
+            if (irand(0,2)==1  && !me->FindNearestCreature(11347, 100.0f, true))
+            if (Creature* nether = me->SummonCreature(11347, me->GetPositionX()+2, me->GetPositionY()+3, me->GetPositionZ()+0.2, 0, TEMPSUMMON_TIMED_DESPAWN, 180000))
+                nether->AI()->AttackStart(me->GetVictim());
                             events.ScheduleEvent(EVENT_SILENCE, urand(20000, 25000), 0, PHASE_ONE);
                             break;
                         case EVENT_RESURRECT_TIMER:
                             //Thekal will transform to Tiger if he died and was not resurrected after 10 seconds.
-                            if (WasDead)
+                            if (WasDead ||  !HealthAbovePct(18))
                             {
+                                WasDead = false;
                                 DoCast(me, SPELL_TIGER_FORM); // SPELL_AURA_TRANSFORM
                                 me->SetObjectScale(2.00f);
                                 me->SetStandState(UNIT_STAND_STATE_STAND);
@@ -211,11 +229,23 @@ class boss_thekal : public CreatureScript
                             break;
                         case EVENT_FORCEPUNCH:
                             DoCastVictim(SPELL_FORCEPUNCH, true);
+           if (irand(0,2)==1 && !me->FindNearestCreature(11361, 100.0f, true))
+
+            if (Creature* nether = me->SummonCreature(11361, me->GetPositionX()+2, me->GetPositionY()+3, me->GetPositionZ()+0.2, 0, TEMPSUMMON_TIMED_DESPAWN, 180000))
+                nether->AI()->AttackStart(me->GetVictim());
+
+
                             events.ScheduleEvent(EVENT_FORCEPUNCH, urand(16000, 21000), 0, PHASE_TWO);
                             break;
                         case EVENT_CHARGE:
                             if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0))
                             {
+
+             if (irand(0,2)==1 && !me->FindNearestCreature(11348, 100.0f, true))
+            if (Creature* nether = me->SummonCreature(11348, me->GetPositionX()+2, me->GetPositionY()+3, me->GetPositionZ()+0.2, 0, TEMPSUMMON_TIMED_DESPAWN, 180000))
+                nether->AI()->AttackStart(me->GetVictim());
+
+
                                 DoCast(target, SPELL_CHARGE);
                                 DoResetThreat();
                                 AttackStart(target);
@@ -232,6 +262,10 @@ class boss_thekal : public CreatureScript
                             break;
                         case EVENT_SUMMONTIGERS:
                             DoCastVictim(SPELL_SUMMONTIGERS, true);
+            if (irand(0,2)==1  && !me->FindNearestCreature(11347, 100.0f, true))
+            if (Creature* nether = me->SummonCreature(11347, me->GetPositionX()+2, me->GetPositionY()+3, me->GetPositionZ()+0.2, 0, TEMPSUMMON_TIMED_DESPAWN, 180000))
+                nether->AI()->AttackStart(me->GetVictim());
+                            events.ScheduleEvent(EVENT_SILENCE, urand(20000, 25000), 0, PHASE_ONE);
                             events.ScheduleEvent(EVENT_SUMMONTIGERS, urand(10000, 14000), 0, PHASE_TWO);
                             break;
                         default:
@@ -252,6 +286,47 @@ class boss_thekal : public CreatureScript
                         instance->SetBossState(DATA_THEKAL, SPECIAL);
                         WasDead=true;
                     }
+
+					if (BotTargetTimer < int32(diff))
+					{
+						if (instance->GetBossState(DATA_THEKAL) != SPECIAL && me->IsAlive())
+						{
+							std::list<Player*> targets;
+							SearchTargetPlayerAllGroup(targets, 80);
+							if (instance->GetBossState(DATA_LORKHAN) != SPECIAL || instance->GetBossState(DATA_ZATH) != SPECIAL)
+							{
+								for (Player* player : targets)
+								{
+									if (BotGroupAI* pGroupAI = dynamic_cast<BotGroupAI*>(player->GetAI()))
+									{
+										if (player->GetSelectedUnit() == me)
+										{
+											player->SetSelection(ObjectGuid::Empty);
+											pGroupAI->ToggleFliterCreature(me, true);
+										}
+									}
+								}
+							}
+							else
+							{
+								for (Player* player : targets)
+								{
+									if (BotGroupAI* pGroupAI = dynamic_cast<BotGroupAI*>(player->GetAI()))
+									{
+										if (player->GetSelectedUnit() != me)
+										{
+											player->SetSelection(ObjectGuid::Empty);
+											pGroupAI->ToggleFliterCreature(me, false);
+										}
+									}
+								}
+							}
+						}
+
+						BotTargetTimer = 2000;
+					}
+					else
+						BotTargetTimer -= diff;
                 }
                 DoMeleeAttackIfReady();
             }
@@ -358,6 +433,10 @@ class npc_zealot_lorkhan : public CreatureScript
                 if (Disarm_Timer <= diff)
                 {
                     DoCastVictim(SPELL_DISARM);
+
+
+
+                    
                     Disarm_Timer = 15000 + rand32() % 10000;
                 } else Disarm_Timer -= diff;
 
@@ -400,6 +479,7 @@ class npc_zealot_lorkhan : public CreatureScript
                     me->SetStandState(UNIT_STAND_STATE_SLEEP);
                     me->setFaction(35);
                     me->AttackStop();
+					ClearBotMeTarget(true);
 
                     instance->SetBossState(DATA_LORKHAN, SPECIAL);
 
@@ -477,6 +557,7 @@ class npc_zealot_zath : public CreatureScript
                 {
                     DoCastVictim(SPELL_SWEEPINGSTRIKES);
                     SweepingStrikes_Timer = 22000 + rand32() % 4000;
+ 
                 } else SweepingStrikes_Timer -= diff;
 
                 //SinisterStrike_Timer
@@ -484,6 +565,9 @@ class npc_zealot_zath : public CreatureScript
                 {
                     DoCastVictim(SPELL_SINISTERSTRIKE);
                     SinisterStrike_Timer = 8000 + rand32() % 8000;
+
+
+
                 } else SinisterStrike_Timer -= diff;
 
                 //Gouge_Timer
@@ -493,7 +577,6 @@ class npc_zealot_zath : public CreatureScript
 
                     if (DoGetThreat(me->GetVictim()))
                         DoModifyThreatPercent(me->GetVictim(), -100);
-
                     Gouge_Timer = 17000 + rand32() % 10000;
                 } else Gouge_Timer -= diff;
 
@@ -550,6 +633,7 @@ class npc_zealot_zath : public CreatureScript
                     me->SetStandState(UNIT_STAND_STATE_SLEEP);
                     me->setFaction(35);
                     me->AttackStop();
+					ClearBotMeTarget(true);
 
                     instance->SetBossState(DATA_ZATH, SPECIAL);
 

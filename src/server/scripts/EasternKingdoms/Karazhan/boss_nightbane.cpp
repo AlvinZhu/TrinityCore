@@ -52,6 +52,19 @@ enum Says
     EMOTE_BREATH                = 4
 };
 
+
+float IntroWay[8][3] =
+{
+    {-11163.00f, -1903.00f, 91.473f},
+    {-11163.00f, -1903.00f, 91.473f},
+    {-11163.00f, -1903.00f, 91.473f},
+    {-11189.20f, -1931.25f, 125.00f},
+    {-11153.76f, -1948.93f, 125.00f},
+    {-11128.73f, -1929.75f, 125.00f},
+    {-11140.00f, -1915.00f, 122.00f},
+    {-11163.00f, -1903.00f, 91.473f}
+};
+/*
 float IntroWay[8][3] =
 {
     {-11053.37f, -1794.48f, 149.00f},
@@ -63,7 +76,7 @@ float IntroWay[8][3] =
     {-11140.00f, -1915.00f, 122.00f},
     {-11163.00f, -1903.00f, 91.473f}
 };
-
+*/
 class boss_nightbane : public CreatureScript
 {
 public:
@@ -139,21 +152,21 @@ public:
             Initialize();
 
             me->SetSpeedRate(MOVE_RUN, 2.0f);
-            me->SetDisableGravity(true);
+            //me->SetDisableGravity(true);
             me->SetWalk(false);
             me->setActive(true);
 
-            if (instance->GetBossState(DATA_NIGHTBANE) == DONE || instance->GetBossState(DATA_NIGHTBANE) == IN_PROGRESS)
-                me->DisappearAndDie();
-            else
+            //if (instance->GetBossState(DATA_NIGHTBANE) == DONE || instance->GetBossState(DATA_NIGHTBANE) == IN_PROGRESS)
+              //  me->DisappearAndDie();
+            //else
                 instance->SetBossState(DATA_NIGHTBANE, NOT_STARTED);
 
             HandleTerraceDoors(true);
-
+me->SetReactState(REACT_PASSIVE);
             if (!Intro)
             {
                 me->SetHomePosition(IntroWay[7][0], IntroWay[7][1], IntroWay[7][2], 0);
-                me->GetMotionMaster()->MoveTargetedHome();
+                //me->GetMotionMaster()->MoveTargetedHome();
             }
         }
 
@@ -167,13 +180,13 @@ public:
         {
             instance->SetBossState(DATA_NIGHTBANE, IN_PROGRESS);
 
-            HandleTerraceDoors(false);
+            //HandleTerraceDoors(false);
             Talk(YELL_AGGRO);
         }
 
         void AttackStart(Unit* who) override
         {
-            if (!Intro && !Flying)
+          //  if (!Intro && !Flying)
                 ScriptedAI::AttackStart(who);
         }
 
@@ -248,7 +261,7 @@ public:
 
             me->InterruptSpell(CURRENT_GENERIC_SPELL);
             me->HandleEmoteCommand(EMOTE_ONESHOT_LIFTOFF);
-            me->SetDisableGravity(true);
+            //me->SetDisableGravity(true);
             (*me).GetMotionMaster()->Clear(false);
             (*me).GetMotionMaster()->MovePoint(0, IntroWay[2][0], IntroWay[2][1], IntroWay[2][2]);
 
@@ -303,8 +316,8 @@ public:
             if (!UpdateVictim())
                 return;
 
-            if (Flying)
-                return;
+           // if (Flying)
+           //     return;
 
             //  Phase 1 "GROUND FIGHT"
             if (Phase == 1)
@@ -408,7 +421,7 @@ public:
                     FireballBarrageTimer = 20000;
                 } else FireballBarrageTimer -= diff;
 
-                if (FlyTimer <= diff) //landing
+             /*   if (FlyTimer <= diff) //landing
                 {
                     Talk(YELL_LAND_PHASE);
 
@@ -416,7 +429,7 @@ public:
                     me->GetMotionMaster()->MovePoint(3, IntroWay[3][0], IntroWay[3][1], IntroWay[3][2]);
 
                     Flying = true;
-                } else FlyTimer -= diff;
+                } else FlyTimer -= diff;*/
             }
         }
     };

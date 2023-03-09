@@ -274,7 +274,7 @@ class boss_nalorakk : public CreatureScript
             void JustDied(Unit* /*killer*/) override
             {
                 instance->SetData(DATA_NALORAKKEVENT, DONE);
-
+me->SummonCreature(23790, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ()+0.1);
                 Talk(YELL_DEATH);
             }
 

@@ -314,6 +314,7 @@ class boss_halazzi : public CreatureScript
             void JustDied(Unit* /*killer*/) override
             {
                 instance->SetData(DATA_HALAZZIEVENT, DONE);
+me->SummonCreature(24024, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ()+0.1);
                 Talk(SAY_DEATH);
             }
         };

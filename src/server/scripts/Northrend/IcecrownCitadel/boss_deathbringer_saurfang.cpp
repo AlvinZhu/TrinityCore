@@ -244,6 +244,8 @@ Position const chokePos[6] =
 
 Position const finalPos = {-563.7552f, 2211.328f, 538.7848f, 0.0f};
 
+uint32 BLOOD_BEAST_ENTRY = 38508;
+
 class boss_deathbringer_saurfang : public CreatureScript
 {
     public:
@@ -257,13 +259,15 @@ class boss_deathbringer_saurfang : public CreatureScript
                 ASSERT(creature->GetVehicleKit()); // we dont actually use it, just check if exists
                 _introDone = false;
                 _fallenChampionCastCount = 0;
+				botAttackTick = 0;
             }
 
             void Initialize()
             {
                 _frenzied = false;
                 _dead = false;
-            }
+				botAttackTick = 0;
+			}
 
             void Reset() override
             {
@@ -287,9 +291,9 @@ class boss_deathbringer_saurfang : public CreatureScript
 
                 if (!instance->CheckRequiredBosses(DATA_DEATHBRINGER_SAURFANG, who->ToPlayer()))
                 {
-                    EnterEvadeMode(EVADE_REASON_OTHER);
-                    instance->DoCastSpellOnPlayers(LIGHT_S_HAMMER_TELEPORT);
-                    return;
+//                    EnterEvadeMode(EVADE_REASON_OTHER);
+  //                  instance->DoCastSpellOnPlayers(LIGHT_S_HAMMER_TELEPORT);
+    //                return;
                 }
 
                 // oh just screw intro, enter combat - no exploits please
@@ -311,14 +315,42 @@ class boss_deathbringer_saurfang : public CreatureScript
                 Talk(SAY_AGGRO);
                 events.ScheduleEvent(EVENT_SUMMON_BLOOD_BEAST, 30000, 0, PHASE_COMBAT);
                 events.ScheduleEvent(EVENT_BERSERK, IsHeroic() ? 360000 : 480000, 0, PHASE_COMBAT);
-                events.ScheduleEvent(EVENT_BOILING_BLOOD, 15500, 0, PHASE_COMBAT);
+                events.ScheduleEvent(EVENT_BOILING_BLOOD, 60000, 0, PHASE_COMBAT);
                 events.ScheduleEvent(EVENT_BLOOD_NOVA, 17000, 0, PHASE_COMBAT);
-                events.ScheduleEvent(EVENT_RUNE_OF_BLOOD, 20000, 0, PHASE_COMBAT);
+                events.ScheduleEvent(EVENT_RUNE_OF_BLOOD, 90000, 0, PHASE_COMBAT);
 
                 _fallenChampionCastCount = 0;
                 instance->DoRemoveAurasDueToSpellOnPlayers(SPELL_MARK_OF_THE_FALLEN_CHAMPION);
                 instance->SetBossState(DATA_DEATHBRINGER_SAURFANG, IN_PROGRESS);
             }
+
+			void ProcessBotAttackCreature(uint32 diff)
+			{
+				if (botAttackTick < 1500)
+				{
+					botAttackTick += diff;
+					return;
+				}
+				botAttackTick = 0;
+
+				std::list<Creature*> bloodBeasts;
+				me->GetCreatureListWithEntryInGrid(bloodBeasts, BLOOD_BEAST_ENTRY, 60);
+				if (bloodBeasts.empty())
+					return;
+				InstanceScript* inst = me->GetInstanceScript();
+				if (!inst)
+					return;
+				BotAttackCreature* pBotAttack = inst->GetBotAttacksCreature(me);
+				if (!pBotAttack)
+					return;
+				for (Creature* bloodBeast : bloodBeasts)
+				{
+					if (!bloodBeast->IsAlive())
+						continue;
+					pBotAttack->AddNewCreatureNeedAttack(bloodBeast, 20);
+				}
+				pBotAttack->UpdateNeedAttackCreatures(diff, this, true);
+			}
 
             void JustDied(Unit* /*killer*/) override
             {
@@ -355,10 +387,11 @@ class boss_deathbringer_saurfang : public CreatureScript
 
             void DamageTaken(Unit* /*attacker*/, uint32& damage) override
             {
+				damage *= 4;
                 if (damage >= me->GetHealth())
                     damage = me->GetHealth() - 1;
 
-                if (!_frenzied && HealthBelowPct(31)) // AT 30%, not below
+                if (!_frenzied && HealthBelowPct(5)) // AT 30%, not below
                 {
                     _frenzied = true;
                     DoCast(me, SPELL_FRENZY);
@@ -368,9 +401,9 @@ class boss_deathbringer_saurfang : public CreatureScript
                 if (!_dead && me->GetHealth() < FightWonValue)
                 {
                     _dead = true;
-                    _JustDied();
-                    _EnterEvadeMode();
-                    me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC | UNIT_FLAG_NOT_SELECTABLE);
+					_JustDied();
+					_EnterEvadeMode();
+					me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC | UNIT_FLAG_NOT_SELECTABLE);
 
                     DoCastAOE(SPELL_REMOVE_MARKS_OF_THE_FALLEN_CHAMPION);
                     DoCast(me, SPELL_ACHIEVEMENT, true);
@@ -380,6 +413,9 @@ class boss_deathbringer_saurfang : public CreatureScript
                     DoCast(me, SPELL_PERMANENT_FEIGN_DEATH);
                     if (Creature* creature = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_SAURFANG_EVENT_NPC)))
                         creature->AI()->DoAction(ACTION_START_OUTRO);
+					//me->KillSelf();
+					me->SetTarget(ObjectGuid::Empty);
+					me->CombatStop();
                 }
             }
 
@@ -413,7 +449,7 @@ class boss_deathbringer_saurfang : public CreatureScript
                 if (type != POINT_MOTION_TYPE && id != POINT_SAURFANG)
                     return;
 
-                instance->HandleGameObject(instance->GetGuidData(GO_SAURFANG_S_DOOR), false);
+                instance->HandleGameObject(instance->GetGuidData(GO_SAURFANG_S_DOOR), true);
             }
 
             void SpellHitTarget(Unit* target, SpellInfo const* spell) override
@@ -455,6 +491,8 @@ class boss_deathbringer_saurfang : public CreatureScript
 
                 events.Update(diff);
 
+				ProcessBotAttackCreature(diff);
+
                 if (me->HasUnitState(UNIT_STATE_CASTING))
                     return;
 
@@ -493,27 +531,28 @@ class boss_deathbringer_saurfang : public CreatureScript
                             me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
                             break;
                         case EVENT_SUMMON_BLOOD_BEAST:
-                            for (uint32 i10 = 0; i10 < 2; ++i10)
+                            for (uint32 i10 = 0; i10 < 1; ++i10)
                                 DoCast(me, SPELL_SUMMON_BLOOD_BEAST+i10);
                             if (Is25ManRaid())
-                                for (uint32 i25 = 0; i25 < 3; ++i25)
+                                for (uint32 i25 = 0; i25 < 2; ++i25)
                                     DoCast(me, SPELL_SUMMON_BLOOD_BEAST_25_MAN+i25);
                             Talk(SAY_BLOOD_BEASTS);
-                            events.ScheduleEvent(EVENT_SUMMON_BLOOD_BEAST, 40000, 0, PHASE_COMBAT);
+                            events.ScheduleEvent(EVENT_SUMMON_BLOOD_BEAST, 120000, 0, PHASE_COMBAT);
                             if (IsHeroic())
-                                events.ScheduleEvent(EVENT_SCENT_OF_BLOOD, 10000, 0, PHASE_COMBAT);
+                                events.ScheduleEvent(EVENT_SCENT_OF_BLOOD, 150000, 0, PHASE_COMBAT);
                             break;
-                        case EVENT_BLOOD_NOVA:
-                            DoCastAOE(SPELL_BLOOD_NOVA_TRIGGER);
-                            events.ScheduleEvent(EVENT_BLOOD_NOVA, urand(20000, 25000), 0, PHASE_COMBAT);
-                            break;
+                        //case EVENT_BLOOD_NOVA:
+                        //    DoCastAOE(SPELL_BLOOD_NOVA_TRIGGER);
+                        //    events.ScheduleEvent(EVENT_BLOOD_NOVA, urand(20000, 25000), 0, PHASE_COMBAT);
+                        //    break;
                         case EVENT_RUNE_OF_BLOOD:
                             DoCastVictim(SPELL_RUNE_OF_BLOOD);
-                            events.ScheduleEvent(EVENT_RUNE_OF_BLOOD, urand(20000, 25000), 0, PHASE_COMBAT);
+							BotSwitchPullTarget(me);
+                            events.ScheduleEvent(EVENT_RUNE_OF_BLOOD, urand(75000, 90000), 0, PHASE_COMBAT);
                             break;
                         case EVENT_BOILING_BLOOD:
                             DoCast(me, SPELL_BOILING_BLOOD);
-                            events.ScheduleEvent(EVENT_BOILING_BLOOD, urand(15000, 20000), 0, PHASE_COMBAT);
+                            events.ScheduleEvent(EVENT_BOILING_BLOOD, urand(60000, 90000), 0, PHASE_COMBAT);
                             break;
                         case EVENT_BERSERK:
                             DoCast(me, SPELL_BERSERK);
@@ -608,7 +647,8 @@ class boss_deathbringer_saurfang : public CreatureScript
             bool _introDone;
             bool _frenzied;   // faster than iterating all auras to find Frenzy
             bool _dead;
-        };
+			uint32 botAttackTick;
+	   };
 
         CreatureAI* GetAI(Creature* creature) const override
         {

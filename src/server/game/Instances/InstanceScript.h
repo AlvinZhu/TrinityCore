@@ -37,6 +37,7 @@ class Player;
 class GameObject;
 class Creature;
 class ModuleReference;
+struct BotAttackCreature;
 
 enum EncounterFrameType
 {
@@ -247,7 +248,9 @@ class TC_GAME_API InstanceScript : public ZoneScript
 
         uint32 GetEncounterCount() const { return bosses.size(); }
 
-    protected:
+		BotAttackCreature* GetBotAttacksCreature(Creature* boss);
+
+	protected:
         void SetHeaders(std::string const& dataHeaders);
         void SetBossNumber(uint32 number) { bosses.resize(number); }
         void LoadBossBoundaries(BossBoundaryData const& data);
@@ -291,7 +294,9 @@ class TC_GAME_API InstanceScript : public ZoneScript
         ObjectGuidMap _objectGuids;
         uint32 completedEncounters; // completed encounter mask, bit indexes are DungeonEncounter.dbc boss numbers, used for packets
 
-    #ifdef TRINITY_API_USE_DYNAMIC_LINKING
+		BotAttackCreature* BotAttacksForBoss;
+
+#ifdef TRINITY_API_USE_DYNAMIC_LINKING
         // Strong reference to the associated script module
         std::shared_ptr<ModuleReference> module_reference;
     #endif // #ifndef TRINITY_API_USE_DYNAMIC_LINKING

@@ -66,6 +66,7 @@ public:
             AggroReset_Timer = urand(45000, 55000);
             AggroResetEnd_Timer = 5000;
             EnrageHard_Timer = 10 * 60000;
+			BotFleeTimer = 0;
 
             WhirlWind = false;
             AggroReset = false;
@@ -79,6 +80,7 @@ public:
         uint32 AggroReset_Timer;
         uint32 AggroResetEnd_Timer;
         uint32 EnrageHard_Timer;
+		int32 BotFleeTimer;
 
         bool Enraged;
         bool EnragedHard;
@@ -139,7 +141,9 @@ public:
                     DoCast(me, SPELL_WHIRLWIND);
                     WhirlWind = true;
                     WhirlWindEnd_Timer = 15000;
-                } else WhirlWind_Timer -= diff;
+					BotFleeTimer = 15000;
+				}
+				else WhirlWind_Timer -= diff;
 
                 if (AggroReset_Timer <= diff)
                 {
@@ -186,6 +190,12 @@ public:
 
                 DoMeleeAttackIfReady();
             }
+
+			if (BotFleeTimer > 0)
+			{
+				BotFleeTimer -= diff;
+				BotCruxFleeByRange(me->GetObjectSize() + 25);
+			}
         }
     };
 
@@ -252,7 +262,8 @@ public:
                 WhirlWind = true;
                 WhirlWind_Timer = urand(25000, 40000);
                 WhirlWindEnd_Timer = 15000;
-            } else WhirlWind_Timer -= diff;
+			}
+			else WhirlWind_Timer -= diff;
 
             if (WhirlWind)
             {
@@ -295,7 +306,8 @@ public:
                 {
                     DoCast(me, SPELL_WHIRLWINDADD);
                     KnockBack_Timer = urand(10000, 20000);
-                } else KnockBack_Timer -= diff;
+				}
+				else KnockBack_Timer -= diff;
             }
 
             if (AggroReset)

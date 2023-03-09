@@ -29,6 +29,9 @@ void HomeMovementGenerator<Creature>::DoInitialize(Creature* owner)
 
 void HomeMovementGenerator<Creature>::DoFinalize(Creature* owner)
 {
+	//hxsd
+owner->ClearUnitState(UNIT_STATE_EVADE);	
+	
     if (arrived)
     {
         owner->ClearUnitState(UNIT_STATE_EVADE);

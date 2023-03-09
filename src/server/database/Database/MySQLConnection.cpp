@@ -201,7 +201,7 @@ bool MySQLConnection::Execute(PreparedStatement* stmt)
         if (mysql_stmt_bind_param(msql_STMT, msql_BIND))
         {
             uint32 lErrno = mysql_errno(m_Mysql);
-            TC_LOG_ERROR("sql.sql", "SQL(p): %s\n [ERROR]: [%u] %s", m_mStmt->getQueryString(m_queries[index].first).c_str(), lErrno, mysql_stmt_error(msql_STMT));
+            TC_LOG_ERROR("sql.sql", "SQL(p1): %s\n [ERROR]: [%u] %s", m_mStmt->getQueryString(m_queries[index].first).c_str(), lErrno, mysql_stmt_error(msql_STMT));
 
             if (_HandleMySQLErrno(lErrno))  // If it returns true, an error was handled successfully (i.e. reconnection)
                 return Execute(stmt);       // Try again
@@ -213,7 +213,7 @@ bool MySQLConnection::Execute(PreparedStatement* stmt)
         if (mysql_stmt_execute(msql_STMT))
         {
             uint32 lErrno = mysql_errno(m_Mysql);
-            TC_LOG_ERROR("sql.sql", "SQL(p): %s\n [ERROR]: [%u] %s", m_mStmt->getQueryString(m_queries[index].first).c_str(), lErrno, mysql_stmt_error(msql_STMT));
+            //TC_LOG_ERROR("sql.sql", "SQL(p2): %s\n [ERROR]: [%u] %s", m_mStmt->getQueryString(m_queries[index].first).c_str(), lErrno, mysql_stmt_error(msql_STMT));
 
             if (_HandleMySQLErrno(lErrno))  // If it returns true, an error was handled successfully (i.e. reconnection)
                 return Execute(stmt);       // Try again
@@ -222,7 +222,7 @@ bool MySQLConnection::Execute(PreparedStatement* stmt)
             return false;
         }
 
-        TC_LOG_DEBUG("sql.sql", "[%u ms] SQL(p): %s", getMSTimeDiff(_s, getMSTime()), m_mStmt->getQueryString(m_queries[index].first).c_str());
+        TC_LOG_DEBUG("sql.sql", "[%u ms] SQL(p3): %s", getMSTimeDiff(_s, getMSTime()), m_mStmt->getQueryString(m_queries[index].first).c_str());
 
         m_mStmt->ClearParameters();
         return true;
@@ -251,7 +251,7 @@ bool MySQLConnection::_Query(PreparedStatement* stmt, MYSQL_RES **pResult, uint6
         if (mysql_stmt_bind_param(msql_STMT, msql_BIND))
         {
             uint32 lErrno = mysql_errno(m_Mysql);
-            TC_LOG_ERROR("sql.sql", "SQL(p): %s\n [ERROR]: [%u] %s", m_mStmt->getQueryString(m_queries[index].first).c_str(), lErrno, mysql_stmt_error(msql_STMT));
+            TC_LOG_ERROR("sql.sql", "SQL(p4): %s\n [ERROR]: [%u] %s", m_mStmt->getQueryString(m_queries[index].first).c_str(), lErrno, mysql_stmt_error(msql_STMT));
 
             if (_HandleMySQLErrno(lErrno))  // If it returns true, an error was handled successfully (i.e. reconnection)
                 return _Query(stmt, pResult, pRowCount, pFieldCount);       // Try again
@@ -263,7 +263,7 @@ bool MySQLConnection::_Query(PreparedStatement* stmt, MYSQL_RES **pResult, uint6
         if (mysql_stmt_execute(msql_STMT))
         {
             uint32 lErrno = mysql_errno(m_Mysql);
-            TC_LOG_ERROR("sql.sql", "SQL(p): %s\n [ERROR]: [%u] %s",
+            TC_LOG_ERROR("sql.sql", "SQL(p5): %s\n [ERROR]: [%u] %s",
                 m_mStmt->getQueryString(m_queries[index].first).c_str(), lErrno, mysql_stmt_error(msql_STMT));
 
             if (_HandleMySQLErrno(lErrno))  // If it returns true, an error was handled successfully (i.e. reconnection)
@@ -273,7 +273,7 @@ bool MySQLConnection::_Query(PreparedStatement* stmt, MYSQL_RES **pResult, uint6
             return false;
         }
 
-        TC_LOG_DEBUG("sql.sql", "[%u ms] SQL(p): %s", getMSTimeDiff(_s, getMSTime()), m_mStmt->getQueryString(m_queries[index].first).c_str());
+        TC_LOG_DEBUG("sql.sql", "[%u ms] SQL(p5): %s", getMSTimeDiff(_s, getMSTime()), m_mStmt->getQueryString(m_queries[index].first).c_str());
 
         m_mStmt->ClearParameters();
 

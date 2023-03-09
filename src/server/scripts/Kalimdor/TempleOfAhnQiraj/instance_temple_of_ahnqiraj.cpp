@@ -49,6 +49,7 @@ class instance_temple_of_ahnqiraj : public InstanceMapScript
                 BugTrioDeathCount = 0;
 
                 CthunPhase = 0;
+				//BotAttacksForBoss = NULL;
             }
 
             //If Vem is dead...
@@ -65,6 +66,31 @@ class instance_temple_of_ahnqiraj : public InstanceMapScript
             uint32 BugTrioDeathCount;
 
             uint32 CthunPhase;
+
+			//BotAttackCreature* BotAttacksForBoss;
+
+			//BotAttackCreature* GetBotAttacksCreature(Creature* boss) override
+			//{
+			//	if (boss == NULL)
+			//		return BotAttacksForBoss;
+			//	if (!BotAttacksForBoss)
+			//	{
+			//		BotAttacksForBoss = new BotAttackCreature(boss, 1000);
+			//		return BotAttacksForBoss;
+			//	}
+			//	else
+			//	{
+			//		if (BotAttacksForBoss->MatchMainCreature(boss))
+			//			return BotAttacksForBoss;
+			//		else
+			//		{
+			//			delete BotAttacksForBoss;
+			//			BotAttacksForBoss = new BotAttackCreature(boss, 1000);
+			//			return BotAttacksForBoss;
+			//		}
+			//	}
+			//	return NULL;
+			//}
 
             void OnCreatureCreate(Creature* creature) override
             {

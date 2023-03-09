@@ -377,7 +377,10 @@ class BattlegroundEY : public Battleground
         void HandleAreaTrigger(Player* Source, uint32 Trigger) override;
         void HandleKillPlayer(Player* player, Player* killer) override;
         WorldSafeLocsEntry const* GetClosestGraveYard(Player* player) override;
-        bool SetupBattleground() override;
+		Creature const* GetClosestGraveCreature(const Player* player) override;
+		bool EYPointIsControl(uint32 team, uint32 pointIndex);
+
+		bool SetupBattleground() override;
         void Reset() override;
         void UpdateTeamScore(uint32 Team);
         void EndBattleground(uint32 winner) override;

@@ -289,6 +289,7 @@ Position const MalygosPositions[MAX_MALYGOS_POS] =
 
 Position const AlexstraszaSpawnPos  = { 854.551f, 1225.31f, 300.901f, 0.0f }; // Alexstrasza's spawn position
 Position const HeartOfMagicSpawnPos = { 755.351f, 1298.31f, 223.909f, 0.0f }; // Heart of Magic spawn position
+Position const CustomSummonPos = { 749.8f, 1309.7f, 266.171f, 0.0f };
 
 #define TEN_MINUTES         (10*MINUTE*IN_MILLISECONDS)
 
@@ -542,6 +543,7 @@ public:
                 case PHASE_NOT_STARTED:
                     events.ScheduleEvent(EVENT_SAY_INTRO, 1*IN_MILLISECONDS, 1, _phase);
                     events.ScheduleEvent(EVENT_START_FIRST_RANDOM_PORTAL, 2*IN_MILLISECONDS, 1, _phase);
+					ClearBotMeTarget(true);
                     break;
                 case PHASE_ONE:
                     events.ScheduleEvent(EVENT_ARCANE_BREATH, urand(8, 10)*IN_MILLISECONDS, 0, _phase);
@@ -550,14 +552,18 @@ public:
                     events.ScheduleEvent(EVENT_POWER_SPARKS, urand(20, 30)*IN_MILLISECONDS, 0, _phase);
                     break;
                 case PHASE_TWO:
-                    events.ScheduleEvent(EVENT_MOVE_TO_POINT_SURGE_P_TWO, 60*IN_MILLISECONDS, 0, _phase);
+                    //events.ScheduleEvent(EVENT_MOVE_TO_POINT_SURGE_P_TWO, 60*IN_MILLISECONDS, 0, _phase);
                     DoAction(ACTION_LIFT_IN_AIR);
+					ClearBotMeTarget(true);
                     break;
                 case PHASE_THREE:
-                    events.ScheduleEvent(EVENT_ARCANE_PULSE, 7*IN_MILLISECONDS, 0, _phase);
+					if (BotAttackCreature* pBotAttack = instance->GetBotAttacksCreature(me))
+						pBotAttack->ClearCreatures();
+					events.ScheduleEvent(EVENT_ARCANE_PULSE, 7 * IN_MILLISECONDS, 0, _phase);
                     events.ScheduleEvent(EVENT_ARCANE_STORM, 10*IN_MILLISECONDS, 0, _phase);
-                    events.ScheduleEvent(EVENT_SURGE_OF_POWER_P_THREE, urand(4, 6)*IN_MILLISECONDS, 0, _phase);
+                    events.ScheduleEvent(EVENT_SURGE_OF_POWER_P_THREE, urand(75, 90)*IN_MILLISECONDS, 0, _phase);
                     events.ScheduleEvent(EVENT_STATIC_FIELD, urand(20, 30)*IN_MILLISECONDS, 0, _phase);
+					ClearBotMeTarget(true);
                     break;
             }
         }
@@ -758,20 +764,29 @@ public:
             if (!instance || (!UpdateVictim() && _phase != PHASE_NOT_STARTED && _phase != PHASE_TWO))
                 return;
 
-            events.Update(diff);
+			if (_phase == PHASE_TWO)
+			{
+				if (BotAttackCreature* pBotAttack = instance->GetBotAttacksCreature(me))
+					pBotAttack->UpdateNeedAttackCreatures(diff, this, false);
+			}
+			else if (_phase == PHASE_THREE)
+			{
+				BotVehicleChaseTarget(me, 40);
+			}
+			events.Update(diff);
 
             // we can't cast if we are casting already unless in PHASE_NOT_STARTED channeling PORTAL_BEAM
             if (me->HasUnitState(UNIT_STATE_CASTING) && _phase != PHASE_NOT_STARTED)
                 return;
 
             // at 50% hp Malygos switchs to phase 2 and removes hovering until reset or end of encounter
-            if (_phase == PHASE_ONE && me->GetHealthPct() <= 50.0f)
-            {
-                SetPhase(PHASE_TWO, true);
-                _canAttack = false;
-                me->AttackStop();
-                Talk(SAY_END_P_ONE);
-            }
+			if (_phase == PHASE_ONE && me->GetHealthPct() <= 50.0f)
+			{
+				SetPhase(PHASE_TWO, true);
+				_canAttack = false;
+				me->AttackStop();
+				Talk(SAY_END_P_ONE);
+			}
 
             while (uint32 eventId = events.ExecuteEvent())
             {
@@ -863,13 +878,13 @@ public:
 
                                 if (casterDiskSummon->IsAIEnabled)
                                     casterDiskSummon->AI()->DoAction(rangeDisks);
-                            }
+							}
 
                             for (uint8 meleeDisks = 0; meleeDisks < 2; meleeDisks++)
                             {
                                 Creature* meleeDiskSummon = me->SummonCreature(NPC_HOVER_DISK_MELEE, MeleeHoverDisksSpawnPositions[meleeDisks]);
                                 meleeDiskSummon->GetMotionMaster()->MovePoint(meleeDisks * MAX_MELEE_HOVER_DISK_SPAWNPOINTS, MeleeHoverDisksWaypoints[meleeDisks * MAX_MELEE_HOVER_DISK_SPAWNPOINTS]);
-                            }
+							}
 
                             _arcaneReinforcements = false;
 
@@ -924,13 +939,13 @@ public:
                         if (_preparingPulsesChecker < 2)
                         {
                             DoCastAOE(SPELL_ARCANE_PULSE, true);
-                            events.ScheduleEvent(EVENT_ARCANE_PULSE, 7*IN_MILLISECONDS, 0, PHASE_THREE);
+                            events.ScheduleEvent(EVENT_ARCANE_PULSE, 75*IN_MILLISECONDS, 0, PHASE_THREE);
                             _preparingPulsesChecker++;
                         }
                         else
                         {
                             DoCastAOE(SPELL_ARCANE_PULSE, true);
-                            events.ScheduleEvent(EVENT_ARCANE_PULSE, 2*IN_MILLISECONDS, 0, PHASE_THREE);
+                            events.ScheduleEvent(EVENT_ARCANE_PULSE, 25*IN_MILLISECONDS, 0, PHASE_THREE);
                         }
                         break;
                     case EVENT_LIGHT_DIMENSION_CHANGE:
@@ -949,40 +964,41 @@ public:
                         DoCast(me, SPELL_IMMUNE_CURSES);
                         _canAttack = true;
                         UpdateVictim();
+                        //me->SetHealth(180000);
                         me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
                         SetPhase(PHASE_THREE, true);
                         break;
                     case EVENT_SURGE_OF_POWER_P_THREE:
-                        if (GetDifficulty() == RAID_DIFFICULTY_10MAN_NORMAL)
-                        {
-                            if (Unit* tempSurgeTarget = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, false, SPELL_RIDE_RED_DRAGON_BUDDY))
-                            {
-                                if (Vehicle* drakeVehicle = tempSurgeTarget->GetVehicleKit())
-                                {
-                                    if (Unit* passenger = drakeVehicle->GetPassenger(0))
-                                    {
-                                        if (passenger->GetTypeId() == TYPEID_PLAYER)
-                                        {
-                                            Talk(EMOTE_SURGE_OF_POWER_WARNING_P3, passenger);
-                                            DoCast(tempSurgeTarget, SPELL_SURGE_OF_POWER_PHASE_3_10, true);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        else if (GetDifficulty() == RAID_DIFFICULTY_25MAN_NORMAL)
-                        {
-                            memset(_surgeTargetGUID, 0, sizeof(_surgeTargetGUID));
-                            DoCastAOE(SPELL_SURGE_OF_POWER_WARNING_SELECTOR_25, true);
-                        }
+						if (GetDifficulty() == RAID_DIFFICULTY_10MAN_NORMAL)
+						{
+							if (Unit* tempSurgeTarget = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, false, SPELL_RIDE_RED_DRAGON_BUDDY))
+							{
+								if (Vehicle* drakeVehicle = tempSurgeTarget->GetVehicleKit())
+								{
+									if (Unit* passenger = drakeVehicle->GetPassenger(0))
+									{
+										if (passenger->GetTypeId() == TYPEID_PLAYER)
+										{
+											Talk(EMOTE_SURGE_OF_POWER_WARNING_P3, passenger);
+											DoCast(tempSurgeTarget, SPELL_SURGE_OF_POWER_PHASE_3_10, true);
+										}
+									}
+								}
+							}
+						}
+						else if (GetDifficulty() == RAID_DIFFICULTY_25MAN_NORMAL)
+						{
+							memset(_surgeTargetGUID, 0, sizeof(_surgeTargetGUID));
+							DoCastAOE(SPELL_SURGE_OF_POWER_WARNING_SELECTOR_25, true);
+						}
 
-                        events.ScheduleEvent(EVENT_SURGE_OF_POWER_P_THREE, urand(9, 18)*IN_MILLISECONDS, 0, PHASE_THREE);
+                        events.ScheduleEvent(EVENT_SURGE_OF_POWER_P_THREE, urand(180, 360)*IN_MILLISECONDS, 0, PHASE_THREE);
                         break;
                     case EVENT_STATIC_FIELD:
-                        if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 60.0f, false, SPELL_RIDE_RED_DRAGON_BUDDY))
-                            DoCast(target, SPELL_STATIC_FIELD_MISSLE, true);
+						if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 60.0f, false, SPELL_RIDE_RED_DRAGON_BUDDY))
+							DoCast(target, SPELL_STATIC_FIELD_MISSLE, true);
 
-                        events.ScheduleEvent(EVENT_STATIC_FIELD, urand(15, 30)*IN_MILLISECONDS, 0, PHASE_THREE);
+						events.ScheduleEvent(EVENT_STATIC_FIELD, urand(60, 90)*IN_MILLISECONDS, 0, PHASE_THREE);
                         break;
                     case EVENT_PREVENT_SAY_SPAM_ON_KILL:
                         _killSpamFilter = false;
@@ -1000,14 +1016,14 @@ public:
         {
             _JustDied();
             Talk(SAY_DEATH);
-            if (Creature* alexstraszaGiftBoxBunny = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_GIFT_BOX_BUNNY_GUID)))
-                alexstraszaGiftBoxBunny->SummonGameObject(RAID_MODE(GO_HEART_OF_MAGIC_10, GO_HEART_OF_MAGIC_25), HeartOfMagicSpawnPos, G3D::Quat(), 0);
+			if (Creature* alexstraszaGiftBoxBunny = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_GIFT_BOX_BUNNY_GUID)))
+				alexstraszaGiftBoxBunny->SummonGameObject(RAID_MODE(GO_HEART_OF_MAGIC_10, GO_HEART_OF_MAGIC_25), HeartOfMagicSpawnPos, G3D::Quat(), 0);
 
-            me->SummonCreature(NPC_ALEXSTRASZA, AlexstraszaSpawnPos, TEMPSUMMON_MANUAL_DESPAWN);
-            me->DespawnOrUnsummon(5*IN_MILLISECONDS);
-        }
+			me->SummonCreature(NPC_ALEXSTRASZA, AlexstraszaSpawnPos, TEMPSUMMON_MANUAL_DESPAWN);
+			me->DespawnOrUnsummon(5 * IN_MILLISECONDS);
+		}
 
-    private:
+	private:
         uint8 _phase; // Counter for phases used with a getter.
         uint8 _summonDeaths; // Keeps count of arcane trash.
         uint8 _preparingPulsesChecker; // In retail they use 2 preparing pulses with 7 sec CD, after they pass 2 seconds.
@@ -1095,6 +1111,7 @@ public:
         {
             _instance = creature->GetInstanceScript();
             Talk(EMOTE_POWER_SPARK_SUMMONED);
+			creature->SetHealth(creature->GetMaxHealth() / 1000);
             MoveToMalygos();
         }
 
@@ -1110,6 +1127,8 @@ public:
         {
             if (!_instance)
                 return;
+			if (BotAttackCreature* pBotAttack = _instance->GetBotAttacksCreature(NULL))
+				pBotAttack->AddNewCreatureNeedAttack(me, (GetDifficulty() == RAID_DIFFICULTY_10MAN_NORMAL ? 10 : 25));
 
             if (Creature* malygos = ObjectAccessor::GetCreature(*me, _instance->GetGuidData(DATA_MALYGOS)))
             {
@@ -1119,11 +1138,11 @@ public:
                     return;
                 }
 
-                if (malygos->HasAura(SPELL_VORTEX_1))
-                {
-                    me->GetMotionMaster()->MoveIdle();
-                    return;
-                }
+				if (malygos->HasAura(SPELL_VORTEX_1))
+				{
+					me->GetMotionMaster()->MoveIdle();
+					return;
+				}
 
                 if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() != CHASE_MOTION_TYPE)
                     me->GetMotionMaster()->MoveFollow(malygos, 0.0f, 0.0f);
@@ -1343,7 +1362,7 @@ class npc_nexus_lord : public CreatureScript
             void DoAction(int32 /*action*/) override
             {
                 _events.ScheduleEvent(EVENT_NUKE_DUMMY, 1);
-                _events.ScheduleEvent(EVENT_ARCANE_SHOCK, 2*IN_MILLISECONDS);
+                _events.ScheduleEvent(EVENT_ARCANE_SHOCK, 5*IN_MILLISECONDS);
                 _events.ScheduleEvent(EVENT_HASTE_BUFF, 12*IN_MILLISECONDS);
             }
 
@@ -1353,6 +1372,8 @@ class npc_nexus_lord : public CreatureScript
                     return;
 
                 _events.Update(diff);
+				if (BotAttackCreature* pBotAttack = _instance->GetBotAttacksCreature(NULL))
+					pBotAttack->AddNewCreatureNeedAttack(me, (GetDifficulty() == RAID_DIFFICULTY_10MAN_NORMAL ? 10 : 25));
 
                 while (uint32 eventId = _events.ExecuteEvent())
                 {
@@ -1368,8 +1389,8 @@ class npc_nexus_lord : public CreatureScript
                             _events.ScheduleEvent(EVENT_HASTE_BUFF, 15*IN_MILLISECONDS);
                             break;
                         case EVENT_NUKE_DUMMY:
-                            DoCastVictim(SPELL_DUMMY_NUKE, true);
-                            DoCast(me, SPELL_ALIGN_DISK_AGGRO, true);
+							DoCastVictim(SPELL_DUMMY_NUKE, true);
+							DoCast(me, SPELL_ALIGN_DISK_AGGRO, true);
                             _events.ScheduleEvent(EVENT_NUKE_DUMMY, 1*IN_MILLISECONDS);
                             break;
                     }
@@ -1414,7 +1435,7 @@ class npc_scion_of_eternity : public CreatureScript
 
             void IsSummonedBy(Unit* /*summoner*/) override
             {
-                _events.ScheduleEvent(EVENT_ARCANE_BARRAGE, urand(14, 29)*IN_MILLISECONDS);
+                _events.ScheduleEvent(EVENT_ARCANE_BARRAGE, urand(20, 30)*IN_MILLISECONDS);
             }
 
             void EnterCombat(Unit* /*who*/) override
@@ -1432,6 +1453,8 @@ class npc_scion_of_eternity : public CreatureScript
             void UpdateAI(uint32 diff) override
             {
                 _events.Update(diff);
+				if (BotAttackCreature* pBotAttack = _instance->GetBotAttacksCreature(NULL))
+					pBotAttack->AddNewCreatureNeedAttack(me, (GetDifficulty() == RAID_DIFFICULTY_10MAN_NORMAL ? 10 : 25));
 
                 while (uint32 eventId = _events.ExecuteEvent())
                 {
@@ -1439,7 +1462,7 @@ class npc_scion_of_eternity : public CreatureScript
                     {
                         case EVENT_ARCANE_BARRAGE:
                             DoCast(me, SPELL_ARCANE_BARRAGE);
-                            _events.ScheduleEvent(EVENT_ARCANE_BARRAGE, urand(3, 15)*IN_MILLISECONDS);
+                            _events.ScheduleEvent(EVENT_ARCANE_BARRAGE, urand(20, 30)*IN_MILLISECONDS);
                             break;
                     }
                 }
@@ -1742,10 +1765,10 @@ class spell_malygos_arcane_storm : public SpellScriptLoader
                 {
                     // Resize list only to objects that are vehicles.
                     IsCreatureVehicleCheck check(true);
-                    Trinity::Containers::RandomResizeList(targets, check, (malygos->GetMap()->GetDifficulty() == RAID_DIFFICULTY_10MAN_NORMAL ? 4 : 10));
+                    Trinity::Containers::RandomResizeList(targets, check, (malygos->GetMap()->GetDifficulty() == RAID_DIFFICULTY_10MAN_NORMAL ? 2 : 5));
                 }
                 else
-                    Trinity::Containers::RandomResizeList(targets, (malygos->GetMap()->GetDifficulty() == RAID_DIFFICULTY_10MAN_NORMAL ? 4 : 10));
+                    Trinity::Containers::RandomResizeList(targets, (malygos->GetMap()->GetDifficulty() == RAID_DIFFICULTY_10MAN_NORMAL ? 1 : 3));
             }
 
             void HandleVisual(SpellEffIndex /*effIndex*/)
@@ -1904,7 +1927,7 @@ class spell_arcane_overload : public SpellScriptLoader
             {
                 Creature* arcaneOverload = GetCaster()->ToCreature();
                 targets.remove_if(ExactDistanceCheck(arcaneOverload,
-                    GetSpellInfo()->Effects[EFFECT_0].CalcRadius(arcaneOverload) * arcaneOverload->GetObjectScale()));
+                    (GetSpellInfo()->Effects[EFFECT_0].CalcRadius(arcaneOverload) * arcaneOverload->GetObjectScale()) / 6.0f));
             }
 
             void Register() override

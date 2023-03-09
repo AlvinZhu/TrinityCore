@@ -454,7 +454,8 @@ class npc_xt002_heart : public CreatureScript
                 _instance(creature->GetInstanceScript())
             {
                 SetCombatMovement(false);
-            }
+				me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE);
+			}
 
             void UpdateAI(uint32 /*diff*/) override { }
 

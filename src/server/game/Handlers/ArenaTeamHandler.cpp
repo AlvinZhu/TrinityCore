@@ -156,10 +156,13 @@ void WorldSession::HandleArenaTeamInviteOpcode(WorldPacket& recvData)
 
     player->SetArenaTeamIdInvited(arenaTeam->GetId());
 
-    WorldPacket data(SMSG_ARENA_TEAM_INVITE, (8+10));
-    data << GetPlayer()->GetName();
-    data << arenaTeam->GetName();
-    player->GetSession()->SendPacket(&data);
+	if (!player->IsPlayerBot())
+	{
+		WorldPacket data(SMSG_ARENA_TEAM_INVITE, (8 + 10));
+		data << GetPlayer()->GetName();
+		data << arenaTeam->GetName();
+		player->GetSession()->SendPacket(&data);
+	}
 
     TC_LOG_DEBUG("network", "WORLD: Sent SMSG_ARENA_TEAM_INVITE");
 }

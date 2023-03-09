@@ -24,6 +24,26 @@
 #include "Player.h"
 #include "GridNotifiers.h"
 
+#include "CreatureTextMgr.h"
+static inline uint8 GetHealthPCT(Unit const* hTarget) { if (!hTarget || hTarget->isDead()) return 100; return (hTarget->GetHealth()*100/hTarget->GetMaxHealth()); }
+static inline uint8 GetManaPCT(Unit const* hTarget) { if (!hTarget || hTarget->isDead() || hTarget->GetMaxPower(POWER_MANA) <= 1) return 100; return (hTarget->GetPower(POWER_MANA)*100/(hTarget->GetMaxPower(POWER_MANA))); }
+//转中文UTF8
+const char* _StringToUTF8b(const char*   pASCIIBuf)
+{
+#ifdef WIN32
+	DWORD     UniCodeLen = MultiByteToWideChar(CP_ACP, 0, pASCIIBuf, -1, 0, 0);
+	std::vector <wchar_t>   vWCH(UniCodeLen);
+	MultiByteToWideChar(CP_ACP, 0, pASCIIBuf, -1, &vWCH[0], UniCodeLen);
+	DWORD   dwUtf8Len = WideCharToMultiByte(CP_UTF8, 0, &vWCH[0], UniCodeLen, NULL, NULL, NULL, NULL);
+	char* _StringConversionStorage = new char[dwUtf8Len + 1];
+	WideCharToMultiByte(CP_UTF8, 0, &vWCH[0], UniCodeLen, _StringConversionStorage, dwUtf8Len, NULL, NULL);
+	return &_StringConversionStorage[0];
+#else
+	return &pASCIIBuf[0];
+#endif
+
+}
+
 enum Yells
 {
     SAY_KILL_PLAYER     = 6
@@ -2397,6 +2417,4753 @@ class spell_toc_heroism : public SpellScriptLoader
         }
 };
 
+//hxsd
+class class_npczs : public CreatureScript
+{
+public:
+    class_npczs() : CreatureScript("class_npczs") { }
+
+ bool OnGossipHello(Player* player, Creature* creature)
+        {
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("挑战"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF );
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("招募"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("解散"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+2);
+            player->SEND_GOSSIP_MENU(907, creature->GetGUID());
+
+            return true;
+        }
+
+        bool OnGossipSelect(Player* player, Creature* creature, uint32 /*sender*/, uint32 action)
+        {
+            player->PlayerTalkClass->ClearMenus();
+            switch (action)
+            {
+            case GOSSIP_ACTION_INFO_DEF:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+
+		int lvl=int(player->getLevel());
+		me->setFaction(14);
+		me->SetLevel(lvl);
+		me->SetMaxHealth(lvl * 60);
+		me->SetHealth(lvl * 60);
+		if (lvl > 20)
+		{
+			me->SetMaxHealth(lvl * 100);
+			me->SetHealth(lvl * 100);
+
+		}
+
+
+		if (lvl > 40)
+		{
+			me->SetMaxHealth(lvl * 200);
+			me->SetHealth(lvl * 200);
+
+		}
+
+		if (lvl > 70)
+		{
+			me->SetMaxHealth(lvl * 300);
+			me->SetHealth(lvl * 300);
+
+		}
+
+
+
+		if (lvl > 80)
+		{
+			me->SetMaxHealth(lvl * 400);
+			me->SetHealth(lvl * 400);
+
+		}
+
+		if (lvl > 85)
+		{
+			me->SetMaxHealth(lvl * 500);
+			me->SetHealth(lvl * 500);
+
+		}
+
+		//me->UpdateMaxHealth();
+		me->SetFullHealth();
+		uint32 dmg = 10;
+                dmg = (lvl * 10);
+		if (lvl > 20)
+			dmg = (lvl * 15);
+
+		if (lvl > 40)
+			dmg =  (lvl * 25);
+
+		if (lvl > 70)
+			dmg = (lvl * 35);
+
+
+		if (lvl > 80)
+			dmg = (lvl * 70);
+
+		if (lvl >= 86)
+			dmg = dmg + (lvl * 80);
+			
+
+		
+		//me->SetBonusDamage(dmg);
+		dmg=dmg/2;me->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, dmg);
+		me->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(OFF_ATTACK, MINDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(OFF_ATTACK, MAXDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(RANGED_ATTACK, MINDAMAGE, dmg);
+		me->SetBaseWeaponDamage(RANGED_ATTACK, MAXDAMAGE, dmg);
+		/*me->SetStatFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, dmg);*/
+		me->SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, dmg);
+		me->UpdateDamagePhysical(BASE_ATTACK);
+	    
+	    me->UpdateDamagePhysical(OFF_ATTACK);
+	     me->UpdateAttackPowerAndDamage();
+		//me->AI()->EnterEvadeMode();
+ break;
+}
+switch (action)
+            {
+case GOSSIP_ACTION_INFO_DEF+1:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+
+		int lvl=int(player->getLevel());
+		int eid = int(creature->GetEntry());
+		int fl=int(irand(1,8));
+		std::list<Creature*> summons;
+		QueryResult result = WorldDatabase.PQuery("SELECT count(id) as sl FROM pknpc where cid= %u;",player->GetGUID());if (result){Field* fields = result->Fetch();if (fields[0].GetUInt32()>=4) {player->GetSession()->SendNotification(_StringToUTF8b("你已经有4个招募者了！"));return false;} }if (summons.size() >= 4)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("你已经有4个招募者了！"));
+			return false;
+}
+
+		player->GetAllMinionsByEntry(summons, eid);
+
+		if (summons.size() >=1)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("你已经有这个招募者了！"));
+			return false;
+}
+
+
+
+		SummonPropertiesEntry const* properties = sSummonPropertiesStore.LookupEntry(713);
+		TempSummon *summon = player->GetMap()->SummonCreature(eid, *player, properties, 0, player);
+		if (!summon)
+			return true;
+        me->setDeathState(JUST_DIED);
+        me->RemoveCorpse();
+        me->SetHealth(0); // just for nice GM-mode view
+		((Guardian*)summon)->InitStatsForLevel(lvl);
+		summon->setFaction(player->getFaction());
+		((Minion*)summon)->SetFollowAngle(fl);
+                summon->GetMotionMaster()->MoveFollow(player, fl, summon->GetFollowAngle());
+                
+                summon->SetLevel(lvl);
+		summon->SetMaxHealth(lvl * 60);
+		summon->SetHealth(lvl * 60);
+		if (lvl > 20)
+		{
+			summon->SetMaxHealth(lvl * 100);
+			summon->SetHealth(lvl * 100);
+
+		}
+		if (lvl > 40)
+		{
+			summon->SetMaxHealth(lvl * 200);
+			summon->SetHealth(lvl * 200);
+
+		}
+		if (lvl > 70)
+		{
+			summon->SetMaxHealth(lvl * 300);
+			summon->SetHealth(lvl * 300);
+
+		}
+		if (lvl > 80)
+		{
+			summon->SetMaxHealth(lvl * 500);
+			summon->SetHealth(lvl * 500);
+
+		}
+		if (lvl > 85)
+		{
+			summon->SetMaxHealth(lvl * 1000);
+			summon->SetHealth(lvl * 1000);
+
+		}
+		summon->SetFullHealth();
+		uint32 dmg = 10;
+                dmg = (lvl * 10);
+		if (lvl > 20)
+			dmg = (lvl * 15);
+
+		if (lvl > 40)
+			dmg =  (lvl * 25);
+
+		if (lvl > 70)
+			dmg = (lvl * 35);
+
+
+		if (lvl > 80)
+			dmg = (lvl * 70);
+
+		if (lvl >= 86)
+			dmg = dmg + (lvl * 80);
+			
+		dmg=dmg/2+1;summon->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, dmg);
+		//summon->SetBaseWeaponDamage(OFF_ATTACK, MINDAMAGE, dmg);
+		//summon->SetBaseWeaponDamage(OFF_ATTACK, MAXDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(RANGED_ATTACK, MINDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(RANGED_ATTACK, MAXDAMAGE, dmg);
+		/*summon->SetStatFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, dmg);
+		*/summon->SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, dmg);
+	     summon->UpdateAttackPowerAndDamage();WorldDatabase.PExecute("DELETE FROM pknpc WHERE cid = %u and pknpcid=%u;", player->GetGUID(),eid);WorldDatabase.PExecute("INSERT INTO pknpc (cid,pknpcid) VALUES (%u, %u);" , player->GetGUID(),eid );
+			//summon->AI()->EnterEvadeMode();
+
+break;
+}		
+		
+switch (action)
+            {
+case GOSSIP_ACTION_INFO_DEF+2:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+		int eid = int(creature->GetEntry());
+		std::list<Creature*> summons;
+
+		player->GetAllMinionsByEntry(summons, eid);
+
+		if (summons.size() < 1)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("当前没有这个招募者！"));
+			return false;
+}
+
+
+		if (summons.size() >= 1)
+		{
+        me->setDeathState(JUST_DIED);
+        me->RemoveCorpse();
+        me->SetHealth(0); // just for nice GM-mode view
+		player->GetSession()->SendNotification(_StringToUTF8b("解散成功！"));WorldDatabase.PExecute("DELETE FROM pknpc WHERE cid = %u and pknpcid=%u;", player->GetGUID(),eid);
+			return true;
+}
+
+}			
+
+
+            return true;
+}
+
+    CreatureAI* GetAI(Creature* creature) const
+    {
+        return new boss_bd_onyxiaAI (creature);
+    }
+
+    struct boss_bd_onyxiaAI : public ScriptedAI
+    {
+        boss_bd_onyxiaAI(Creature* creature) : ScriptedAI(creature)
+        {
+            instance = creature->GetInstanceScript();
+        }
+
+        InstanceScript* instance;
+        EventMap events;
+        uint32 m_uiDistancesCheckTimer;
+        uint32 m_uiPowerTimer;
+
+        void Reset()
+        {
+            me->setPowerType(POWER_RAGE);
+            if (irand(0,8)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+            //events.Reset();
+        }
+
+      
+
+        
+   void UpdatePower()
+    {
+if (me->GetPower(POWER_RAGE) < me->GetMaxPower(POWER_RAGE)/3)
+me->SetPower(POWER_RAGE, (me->GetMaxPower(POWER_RAGE)));
+
+if (me->GetPower(POWER_ENERGY) < me->GetMaxPower(POWER_ENERGY)/3)
+me->SetPower(POWER_ENERGY, (me->GetMaxPower(POWER_ENERGY)));
+
+if (me->GetPower(POWER_MANA) < me->GetMaxPower(POWER_MANA)/3)
+me->SetPower(POWER_MANA, (me->GetMaxPower(POWER_MANA)));if (me->GetPower(POWER_RUNIC_POWER) < me->GetMaxPower(POWER_RUNIC_POWER)/3) me->SetPower(POWER_RUNIC_POWER, (me->GetMaxPower(POWER_RUNIC_POWER)));if (me->GetPower(POWER_FOCUS) < me->GetMaxPower(POWER_FOCUS)/3) me->SetPower(POWER_FOCUS, (me->GetMaxPower(POWER_FOCUS)));
+
+    }
+
+    void JustDied(Unit* killer)
+    {
+    if (irand(0,8)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+    }
+
+
+        
+
+        void EnterCombat(Unit* /*who*/)
+        {
+             if (irand(0,58)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+            m_uiPowerTimer = 2000;
+            m_uiDistancesCheckTimer = 10000;
+            
+            
+            
+        }
+
+/*        void EnterEvadeMode()
+        {
+            //me->DespawnOrUnsummon(100);
+        }*/
+
+        void UpdateAI(uint32 diff)
+        {
+            if (!UpdateVictim())
+                return;
+
+             uint8 lvl = me->getLevel();
+             Unit* opponent = me->GetVictim();
+
+
+if (!opponent)
+return;
+float meleedist = me->GetDistance(opponent);
+	    if (_isnan(meleedist))
+		return;
+            if (meleedist>30) 
+                return;
+
+                if (me->HasUnitState(UNIT_STATE_CASTING))
+                    return;
+
+
+    uint32 SPELLA =40504;
+    uint32 SPELLB =78;
+    uint32 SPELLC =100;
+    uint32 SPELLD =2457;
+
+if (lvl>=10 && irand(0,8)==1)
+{
+    SPELLA =5308;
+    SPELLB =12294;
+    //SPELLC =355;
+    SPELLD =71;	
+}
+
+if (lvl>=20 && irand(0,8)==1)
+{
+    SPELLA =7386;
+    SPELLB =7394;
+    SPELLC =6343;
+    SPELLD =2565;	
+}
+
+if (lvl>=30 && irand(0,8)==1)
+{
+    SPELLA =1680;
+    SPELLB =20243;
+    //SPELLC =676;
+    SPELLD =55694;	
+}
+
+if (lvl>=40 && irand(0,8)==1)
+{
+    SPELLA =1715;
+    SPELLB =845;
+    SPELLC =40599;
+    SPELLD =6673;	
+}
+
+if (lvl>=50 && irand(0,8)==1)
+{
+    SPELLA =12323;
+    //SPELLB =5246;
+    SPELLC =46924;
+    SPELLD =871;	
+}
+
+if (lvl>=60 && irand(0,8)==1)
+{
+    //SPELLA =46968;
+    SPELLB =40504;
+    SPELLC =12328;
+    SPELLD =23920;	
+}
+
+if (lvl>=70 && irand(0,8)==1)
+{
+    SPELLA =64382;
+    SPELLB =40599;
+    SPELLC =65924;
+    SPELLD =65932;	
+}
+
+if (lvl>=76 && irand(0,8)==1)
+{
+    SPELLA =65926;
+    SPELLB =65936;
+    SPELLC =65940;
+    SPELLD =2457;	
+}
+
+if (lvl>=80 && irand(0,8)==1)
+{
+    SPELLA =65947;
+    SPELLB =65930;
+    SPELLC =68764;
+    SPELLD =2457;	
+}
+
+
+            if (m_uiPowerTimer <= diff && GetHealthPCT(me) < 30)
+            {
+               DoCast(me, 61371);
+               m_uiPowerTimer = 2000;
+            }
+            else m_uiPowerTimer -= diff;
+
+            if (m_uiDistancesCheckTimer <= diff  && GetHealthPCT(me) < 10)
+            {
+                    me->AddAura(5016, me);
+
+                m_uiDistancesCheckTimer = 5000;
+            }
+            else m_uiDistancesCheckTimer -= diff;if (irand(0,3)==0) {if (irand(0,180)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}}
+
+            //events.Update(diff);
+
+if (irand(0, 30) == 0) DoCastVictim(SPELLA);
+else if (irand(0, 30) == 1) DoCastVictim(SPELLB);
+else if (irand(0, 30) == 2) DoCastVictim(SPELLC);
+else if (irand(0, 30) == 3) DoCastVictim(SPELLC);
+else if (irand(0, 30) == 4) DoCast(me, SPELLD);
+if (me->GetPower(POWER_RAGE) < me->GetMaxPower(POWER_RAGE)/3)me->SetPower(POWER_RAGE, (me->GetMaxPower(POWER_RAGE)));if (me->GetPower(POWER_ENERGY) < me->GetMaxPower(POWER_ENERGY)/3)me->SetPower(POWER_ENERGY, (me->GetMaxPower(POWER_ENERGY)));if (me->GetPower(POWER_MANA) < me->GetMaxPower(POWER_MANA)/3)me->SetPower(POWER_MANA, (me->GetMaxPower(POWER_MANA)));if (me->GetPower(POWER_RUNIC_POWER) < me->GetMaxPower(POWER_RUNIC_POWER)/3) me->SetPower(POWER_RUNIC_POWER, (me->GetMaxPower(POWER_RUNIC_POWER)));if (me->GetPower(POWER_FOCUS) < me->GetMaxPower(POWER_FOCUS)/3) me->SetPower(POWER_FOCUS, (me->GetMaxPower(POWER_FOCUS)));
+/*            while (uint32 eventId = events.ExecuteEvent())
+            {
+                switch (eventId)
+                {
+                    case EVENT_CLASSA:
+                    DoCastVictim(SPELLA);
+                    
+                    events.ScheduleEvent(EVENT_CLASSA, urand(2000, 4000));
+                    break;                       
+
+                    case EVENT_CLASSB:
+                    DoCastVictim(SPELLB);
+                    
+                    break;
+
+                    case EVENT_CLASSC:
+                    DoCastVictim(SPELLC);
+                    if (irand(0,6)==1) Talk(1);
+                    
+                    if (irand(0,12)==1) DoCast(me,SPELLD);
+
+                    
+                    break;
+
+                    default:
+                    break;
+                }
+            }*/
+
+if (me->HasUnitState(UNIT_STATE_CASTING)) return;            DoMeleeAttackIfReady();
+        }
+    };
+};
+
+class class_npcqs : public CreatureScript
+{
+public:
+    class_npcqs() : CreatureScript("class_npcqs") { }
+
+ bool OnGossipHello(Player* player, Creature* creature)
+        {
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("挑战"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF );
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("招募"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("解散"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+2);
+            player->SEND_GOSSIP_MENU(907, creature->GetGUID());
+
+            return true;
+        }
+
+        bool OnGossipSelect(Player* player, Creature* creature, uint32 /*sender*/, uint32 action)
+        {
+            player->PlayerTalkClass->ClearMenus();
+            switch (action)
+            {
+            case GOSSIP_ACTION_INFO_DEF:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+
+		int lvl=int(player->getLevel());
+		me->setFaction(14);
+		me->SetLevel(lvl);
+		me->SetMaxHealth(lvl * 60);
+		me->SetHealth(lvl * 60);
+		if (lvl > 20)
+		{
+			me->SetMaxHealth(lvl * 100);
+			me->SetHealth(lvl * 100);
+
+		}
+
+
+		if (lvl > 40)
+		{
+			me->SetMaxHealth(lvl * 200);
+			me->SetHealth(lvl * 200);
+
+		}
+
+		if (lvl > 70)
+		{
+			me->SetMaxHealth(lvl * 300);
+			me->SetHealth(lvl * 300);
+
+		}
+
+
+
+		if (lvl > 80)
+		{
+			me->SetMaxHealth(lvl * 400);
+			me->SetHealth(lvl * 400);
+
+		}
+
+		if (lvl > 85)
+		{
+			me->SetMaxHealth(lvl * 500);
+			me->SetHealth(lvl * 500);
+
+		}
+
+		//me->UpdateMaxHealth();
+		me->SetFullHealth();
+		uint32 dmg = 10;
+                dmg = (lvl * 10);
+		if (lvl > 20)
+			dmg = (lvl * 15);
+
+		if (lvl > 40)
+			dmg =  (lvl * 25);
+
+		if (lvl > 70)
+			dmg = (lvl * 35);
+
+
+		if (lvl > 80)
+			dmg = (lvl * 70);
+
+		if (lvl >= 86)
+			dmg = dmg + (lvl * 80);
+			
+
+		
+		//me->SetBonusDamage(dmg);
+		dmg=dmg/2;me->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, dmg);
+		me->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(OFF_ATTACK, MINDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(OFF_ATTACK, MAXDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(RANGED_ATTACK, MINDAMAGE, dmg);
+		me->SetBaseWeaponDamage(RANGED_ATTACK, MAXDAMAGE, dmg);
+		/*me->SetStatFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, dmg);*/
+		me->SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, dmg);
+		me->UpdateDamagePhysical(BASE_ATTACK);
+	    me->UpdateDamagePhysical(OFF_ATTACK);
+	     me->UpdateAttackPowerAndDamage();
+		//me->AI()->EnterEvadeMode();
+ break;
+}
+switch (action)
+            {
+case GOSSIP_ACTION_INFO_DEF+1:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+
+		int lvl=int(player->getLevel());
+		int eid = int(creature->GetEntry());
+		int fl=int(irand(1,8));
+		std::list<Creature*> summons;
+		QueryResult result = WorldDatabase.PQuery("SELECT count(id) as sl FROM pknpc where cid= %u;",player->GetGUID());if (result){Field* fields = result->Fetch();if (fields[0].GetUInt32()>=4) {player->GetSession()->SendNotification(_StringToUTF8b("你已经有4个招募者了！"));return false;} }if (summons.size() >= 4)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("你已经有4个招募者了！"));
+			return false;
+}
+
+		player->GetAllMinionsByEntry(summons, eid);
+
+		if (summons.size() >= 1)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("你已经有这个招募者了！"));
+			return false;
+}
+
+
+
+		SummonPropertiesEntry const* properties = sSummonPropertiesStore.LookupEntry(713);
+		TempSummon *summon = player->GetMap()->SummonCreature(eid, *player, properties, 0, player);
+		if (!summon)
+			return true;
+        me->setDeathState(JUST_DIED);
+        me->RemoveCorpse();
+        me->SetHealth(0); // just for nice GM-mode view
+		((Guardian*)summon)->InitStatsForLevel(lvl);
+		summon->setFaction(player->getFaction());
+		((Minion*)summon)->SetFollowAngle(fl);
+                summon->GetMotionMaster()->MoveFollow(player, fl, summon->GetFollowAngle());
+                
+                summon->SetLevel(lvl);
+		summon->SetMaxHealth(lvl * 60);
+		summon->SetHealth(lvl * 60);
+		if (lvl > 20)
+		{
+			summon->SetMaxHealth(lvl * 100);
+			summon->SetHealth(lvl * 100);
+
+		}
+		if (lvl > 40)
+		{
+			summon->SetMaxHealth(lvl * 200);
+			summon->SetHealth(lvl * 200);
+
+		}
+		if (lvl > 70)
+		{
+			summon->SetMaxHealth(lvl * 300);
+			summon->SetHealth(lvl * 300);
+
+		}
+		if (lvl > 80)
+		{
+			summon->SetMaxHealth(lvl * 500);
+			summon->SetHealth(lvl * 500);
+
+		}
+		if (lvl > 85)
+		{
+			summon->SetMaxHealth(lvl * 1000);
+			summon->SetHealth(lvl * 1000);
+
+		}
+		summon->SetFullHealth();
+		uint32 dmg = 10;
+                dmg = (lvl * 10);
+		if (lvl > 20)
+			dmg = (lvl * 15);
+
+		if (lvl > 40)
+			dmg =  (lvl * 25);
+
+		if (lvl > 70)
+			dmg = (lvl * 35);
+
+
+		if (lvl > 80)
+			dmg = (lvl * 70);
+
+		if (lvl >= 86)
+			dmg = dmg + (lvl * 80);
+			
+		dmg=dmg/2+1;summon->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, dmg);
+		//summon->SetBaseWeaponDamage(OFF_ATTACK, MINDAMAGE, dmg);
+		//summon->SetBaseWeaponDamage(OFF_ATTACK, MAXDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(RANGED_ATTACK, MINDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(RANGED_ATTACK, MAXDAMAGE, dmg);
+		/*summon->SetStatFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, dmg);
+		*/summon->SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, dmg);
+	     summon->UpdateAttackPowerAndDamage();WorldDatabase.PExecute("DELETE FROM pknpc WHERE cid = %u and pknpcid=%u;", player->GetGUID(),eid);WorldDatabase.PExecute("INSERT INTO pknpc (cid,pknpcid) VALUES (%u, %u);" , player->GetGUID(),eid );
+			//summon->AI()->EnterEvadeMode();
+
+break;
+}		
+switch (action)
+            {
+case GOSSIP_ACTION_INFO_DEF+2:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+		int eid = int(creature->GetEntry());
+		std::list<Creature*> summons;
+
+		player->GetAllMinionsByEntry(summons, eid);
+
+		if (summons.size() < 1)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("当前没有这个招募者！"));
+			return false;
+}
+
+
+		if (summons.size() >= 1)
+		{
+        me->setDeathState(JUST_DIED);
+        me->RemoveCorpse();
+        me->SetHealth(0); // just for nice GM-mode view
+		player->GetSession()->SendNotification(_StringToUTF8b("解散成功！"));WorldDatabase.PExecute("DELETE FROM pknpc WHERE cid = %u and pknpcid=%u;", player->GetGUID(),eid);
+			return true;
+}
+
+}			
+
+
+            return true;
+}
+
+    CreatureAI* GetAI(Creature* creature) const
+    {
+        return new boss_bd_onyxiaAI (creature);
+    }
+
+    struct boss_bd_onyxiaAI : public ScriptedAI
+    {
+        boss_bd_onyxiaAI(Creature* creature) : ScriptedAI(creature)
+        {
+            instance = creature->GetInstanceScript();
+        }
+
+        InstanceScript* instance;
+        EventMap events;
+        uint32 m_uiDistancesCheckTimer;
+        uint32 m_uiPowerTimer;
+
+        void Reset()
+        {
+            if (irand(0,8)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+            //events.Reset();
+        }
+
+      
+
+        
+   void UpdatePower()
+    {
+if (me->GetPower(POWER_RAGE) < me->GetMaxPower(POWER_RAGE)/3)
+me->SetPower(POWER_RAGE, (me->GetMaxPower(POWER_RAGE)));
+
+if (me->GetPower(POWER_ENERGY) < me->GetMaxPower(POWER_ENERGY)/3)
+me->SetPower(POWER_ENERGY, (me->GetMaxPower(POWER_ENERGY)));
+
+if (me->GetPower(POWER_MANA) < me->GetMaxPower(POWER_MANA)/3)
+me->SetPower(POWER_MANA, (me->GetMaxPower(POWER_MANA)));if (me->GetPower(POWER_RUNIC_POWER) < me->GetMaxPower(POWER_RUNIC_POWER)/3) me->SetPower(POWER_RUNIC_POWER, (me->GetMaxPower(POWER_RUNIC_POWER)));if (me->GetPower(POWER_FOCUS) < me->GetMaxPower(POWER_FOCUS)/3) me->SetPower(POWER_FOCUS, (me->GetMaxPower(POWER_FOCUS)));
+    }
+
+    void JustDied(Unit* killer)
+    {
+    if (irand(0,8)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+    }
+
+
+        
+
+        void EnterCombat(Unit* /*who*/)
+        {
+            if (irand(0,58)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+            m_uiPowerTimer = 2000;
+            m_uiDistancesCheckTimer = 10000;
+            
+            
+            
+        }
+
+/*        void EnterEvadeMode()
+        {
+            //me->DespawnOrUnsummon(100);
+        }*/
+
+        void UpdateAI(uint32 diff)
+        {
+            if (!UpdateVictim())
+                return;
+
+             uint8 lvl = me->getLevel();
+             Unit* opponent = me->GetVictim();
+
+
+if (!opponent)
+return;
+float meleedist = me->GetDistance(opponent);
+	    if (_isnan(meleedist))
+		return;
+            if (meleedist>30) 
+                return;
+
+                if (me->HasUnitState(UNIT_STATE_CASTING))
+                    return;
+
+
+   uint32 SPELLA =20271;
+    uint32 SPELLB =35395;
+    uint32 SPELLC =853;
+    uint32 SPELLD =54043;
+
+if (lvl>=10 && irand(0,8)==1)
+{
+    SPELLA =48819;
+    SPELLB =10326;
+    SPELLC =25780;
+    SPELLD =25780;	
+}
+
+if (lvl>=20 && irand(0,8)==1)
+{
+    SPELLA =2812;
+    SPELLB =53595;
+     SPELLC =61411;
+    SPELLD =31801;	
+}
+
+if (lvl>=30 && irand(0,8)==1)
+{
+    SPELLA =40599;
+    SPELLB =53385;
+    SPELLC =24245;
+    SPELLD =635;	
+}
+
+if (lvl>=40 && irand(0,8)==1)
+{
+    SPELLA =53600;
+    SPELLB =10326;
+    SPELLC =879;
+    SPELLD =20154;	
+}
+
+if (lvl>=50 && irand(0,8)==1)
+{
+    SPELLA =35395;
+    SPELLB =48818;
+    SPELLC =53385;
+    SPELLD =48936;	
+}
+
+if (lvl>=60 && irand(0,8)==1)
+{
+    SPELLA =35395;
+    SPELLB =20271;
+    SPELLC =53385;
+    SPELLD =48785;	
+}
+
+if (lvl>=70 && irand(0,8)==1)
+{
+    SPELLA =35395;
+    SPELLB =53385;
+    SPELLC =20271;
+    SPELLD =48801;	
+}
+
+if (lvl>=76 && irand(0,8)==1)
+{
+    SPELLA =66005;
+    SPELLB =60504;
+    SPELLC =60599;
+    SPELLD =19740;	
+}
+
+if (lvl>=80 && irand(0,8)==1)
+{
+    SPELLA =66007;
+    SPELLB =66006;
+    SPELLC =66003;
+    SPELLD =66011;	
+}
+
+
+
+
+
+
+
+
+            if (m_uiPowerTimer <= diff && GetHealthPCT(me) < 30)
+            {
+               DoCast(me, 61371);
+               m_uiPowerTimer = 2000;
+            }
+            else m_uiPowerTimer -= diff;
+
+            if (m_uiDistancesCheckTimer <= diff  && GetHealthPCT(me) < 10)
+            {
+                    me->AddAura(5016, me);
+
+                m_uiDistancesCheckTimer = 5000;
+            }
+            else m_uiDistancesCheckTimer -= diff;if (irand(0,3)==0) {if (irand(0,180)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}}
+
+            //events.Update(diff);
+
+if (irand(0, 30) == 0) DoCastVictim(SPELLA);
+else if (irand(0, 30) == 1) DoCastVictim(SPELLB);
+else if (irand(0, 30) == 2) DoCastVictim(SPELLC);
+else if (irand(0, 30) == 3) DoCastVictim(SPELLC);
+else if (irand(0, 30) == 4) DoCast(me, SPELLD);
+if (me->GetPower(POWER_RAGE) < me->GetMaxPower(POWER_RAGE)/3)me->SetPower(POWER_RAGE, (me->GetMaxPower(POWER_RAGE)));if (me->GetPower(POWER_ENERGY) < me->GetMaxPower(POWER_ENERGY)/3)me->SetPower(POWER_ENERGY, (me->GetMaxPower(POWER_ENERGY)));if (me->GetPower(POWER_MANA) < me->GetMaxPower(POWER_MANA)/3)me->SetPower(POWER_MANA, (me->GetMaxPower(POWER_MANA)));if (me->GetPower(POWER_RUNIC_POWER) < me->GetMaxPower(POWER_RUNIC_POWER)/3) me->SetPower(POWER_RUNIC_POWER, (me->GetMaxPower(POWER_RUNIC_POWER)));if (me->GetPower(POWER_FOCUS) < me->GetMaxPower(POWER_FOCUS)/3) me->SetPower(POWER_FOCUS, (me->GetMaxPower(POWER_FOCUS)));
+            /*while (uint32 eventId = events.ExecuteEvent())
+            {
+                switch (eventId)
+                {
+                    case EVENT_CLASSA:
+                    DoCastVictim(SPELLA);
+                    
+                    events.ScheduleEvent(EVENT_CLASSA, urand(2000, 4000));
+                    break;                       
+
+                    case EVENT_CLASSB:
+                    DoCastVictim(SPELLB);
+                    
+                    break;
+
+                    case EVENT_CLASSC:
+                    DoCastVictim(SPELLC);
+                    if (irand(0,6)==1) Talk(1);
+                    
+                    if (irand(0,12)==1) DoCast(me,SPELLD);
+
+                    
+                    break;
+
+                    default:
+                    break;
+                }
+            }*/
+
+if (me->HasUnitState(UNIT_STATE_CASTING)) return;            DoMeleeAttackIfReady();
+        }
+    };
+};
+
+
+class class_npcfs : public CreatureScript
+{
+public:
+    class_npcfs() : CreatureScript("class_npcfs") { }
+
+ bool OnGossipHello(Player* player, Creature* creature)
+        {
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("挑战"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF );
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("招募"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("解散"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+2);
+            player->SEND_GOSSIP_MENU(907, creature->GetGUID());
+
+            return true;
+        }
+
+        bool OnGossipSelect(Player* player, Creature* creature, uint32 /*sender*/, uint32 action)
+        {
+            player->PlayerTalkClass->ClearMenus();
+            switch (action)
+            {
+            case GOSSIP_ACTION_INFO_DEF:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+
+		int lvl=int(player->getLevel());
+		me->setFaction(14);
+		me->SetLevel(lvl);
+		me->SetMaxHealth(lvl * 60);
+		me->SetHealth(lvl * 60);
+		if (lvl > 20)
+		{
+			me->SetMaxHealth(lvl * 100);
+			me->SetHealth(lvl * 100);
+
+		}
+
+
+		if (lvl > 40)
+		{
+			me->SetMaxHealth(lvl * 200);
+			me->SetHealth(lvl * 200);
+
+		}
+
+		if (lvl > 70)
+		{
+			me->SetMaxHealth(lvl * 300);
+			me->SetHealth(lvl * 300);
+
+		}
+
+
+
+		if (lvl > 80)
+		{
+			me->SetMaxHealth(lvl * 400);
+			me->SetHealth(lvl * 400);
+
+		}
+
+		if (lvl > 85)
+		{
+			me->SetMaxHealth(lvl * 500);
+			me->SetHealth(lvl * 500);
+
+		}
+
+		//me->UpdateMaxHealth();
+		me->SetFullHealth();
+		uint32 dmg = 10;
+                dmg = (lvl * 10);
+		if (lvl > 20)
+			dmg = (lvl * 15);
+
+		if (lvl > 40)
+			dmg =  (lvl * 25);
+
+		if (lvl > 70)
+			dmg = (lvl * 35);
+
+
+		if (lvl > 80)
+			dmg = (lvl * 70);
+
+		if (lvl >= 86)
+			dmg = dmg + (lvl * 80);
+			
+
+		
+		//me->SetBonusDamage(dmg);
+		dmg=dmg/2;me->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, dmg);
+		me->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(OFF_ATTACK, MINDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(OFF_ATTACK, MAXDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(RANGED_ATTACK, MINDAMAGE, dmg);
+		me->SetBaseWeaponDamage(RANGED_ATTACK, MAXDAMAGE, dmg);
+/*		me->SetStatFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, dmg);*/
+		me->SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, dmg);
+		me->UpdateDamagePhysical(BASE_ATTACK);
+	    me->UpdateDamagePhysical(OFF_ATTACK);
+	     me->UpdateAttackPowerAndDamage();
+		//me->AI()->EnterEvadeMode();
+ break;
+}
+switch (action)
+            {
+case GOSSIP_ACTION_INFO_DEF+1:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+
+		int lvl=int(player->getLevel());
+		int eid = int(creature->GetEntry());
+		int fl=int(irand(1,8));
+		std::list<Creature*> summons;
+		QueryResult result = WorldDatabase.PQuery("SELECT count(id) as sl FROM pknpc where cid= %u;",player->GetGUID());if (result){Field* fields = result->Fetch();if (fields[0].GetUInt32()>=4) {player->GetSession()->SendNotification(_StringToUTF8b("你已经有4个招募者了！"));return false;} }if (summons.size() >= 4)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("你已经有4个招募者了！"));
+			return false;
+}
+
+		player->GetAllMinionsByEntry(summons, eid);
+
+		if (summons.size() >= 1)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("你已经有这个招募者了！"));
+			return false;
+}
+
+
+
+		SummonPropertiesEntry const* properties = sSummonPropertiesStore.LookupEntry(713);
+		TempSummon *summon = player->GetMap()->SummonCreature(eid, *player, properties, 0, player);
+		if (!summon)
+			return true;
+        me->setDeathState(JUST_DIED);
+        me->RemoveCorpse();
+        me->SetHealth(0); // just for nice GM-mode view
+		((Guardian*)summon)->InitStatsForLevel(lvl);
+		summon->setFaction(player->getFaction());
+		((Minion*)summon)->SetFollowAngle(fl);
+                summon->GetMotionMaster()->MoveFollow(player, fl, summon->GetFollowAngle());
+                
+                summon->SetLevel(lvl);
+		summon->SetMaxHealth(lvl * 60);
+		summon->SetHealth(lvl * 60);
+		if (lvl > 20)
+		{
+			summon->SetMaxHealth(lvl * 100);
+			summon->SetHealth(lvl * 100);
+
+		}
+		if (lvl > 40)
+		{
+			summon->SetMaxHealth(lvl * 200);
+			summon->SetHealth(lvl * 200);
+
+		}
+		if (lvl > 70)
+		{
+			summon->SetMaxHealth(lvl * 300);
+			summon->SetHealth(lvl * 300);
+
+		}
+		if (lvl > 80)
+		{
+			summon->SetMaxHealth(lvl * 500);
+			summon->SetHealth(lvl * 500);
+
+		}
+		if (lvl > 85)
+		{
+			summon->SetMaxHealth(lvl * 1000);
+			summon->SetHealth(lvl * 1000);
+
+		}
+		summon->SetFullHealth();
+		uint32 dmg = 10;
+                dmg = (lvl * 10);
+		if (lvl > 20)
+			dmg = (lvl * 15);
+
+		if (lvl > 40)
+			dmg =  (lvl * 25);
+
+		if (lvl > 70)
+			dmg = (lvl * 35);
+
+
+		if (lvl > 80)
+			dmg = (lvl * 70);
+
+		if (lvl >= 86)
+			dmg = dmg + (lvl * 80);
+			
+		dmg=dmg/2+1;summon->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, dmg);
+		//summon->SetBaseWeaponDamage(OFF_ATTACK, MINDAMAGE, dmg);
+		//summon->SetBaseWeaponDamage(OFF_ATTACK, MAXDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(RANGED_ATTACK, MINDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(RANGED_ATTACK, MAXDAMAGE, dmg);
+		/*summon->SetStatFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, dmg);
+		*/summon->SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, dmg);
+	     summon->UpdateAttackPowerAndDamage();WorldDatabase.PExecute("DELETE FROM pknpc WHERE cid = %u and pknpcid=%u;", player->GetGUID(),eid);WorldDatabase.PExecute("INSERT INTO pknpc (cid,pknpcid) VALUES (%u, %u);" , player->GetGUID(),eid );
+			//summon->AI()->EnterEvadeMode();
+
+break;
+}		
+		
+switch (action)
+            {
+case GOSSIP_ACTION_INFO_DEF+2:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+		int eid = int(creature->GetEntry());
+		std::list<Creature*> summons;
+
+		player->GetAllMinionsByEntry(summons, eid);
+
+		if (summons.size() < 1)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("当前没有这个招募者！"));
+			return false;
+}
+
+
+		if (summons.size() >= 1)
+		{
+        me->setDeathState(JUST_DIED);
+        me->RemoveCorpse();
+        me->SetHealth(0); // just for nice GM-mode view
+		player->GetSession()->SendNotification(_StringToUTF8b("解散成功！"));WorldDatabase.PExecute("DELETE FROM pknpc WHERE cid = %u and pknpcid=%u;", player->GetGUID(),eid);
+			return true;
+}
+
+}	
+
+            return true;
+}
+
+    CreatureAI* GetAI(Creature* creature) const
+    {
+        return new boss_bd_onyxiaAI (creature);
+    }
+
+    struct boss_bd_onyxiaAI : public ScriptedAI
+    {
+        boss_bd_onyxiaAI(Creature* creature) : ScriptedAI(creature)
+        {
+            instance = creature->GetInstanceScript();
+        }
+
+        InstanceScript* instance;
+        EventMap events;
+        uint32 m_uiDistancesCheckTimer;
+        uint32 m_uiPowerTimer;
+
+        void Reset()
+        {
+            if (irand(0,8)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+            //events.Reset();
+        }
+
+      
+
+        
+   void UpdatePower()
+    {
+if (me->GetPower(POWER_RAGE) < me->GetMaxPower(POWER_RAGE)/3)
+me->SetPower(POWER_RAGE, (me->GetMaxPower(POWER_RAGE)));
+
+if (me->GetPower(POWER_ENERGY) < me->GetMaxPower(POWER_ENERGY)/3)
+me->SetPower(POWER_ENERGY, (me->GetMaxPower(POWER_ENERGY)));
+
+if (me->GetPower(POWER_MANA) < me->GetMaxPower(POWER_MANA)/3)
+me->SetPower(POWER_MANA, (me->GetMaxPower(POWER_MANA)));if (me->GetPower(POWER_RUNIC_POWER) < me->GetMaxPower(POWER_RUNIC_POWER)/3) me->SetPower(POWER_RUNIC_POWER, (me->GetMaxPower(POWER_RUNIC_POWER)));if (me->GetPower(POWER_FOCUS) < me->GetMaxPower(POWER_FOCUS)/3) me->SetPower(POWER_FOCUS, (me->GetMaxPower(POWER_FOCUS)));
+    }
+
+    void JustDied(Unit* killer)
+    {
+    if (irand(0,8)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+    }
+
+
+        
+
+        void EnterCombat(Unit* /*who*/)
+        {
+             if (irand(0,58)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+            m_uiPowerTimer = 2000;
+            m_uiDistancesCheckTimer = 10000;
+            
+            
+            
+        }
+
+/*        void EnterEvadeMode()
+        {
+            //me->DespawnOrUnsummon(100);
+        }*/
+
+        void UpdateAI(uint32 diff)
+        {
+            if (!UpdateVictim())
+                return;
+
+             uint8 lvl = me->getLevel();
+             Unit* opponent = me->GetVictim();
+
+
+if (!opponent)
+return;
+float meleedist = me->GetDistance(opponent);
+	    if (_isnan(meleedist))
+		return;
+            if (meleedist>30) 
+                return;
+
+                if (me->HasUnitState(UNIT_STATE_CASTING))
+                    return;
+
+
+    uint32 SPELLA =133;
+    uint32 SPELLB =44614;
+    uint32 SPELLC =122;
+    uint32 SPELLD =45438;
+
+if (lvl>=10 && irand(0,8)==1)
+{
+    SPELLA =30451;
+    SPELLB =11366;
+    SPELLC =44425;
+    SPELLD =45438;	
+}
+
+if (lvl>=20 && irand(0,8)==1)
+{
+    SPELLA =116;
+    SPELLB =2139;
+    SPELLC =1449;
+    SPELLD =12051;	
+}
+
+if (lvl>=30 && irand(0,8)==1)
+{
+    SPELLA =30455;
+    SPELLB =5143;
+    SPELLC =42896;
+    SPELLD =30482;	
+}
+
+if (lvl>=40 && irand(0,8)==1)
+{
+    SPELLA =42873;
+    SPELLB =38692;
+    SPELLC =2948;
+    SPELLD =11426;	
+}
+
+if (lvl>=50 && irand(0,8)==1)
+{
+    SPELLA =10;
+    SPELLB =31661;
+    SPELLC =44572;
+    SPELLD =55342;	
+}
+
+if (lvl>=60 && irand(0,8)==1)
+{
+    SPELLA =55359;
+    SPELLB =47610;
+    SPELLC =42940;
+    SPELLD =475;	
+}
+
+if (lvl>=70 && irand(0,8)==1)
+{
+    SPELLA =40504;
+    SPELLB =42939;
+    SPELLC =42841;
+    SPELLD =6117;	
+}
+
+if (lvl>=76 && irand(0,8)==1)
+{
+    SPELLA =65802;
+    SPELLB =65807;
+    SPELLC =42846;
+    SPELLD =43046;	
+}
+
+if (lvl>=80 && irand(0,8)==1)
+{
+    SPELLA =65799;
+    SPELLB =65791;
+    SPELLC =65800;
+    SPELLD =65802;	
+}
+
+
+
+            if (m_uiPowerTimer <= diff && GetHealthPCT(me) < 30)
+            {
+               DoCast(me, 61371);
+               m_uiPowerTimer = 2000;
+            }
+            else m_uiPowerTimer -= diff;
+
+            if (m_uiDistancesCheckTimer <= diff  && GetHealthPCT(me) < 10)
+            {
+                    me->AddAura(5016, me);
+
+                m_uiDistancesCheckTimer = 5000;
+            }
+            else m_uiDistancesCheckTimer -= diff;if (irand(0,3)==0) {if (irand(0,180)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}}
+
+            //events.Update(diff);
+
+if (irand(0, 30) == 0) DoCastVictim(SPELLA);
+else if (irand(0, 30) == 1) DoCastVictim(SPELLB);
+else if (irand(0, 30) == 2) DoCastVictim(SPELLC);
+else if (irand(0, 30) == 3) DoCastVictim(SPELLC);
+else if (irand(0, 30) == 4) DoCast(me, SPELLD);
+if (me->GetPower(POWER_RAGE) < me->GetMaxPower(POWER_RAGE)/3)me->SetPower(POWER_RAGE, (me->GetMaxPower(POWER_RAGE)));if (me->GetPower(POWER_ENERGY) < me->GetMaxPower(POWER_ENERGY)/3)me->SetPower(POWER_ENERGY, (me->GetMaxPower(POWER_ENERGY)));if (me->GetPower(POWER_MANA) < me->GetMaxPower(POWER_MANA)/3)me->SetPower(POWER_MANA, (me->GetMaxPower(POWER_MANA)));if (me->GetPower(POWER_RUNIC_POWER) < me->GetMaxPower(POWER_RUNIC_POWER)/3) me->SetPower(POWER_RUNIC_POWER, (me->GetMaxPower(POWER_RUNIC_POWER)));if (me->GetPower(POWER_FOCUS) < me->GetMaxPower(POWER_FOCUS)/3) me->SetPower(POWER_FOCUS, (me->GetMaxPower(POWER_FOCUS)));
+         /*   while (uint32 eventId = events.ExecuteEvent())
+            {
+                switch (eventId)
+                {
+                    case EVENT_CLASSA:
+                    DoCastVictim(SPELLA);
+                    
+                    events.ScheduleEvent(EVENT_CLASSA, urand(2000, 4000));
+                    break;                       
+
+                    case EVENT_CLASSB:
+                    DoCastVictim(SPELLB);
+                    
+                    break;
+
+                    case EVENT_CLASSC:
+                    DoCastVictim(SPELLC);
+                    if (irand(0,6)==1) Talk(1);
+                    
+                    if (irand(0,12)==1) DoCast(me,SPELLD);
+
+                    
+                    break;
+
+                    default:
+                    break;
+                }
+            }*/
+if (me->HasUnitState(UNIT_STATE_CASTING)) return;if (irand(0,2)==0) DoMeleeAttackIfReady(); else DoSpellAttackIfReady(133);
+        }
+    };
+};
+
+
+class class_npcss : public CreatureScript
+{
+public:
+    class_npcss() : CreatureScript("class_npcss") { }
+
+ bool OnGossipHello(Player* player, Creature* creature)
+        {
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("挑战"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF );
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("招募"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("解散"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+2);
+            player->SEND_GOSSIP_MENU(907, creature->GetGUID());
+
+            return true;
+        }
+
+        bool OnGossipSelect(Player* player, Creature* creature, uint32 /*sender*/, uint32 action)
+        {
+            player->PlayerTalkClass->ClearMenus();
+            switch (action)
+            {
+            case GOSSIP_ACTION_INFO_DEF:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+
+		int lvl=int(player->getLevel());
+		me->setFaction(14);
+		me->SetLevel(lvl);
+		me->SetMaxHealth(lvl * 60);
+		me->SetHealth(lvl * 60);
+		if (lvl > 20)
+		{
+			me->SetMaxHealth(lvl * 100);
+			me->SetHealth(lvl * 100);
+
+		}
+
+
+		if (lvl > 40)
+		{
+			me->SetMaxHealth(lvl * 200);
+			me->SetHealth(lvl * 200);
+
+		}
+
+		if (lvl > 70)
+		{
+			me->SetMaxHealth(lvl * 300);
+			me->SetHealth(lvl * 300);
+
+		}
+
+
+
+		if (lvl > 80)
+		{
+			me->SetMaxHealth(lvl * 400);
+			me->SetHealth(lvl * 400);
+
+		}
+
+		if (lvl > 85)
+		{
+			me->SetMaxHealth(lvl * 500);
+			me->SetHealth(lvl * 500);
+
+		}
+
+		//me->UpdateMaxHealth();
+		me->SetFullHealth();
+		uint32 dmg = 10;
+                dmg = (lvl * 10);
+		if (lvl > 20)
+			dmg = (lvl * 15);
+
+		if (lvl > 40)
+			dmg =  (lvl * 25);
+
+		if (lvl > 70)
+			dmg = (lvl * 35);
+
+
+		if (lvl > 80)
+			dmg = (lvl * 70);
+
+		if (lvl >= 86)
+			dmg = dmg + (lvl * 80);
+			
+
+		
+		//me->SetBonusDamage(dmg);
+		dmg=dmg/2;me->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, dmg);
+		me->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(OFF_ATTACK, MINDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(OFF_ATTACK, MAXDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(RANGED_ATTACK, MINDAMAGE, dmg);
+		me->SetBaseWeaponDamage(RANGED_ATTACK, MAXDAMAGE, dmg);
+		/*me->SetStatFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, dmg);*/
+		me->SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, dmg);
+		me->UpdateDamagePhysical(BASE_ATTACK);
+	    me->UpdateDamagePhysical(OFF_ATTACK);
+	     me->UpdateAttackPowerAndDamage();
+		//me->AI()->EnterEvadeMode();
+ break;
+}
+switch (action)
+            {
+case GOSSIP_ACTION_INFO_DEF+1:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+
+		int lvl=int(player->getLevel());
+		int eid = int(creature->GetEntry());
+		int fl=int(irand(1,8));
+		std::list<Creature*> summons;
+		QueryResult result = WorldDatabase.PQuery("SELECT count(id) as sl FROM pknpc where cid= %u;",player->GetGUID());if (result){Field* fields = result->Fetch();if (fields[0].GetUInt32()>=4) {player->GetSession()->SendNotification(_StringToUTF8b("你已经有4个招募者了！"));return false;} }if (summons.size() >= 4)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("你已经有4个招募者了！"));
+			return false;
+}
+
+		player->GetAllMinionsByEntry(summons, eid);
+
+		if (summons.size() >= 1)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("你已经有这个招募者了！"));
+			return false;
+}
+
+
+
+		SummonPropertiesEntry const* properties = sSummonPropertiesStore.LookupEntry(713);
+		TempSummon *summon = player->GetMap()->SummonCreature(eid, *player, properties, 0, player);
+		if (!summon)
+			return true;
+        me->setDeathState(JUST_DIED);
+        me->RemoveCorpse();
+        me->SetHealth(0); // just for nice GM-mode view
+		((Guardian*)summon)->InitStatsForLevel(lvl);
+		summon->setFaction(player->getFaction());
+		((Minion*)summon)->SetFollowAngle(fl);
+                summon->GetMotionMaster()->MoveFollow(player, fl, summon->GetFollowAngle());
+                
+                summon->SetLevel(lvl);
+		summon->SetMaxHealth(lvl * 60);
+		summon->SetHealth(lvl * 60);
+		if (lvl > 20)
+		{
+			summon->SetMaxHealth(lvl * 100);
+			summon->SetHealth(lvl * 100);
+
+		}
+		if (lvl > 40)
+		{
+			summon->SetMaxHealth(lvl * 200);
+			summon->SetHealth(lvl * 200);
+
+		}
+		if (lvl > 70)
+		{
+			summon->SetMaxHealth(lvl * 300);
+			summon->SetHealth(lvl * 300);
+
+		}
+		if (lvl > 80)
+		{
+			summon->SetMaxHealth(lvl * 500);
+			summon->SetHealth(lvl * 500);
+
+		}
+		if (lvl > 85)
+		{
+			summon->SetMaxHealth(lvl * 1000);
+			summon->SetHealth(lvl * 1000);
+
+		}
+		summon->SetFullHealth();
+		uint32 dmg = 10;
+                dmg = (lvl * 10);
+		if (lvl > 20)
+			dmg = (lvl * 15);
+
+		if (lvl > 40)
+			dmg =  (lvl * 25);
+
+		if (lvl > 70)
+			dmg = (lvl * 35);
+
+
+		if (lvl > 80)
+			dmg = (lvl * 70);
+
+		if (lvl >= 86)
+			dmg = dmg + (lvl * 80);
+			
+		dmg=dmg/2+1;summon->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, dmg);
+		//summon->SetBaseWeaponDamage(OFF_ATTACK, MINDAMAGE, dmg);
+		//summon->SetBaseWeaponDamage(OFF_ATTACK, MAXDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(RANGED_ATTACK, MINDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(RANGED_ATTACK, MAXDAMAGE, dmg);
+		/*summon->SetStatFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, dmg);
+		*/summon->SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, dmg);
+	     summon->UpdateAttackPowerAndDamage();WorldDatabase.PExecute("DELETE FROM pknpc WHERE cid = %u and pknpcid=%u;", player->GetGUID(),eid);WorldDatabase.PExecute("INSERT INTO pknpc (cid,pknpcid) VALUES (%u, %u);" , player->GetGUID(),eid );
+			//summon->AI()->EnterEvadeMode();
+
+break;
+}		
+switch (action)
+            {
+case GOSSIP_ACTION_INFO_DEF+2:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+		int eid = int(creature->GetEntry());
+		std::list<Creature*> summons;
+
+		player->GetAllMinionsByEntry(summons, eid);
+
+		if (summons.size() < 1)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("当前没有这个招募者！"));
+			return false;
+}
+
+
+		if (summons.size() >= 1)
+		{
+        me->setDeathState(JUST_DIED);
+        me->RemoveCorpse();
+        me->SetHealth(0); // just for nice GM-mode view
+		player->GetSession()->SendNotification(_StringToUTF8b("解散成功！"));WorldDatabase.PExecute("DELETE FROM pknpc WHERE cid = %u and pknpcid=%u;", player->GetGUID(),eid);
+			return true;
+}
+
+}			
+
+
+            return true;
+}
+
+    CreatureAI* GetAI(Creature* creature) const
+    {
+        return new boss_bd_onyxiaAI (creature);
+    }
+
+    struct boss_bd_onyxiaAI : public ScriptedAI
+    {
+        boss_bd_onyxiaAI(Creature* creature) : ScriptedAI(creature)
+        {
+            instance = creature->GetInstanceScript();
+        }
+
+        InstanceScript* instance;
+        EventMap events;
+        uint32 m_uiDistancesCheckTimer;
+        uint32 m_uiPowerTimer;
+
+        void Reset()
+        {
+            if (irand(0,8)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+            //events.Reset();
+        }
+
+      
+
+        
+   void UpdatePower()
+    {
+if (me->GetPower(POWER_RAGE) < me->GetMaxPower(POWER_RAGE)/3)
+me->SetPower(POWER_RAGE, (me->GetMaxPower(POWER_RAGE)));
+
+if (me->GetPower(POWER_ENERGY) < me->GetMaxPower(POWER_ENERGY)/3)
+me->SetPower(POWER_ENERGY, (me->GetMaxPower(POWER_ENERGY)));
+
+if (me->GetPower(POWER_MANA) < me->GetMaxPower(POWER_MANA)/3)
+me->SetPower(POWER_MANA, (me->GetMaxPower(POWER_MANA)));if (me->GetPower(POWER_RUNIC_POWER) < me->GetMaxPower(POWER_RUNIC_POWER)/3) me->SetPower(POWER_RUNIC_POWER, (me->GetMaxPower(POWER_RUNIC_POWER)));if (me->GetPower(POWER_FOCUS) < me->GetMaxPower(POWER_FOCUS)/3) me->SetPower(POWER_FOCUS, (me->GetMaxPower(POWER_FOCUS)));
+    }
+
+    void JustDied(Unit* killer)
+    {
+    if (irand(0,8)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+    }
+
+
+        
+
+        void EnterCombat(Unit* /*who*/)
+        {
+            if (irand(0,58)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+            m_uiPowerTimer = 2000;
+            m_uiDistancesCheckTimer = 10000;
+            
+            
+            
+        }
+
+/*        void EnterEvadeMode()
+        {
+            //me->DespawnOrUnsummon(100);
+        }*/
+
+        void UpdateAI(uint32 diff)
+        {
+            if (!UpdateVictim())
+                return;
+
+             uint8 lvl = me->getLevel();
+             Unit* opponent = me->GetVictim();
+
+
+if (!opponent)
+return;
+float meleedist = me->GetDistance(opponent);
+	    if (_isnan(meleedist))
+		return;
+            if (meleedist>30) 
+                return;
+
+                if (me->HasUnitState(UNIT_STATE_CASTING))
+                    return;
+
+
+    uint32 SPELLA =686;
+    uint32 SPELLB =172;
+    uint32 SPELLC =689;
+    uint32 SPELLD =696;
+
+if (lvl>=10 && irand(0,8)==1)
+{
+    SPELLA =30108;
+    SPELLB =29722;
+    SPELLC =17962;
+    SPELLD =755;	
+}
+
+if (lvl>=20 && irand(0,8)==1)
+{
+    SPELLA =348;
+    SPELLB =6353;
+    SPELLC =47838;
+    SPELLD =688;	
+}
+
+if (lvl>=30 && irand(0,8)==1)
+{
+    SPELLA =1120;
+    SPELLB =59172;
+    SPELLC =5740;
+    SPELLD =50589;
+}
+
+if (lvl>=40 && irand(0,8)==1)
+{
+    SPELLA =1949;
+    SPELLB =47864;
+    SPELLC =47897;
+   SPELLD =132;
+}
+
+if (lvl>=50 && irand(0,8)==1)
+{
+    SPELLA =5138;
+    SPELLB =30283;
+    SPELLC = 47860;
+    SPELLD =47889;	
+}
+
+if (lvl>=60 && irand(0,8)==1)
+{
+    SPELLA =40504;
+    SPELLB =1490;
+    SPELLC =40599;
+    //SPELLD =119898;	
+}
+
+if (lvl>=70 && irand(0,8)==1)
+{
+    SPELLA =59092;
+    SPELLB =30405;
+    SPELLC =47811;
+    SPELLD =60004;	
+}
+
+if (lvl>=76 && irand(0,8)==1)
+{
+    SPELLA =65810;
+    SPELLB =65814;
+    SPELLC =65815;
+    SPELLD =61371;	
+}
+
+if (lvl>=80 && irand(0,8)==1)
+{
+    
+    SPELLA =47809;
+    SPELLB =65821;
+    SPELLC =65812;
+    //SPELLD =67514;	
+}
+
+
+
+            if (m_uiPowerTimer <= diff && GetHealthPCT(me) < 30)
+            {
+               DoCast(me, 61371);
+               m_uiPowerTimer = 2000;
+            }
+            else m_uiPowerTimer -= diff;
+
+            if (m_uiDistancesCheckTimer <= diff  && GetHealthPCT(me) < 10)
+            {
+                    me->AddAura(5016, me);
+
+                m_uiDistancesCheckTimer = 5000;
+            }
+            else m_uiDistancesCheckTimer -= diff;if (irand(0,3)==0) {if (irand(0,180)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}}
+
+          //  events.Update(diff);
+
+if (irand(0, 30) == 0) DoCastVictim(SPELLA);
+else if (irand(0, 30) == 1) DoCastVictim(SPELLB);
+else if (irand(0, 30) == 2) DoCastVictim(SPELLC);
+else if (irand(0, 30) == 3) DoCastVictim(SPELLC);
+else if (irand(0, 30) == 4) DoCast(me, SPELLD);
+if (me->GetPower(POWER_RAGE) < me->GetMaxPower(POWER_RAGE)/3)me->SetPower(POWER_RAGE, (me->GetMaxPower(POWER_RAGE)));if (me->GetPower(POWER_ENERGY) < me->GetMaxPower(POWER_ENERGY)/3)me->SetPower(POWER_ENERGY, (me->GetMaxPower(POWER_ENERGY)));if (me->GetPower(POWER_MANA) < me->GetMaxPower(POWER_MANA)/3)me->SetPower(POWER_MANA, (me->GetMaxPower(POWER_MANA)));if (me->GetPower(POWER_RUNIC_POWER) < me->GetMaxPower(POWER_RUNIC_POWER)/3) me->SetPower(POWER_RUNIC_POWER, (me->GetMaxPower(POWER_RUNIC_POWER)));if (me->GetPower(POWER_FOCUS) < me->GetMaxPower(POWER_FOCUS)/3) me->SetPower(POWER_FOCUS, (me->GetMaxPower(POWER_FOCUS)));
+           /* while (uint32 eventId = events.ExecuteEvent())
+            {
+                switch (eventId)
+                {
+                    case EVENT_CLASSA:
+                    DoCastVictim(SPELLA);
+                    
+                    events.ScheduleEvent(EVENT_CLASSA, urand(2000, 4000));
+                    break;                       
+
+                    case EVENT_CLASSB:
+                    DoCastVictim(SPELLB);
+                    
+                    break;
+
+                    case EVENT_CLASSC:
+                    DoCastVictim(SPELLC);
+                    if (irand(0,6)==1) Talk(1);
+                    
+                    if (irand(0,12)==1) DoCast(me,SPELLD);
+
+                    
+                    break;
+
+                    default:
+                    break;
+                }
+            }*/
+
+if (me->HasUnitState(UNIT_STATE_CASTING)) return;if (irand(0,2)==0) DoMeleeAttackIfReady(); else             DoSpellAttackIfReady(686);
+        }
+    };
+};
+
+class class_npcms : public CreatureScript
+{
+public:
+    class_npcms() : CreatureScript("class_npcms") { }
+
+ bool OnGossipHello(Player* player, Creature* creature)
+        {
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("挑战"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF );
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("招募"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("解散"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+2);
+            player->SEND_GOSSIP_MENU(907, creature->GetGUID());
+
+            return true;
+        }
+
+        bool OnGossipSelect(Player* player, Creature* creature, uint32 /*sender*/, uint32 action)
+        {
+            player->PlayerTalkClass->ClearMenus();
+            switch (action)
+            {
+            case GOSSIP_ACTION_INFO_DEF:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+
+		int lvl=int(player->getLevel());
+		me->setFaction(14);
+		me->SetLevel(lvl);
+		me->SetMaxHealth(lvl * 60);
+		me->SetHealth(lvl * 60);
+		if (lvl > 20)
+		{
+			me->SetMaxHealth(lvl * 100);
+			me->SetHealth(lvl * 100);
+
+		}
+
+
+		if (lvl > 40)
+		{
+			me->SetMaxHealth(lvl * 200);
+			me->SetHealth(lvl * 200);
+
+		}
+
+		if (lvl > 70)
+		{
+			me->SetMaxHealth(lvl * 300);
+			me->SetHealth(lvl * 300);
+
+		}
+
+
+
+		if (lvl > 80)
+		{
+			me->SetMaxHealth(lvl * 400);
+			me->SetHealth(lvl * 400);
+
+		}
+
+		if (lvl > 85)
+		{
+			me->SetMaxHealth(lvl * 500);
+			me->SetHealth(lvl * 500);
+
+		}
+
+		//me->UpdateMaxHealth();
+		me->SetFullHealth();
+		uint32 dmg = 10;
+                dmg = (lvl * 10);
+		if (lvl > 20)
+			dmg = (lvl * 15);
+
+		if (lvl > 40)
+			dmg =  (lvl * 25);
+
+		if (lvl > 70)
+			dmg = (lvl * 35);
+
+
+		if (lvl > 80)
+			dmg = (lvl * 70);
+
+		if (lvl >= 86)
+			dmg = dmg + (lvl * 80);
+			
+
+		
+		//me->SetBonusDamage(dmg);
+		dmg=dmg/2;me->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, dmg);
+		me->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(OFF_ATTACK, MINDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(OFF_ATTACK, MAXDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(RANGED_ATTACK, MINDAMAGE, dmg);
+		me->SetBaseWeaponDamage(RANGED_ATTACK, MAXDAMAGE, dmg);
+/*		me->SetStatFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, dmg);*/
+		me->SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, dmg);
+		me->UpdateDamagePhysical(BASE_ATTACK);
+	    me->UpdateDamagePhysical(OFF_ATTACK);
+	     me->UpdateAttackPowerAndDamage();
+		//me->AI()->EnterEvadeMode();
+ break;
+}
+switch (action)
+            {
+case GOSSIP_ACTION_INFO_DEF+1:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+
+		int lvl=int(player->getLevel());
+		int eid = int(creature->GetEntry());
+		int fl=int(irand(1,8));
+		std::list<Creature*> summons;
+		QueryResult result = WorldDatabase.PQuery("SELECT count(id) as sl FROM pknpc where cid= %u;",player->GetGUID());if (result){Field* fields = result->Fetch();if (fields[0].GetUInt32()>=4) {player->GetSession()->SendNotification(_StringToUTF8b("你已经有4个招募者了！"));return false;} }if (summons.size() >= 4)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("你已经有4个招募者了！"));
+			return false;
+}
+
+		player->GetAllMinionsByEntry(summons, eid);
+
+		if (summons.size() >= 1)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("你已经有这个招募者了！"));
+			return false;
+}
+
+
+
+		SummonPropertiesEntry const* properties = sSummonPropertiesStore.LookupEntry(713);
+		TempSummon *summon = player->GetMap()->SummonCreature(eid, *player, properties, 0, player);
+		if (!summon)
+			return true;
+        me->setDeathState(JUST_DIED);
+        me->RemoveCorpse();
+        me->SetHealth(0); // just for nice GM-mode view
+		((Guardian*)summon)->InitStatsForLevel(lvl);
+		summon->setFaction(player->getFaction());
+		((Minion*)summon)->SetFollowAngle(fl);
+                summon->GetMotionMaster()->MoveFollow(player, fl, summon->GetFollowAngle());
+                
+                summon->SetLevel(lvl);
+		summon->SetMaxHealth(lvl * 60);
+		summon->SetHealth(lvl * 60);
+		if (lvl > 20)
+		{
+			summon->SetMaxHealth(lvl * 100);
+			summon->SetHealth(lvl * 100);
+
+		}
+		if (lvl > 40)
+		{
+			summon->SetMaxHealth(lvl * 200);
+			summon->SetHealth(lvl * 200);
+
+		}
+		if (lvl > 70)
+		{
+			summon->SetMaxHealth(lvl * 300);
+			summon->SetHealth(lvl * 300);
+
+		}
+		if (lvl > 80)
+		{
+			summon->SetMaxHealth(lvl * 500);
+			summon->SetHealth(lvl * 500);
+
+		}
+		if (lvl > 85)
+		{
+			summon->SetMaxHealth(lvl * 1000);
+			summon->SetHealth(lvl * 1000);
+
+		}
+		summon->SetFullHealth();
+		uint32 dmg = 10;
+                dmg = (lvl * 10);
+		if (lvl > 20)
+			dmg = (lvl * 15);
+
+		if (lvl > 40)
+			dmg =  (lvl * 25);
+
+		if (lvl > 70)
+			dmg = (lvl * 35);
+
+
+		if (lvl > 80)
+			dmg = (lvl * 70);
+
+		if (lvl >= 86)
+			dmg = dmg + (lvl * 80);
+			
+		dmg=dmg/2+1;summon->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, dmg);
+		//summon->SetBaseWeaponDamage(OFF_ATTACK, MINDAMAGE, dmg);
+		//summon->SetBaseWeaponDamage(OFF_ATTACK, MAXDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(RANGED_ATTACK, MINDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(RANGED_ATTACK, MAXDAMAGE, dmg);
+		/*summon->SetStatFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, dmg);
+		*/summon->SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, dmg);
+	     summon->UpdateAttackPowerAndDamage();WorldDatabase.PExecute("DELETE FROM pknpc WHERE cid = %u and pknpcid=%u;", player->GetGUID(),eid);WorldDatabase.PExecute("INSERT INTO pknpc (cid,pknpcid) VALUES (%u, %u);" , player->GetGUID(),eid );
+			//summon->AI()->EnterEvadeMode();
+
+break;
+}		
+switch (action)
+            {
+case GOSSIP_ACTION_INFO_DEF+2:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+		int eid = int(creature->GetEntry());
+		std::list<Creature*> summons;
+
+		player->GetAllMinionsByEntry(summons, eid);
+
+		if (summons.size() < 1)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("当前没有这个招募者！"));
+			return false;
+}
+
+
+		if (summons.size() >= 1)
+		{
+        me->setDeathState(JUST_DIED);
+        me->RemoveCorpse();
+        me->SetHealth(0); // just for nice GM-mode view
+		player->GetSession()->SendNotification(_StringToUTF8b("解散成功！"));WorldDatabase.PExecute("DELETE FROM pknpc WHERE cid = %u and pknpcid=%u;", player->GetGUID(),eid);
+			return true;
+}
+
+}			
+
+
+            return true;
+}
+
+    CreatureAI* GetAI(Creature* creature) const
+    {
+        return new boss_bd_onyxiaAI (creature);
+    }
+
+    struct boss_bd_onyxiaAI : public ScriptedAI
+    {
+        boss_bd_onyxiaAI(Creature* creature) : ScriptedAI(creature)
+        {
+            instance = creature->GetInstanceScript();
+        }
+
+        InstanceScript* instance;
+        EventMap events;
+        uint32 m_uiDistancesCheckTimer;
+        uint32 m_uiPowerTimer;
+
+        void Reset()
+        {
+            if (irand(0,8)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+            //events.Reset();
+        }
+
+      
+
+        
+   void UpdatePower()
+    {
+if (me->GetPower(POWER_RAGE) < me->GetMaxPower(POWER_RAGE)/3)
+me->SetPower(POWER_RAGE, (me->GetMaxPower(POWER_RAGE)));
+
+if (me->GetPower(POWER_ENERGY) < me->GetMaxPower(POWER_ENERGY)/3)
+me->SetPower(POWER_ENERGY, (me->GetMaxPower(POWER_ENERGY)));
+
+if (me->GetPower(POWER_MANA) < me->GetMaxPower(POWER_MANA)/3)
+me->SetPower(POWER_MANA, (me->GetMaxPower(POWER_MANA)));if (me->GetPower(POWER_RUNIC_POWER) < me->GetMaxPower(POWER_RUNIC_POWER)/3) me->SetPower(POWER_RUNIC_POWER, (me->GetMaxPower(POWER_RUNIC_POWER)));if (me->GetPower(POWER_FOCUS) < me->GetMaxPower(POWER_FOCUS)/3) me->SetPower(POWER_FOCUS, (me->GetMaxPower(POWER_FOCUS)));
+    }
+
+    void JustDied(Unit* killer)
+    {
+    if (irand(0,8)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+    }
+
+
+        
+
+        void EnterCombat(Unit* /*who*/)
+        {
+             if (irand(0,58)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+            m_uiPowerTimer = 2000;
+            m_uiDistancesCheckTimer = 10000;
+            
+            
+            
+        }
+
+/*        void EnterEvadeMode()
+        {
+            //me->DespawnOrUnsummon(100);
+        }*/
+
+        void UpdateAI(uint32 diff)
+        {
+            if (!UpdateVictim())
+                return;
+
+             uint8 lvl = me->getLevel();
+             Unit* opponent = me->GetVictim();
+
+
+if (!opponent)
+return;
+float meleedist = me->GetDistance(opponent);
+	    if (_isnan(meleedist))
+		return;
+            if (meleedist>30) 
+                return;
+
+                if (me->HasUnitState(UNIT_STATE_CASTING))
+                    return;
+
+
+   uint32 SPELLA =585;
+    uint32 SPELLB =589;
+    uint32 SPELLC =48125;
+    uint32 SPELLD =2061;
+
+if (lvl>=10 && irand(0,8)==1)
+{
+    SPELLA =48127;
+    SPELLB =15407;
+    SPELLC =48300;
+    SPELLD =21562;	
+}
+
+if (lvl>=20 && irand(0,8)==1)
+{
+    SPELLA =14914;
+    SPELLB =2944;
+    SPELLC =48160;
+    SPELLD =586;	
+}
+
+if (lvl>=30 && irand(0,8)==1)
+{
+    SPELLA =34914;
+    SPELLB =9484;
+    SPELLC =34433;
+    SPELLD =2050;	
+}
+
+if (lvl>=40 && irand(0,8)==1)
+{
+    SPELLA =48158;
+    SPELLB =40504;
+    SPELLC =48123;
+    SPELLD =6346;
+}
+
+if (lvl>=50 && irand(0,8)==1)
+{
+    SPELLA =15487;
+   SPELLB =48156;
+    SPELLC =32375;
+    //SPELLD =40504;	
+}
+
+if (lvl>=60 && irand(0,8)==1)
+{
+    SPELLA =64044;
+    SPELLB =15487;
+    SPELLC =40599;
+    SPELLD =10060;	
+}
+
+if (lvl>=76 && irand(0,8)==1)
+{
+    SPELLA =65488;
+    SPELLB =65492;
+    SPELLC =10890;
+    SPELLD =48072;	
+}
+
+if (lvl>=80 && irand(0,8)==1)
+{
+    SPELLA =65542;
+    SPELLB =65490;
+    SPELLC =65541;
+    SPELLD =66177;	
+}
+
+
+            if (m_uiPowerTimer <= diff && GetHealthPCT(me) < 30)
+            {
+               DoCast(me, 61371);
+               m_uiPowerTimer = 2000;
+            }
+            else m_uiPowerTimer -= diff;
+
+            if (m_uiDistancesCheckTimer <= diff  && GetHealthPCT(me) < 10)
+            {
+                    me->AddAura(5016, me);
+
+                m_uiDistancesCheckTimer = 5000;
+            }
+            else m_uiDistancesCheckTimer -= diff;if (irand(0,3)==0) {if (irand(0,180)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}}
+
+            //events.Update(diff);
+
+if (irand(0, 30) == 0) DoCastVictim(SPELLA);
+else if (irand(0, 30) == 1) DoCastVictim(SPELLB);
+else if (irand(0, 30) == 2) DoCastVictim(SPELLC);
+else if (irand(0, 30) == 3) DoCastVictim(SPELLC);
+else if (irand(0, 30) == 4) DoCast(me, SPELLD);
+if (me->GetPower(POWER_RAGE) < me->GetMaxPower(POWER_RAGE)/3)me->SetPower(POWER_RAGE, (me->GetMaxPower(POWER_RAGE)));if (me->GetPower(POWER_ENERGY) < me->GetMaxPower(POWER_ENERGY)/3)me->SetPower(POWER_ENERGY, (me->GetMaxPower(POWER_ENERGY)));if (me->GetPower(POWER_MANA) < me->GetMaxPower(POWER_MANA)/3)me->SetPower(POWER_MANA, (me->GetMaxPower(POWER_MANA)));if (me->GetPower(POWER_RUNIC_POWER) < me->GetMaxPower(POWER_RUNIC_POWER)/3) me->SetPower(POWER_RUNIC_POWER, (me->GetMaxPower(POWER_RUNIC_POWER)));if (me->GetPower(POWER_FOCUS) < me->GetMaxPower(POWER_FOCUS)/3) me->SetPower(POWER_FOCUS, (me->GetMaxPower(POWER_FOCUS)));
+           /* while (uint32 eventId = events.ExecuteEvent())
+            {
+                switch (eventId)
+                {
+                    case EVENT_CLASSA:
+                    DoCastVictim(SPELLA);
+                    
+                    events.ScheduleEvent(EVENT_CLASSA, urand(2000, 4000));
+                    break;                       
+
+                    case EVENT_CLASSB:
+                    DoCastVictim(SPELLB);
+                    
+                    break;
+
+                    case EVENT_CLASSC:
+                    DoCastVictim(SPELLC);
+                    if (irand(0,6)==1) Talk(1);
+                    
+                    if (irand(0,12)==1) DoCast(me,SPELLD);
+
+                    
+                    break;
+
+                    default:
+                    break;
+                }
+            }*/
+
+if (me->HasUnitState(UNIT_STATE_CASTING)) return;if (irand(0,2)==0) DoMeleeAttackIfReady(); else             DoSpellAttackIfReady(585);
+        }
+    };
+};
+
+class class_npclr : public CreatureScript
+{
+public:
+    class_npclr() : CreatureScript("class_npclr") { }
+
+ bool OnGossipHello(Player* player, Creature* creature)
+        {
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("挑战"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF );
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("招募"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("解散"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+2);
+            player->SEND_GOSSIP_MENU(907, creature->GetGUID());
+
+            return true;
+        }
+
+        bool OnGossipSelect(Player* player, Creature* creature, uint32 /*sender*/, uint32 action)
+        {
+            player->PlayerTalkClass->ClearMenus();
+            switch (action)
+            {
+            case GOSSIP_ACTION_INFO_DEF:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+
+		int lvl=int(player->getLevel());
+		me->setFaction(14);
+		me->SetLevel(lvl);
+		me->SetMaxHealth(lvl * 60);
+		me->SetHealth(lvl * 60);
+		if (lvl > 20)
+		{
+			me->SetMaxHealth(lvl * 100);
+			me->SetHealth(lvl * 100);
+
+		}
+
+
+		if (lvl > 40)
+		{
+			me->SetMaxHealth(lvl * 200);
+			me->SetHealth(lvl * 200);
+
+		}
+
+		if (lvl > 70)
+		{
+			me->SetMaxHealth(lvl * 300);
+			me->SetHealth(lvl * 300);
+
+		}
+
+
+
+		if (lvl > 80)
+		{
+			me->SetMaxHealth(lvl * 400);
+			me->SetHealth(lvl * 400);
+
+		}
+
+		if (lvl > 85)
+		{
+			me->SetMaxHealth(lvl * 500);
+			me->SetHealth(lvl * 500);
+
+		}
+
+		//me->UpdateMaxHealth();
+		me->SetFullHealth();
+		uint32 dmg = 10;
+                dmg = (lvl * 10);
+		if (lvl > 20)
+			dmg = (lvl * 15);
+
+		if (lvl > 40)
+			dmg =  (lvl * 25);
+
+		if (lvl > 70)
+			dmg = (lvl * 35);
+
+
+		if (lvl > 80)
+			dmg = (lvl * 70);
+
+		if (lvl >= 86)
+			dmg = dmg + (lvl * 80);
+			
+
+		
+		//me->SetBonusDamage(dmg);
+		dmg=dmg/2;me->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, dmg);
+		me->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(OFF_ATTACK, MINDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(OFF_ATTACK, MAXDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(RANGED_ATTACK, MINDAMAGE, dmg);
+		me->SetBaseWeaponDamage(RANGED_ATTACK, MAXDAMAGE, dmg);
+/*		me->SetStatFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, dmg);*/
+		me->SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, dmg);
+		me->UpdateDamagePhysical(BASE_ATTACK);
+	    me->UpdateDamagePhysical(OFF_ATTACK);
+	     me->UpdateAttackPowerAndDamage();
+		//me->AI()->EnterEvadeMode();
+ break;
+}
+switch (action)
+            {
+case GOSSIP_ACTION_INFO_DEF+1:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+
+		int lvl=int(player->getLevel());
+		int eid = int(creature->GetEntry());
+		int fl=int(irand(1,8));
+		std::list<Creature*> summons;
+		QueryResult result = WorldDatabase.PQuery("SELECT count(id) as sl FROM pknpc where cid= %u;",player->GetGUID());if (result){Field* fields = result->Fetch();if (fields[0].GetUInt32()>=4) {player->GetSession()->SendNotification(_StringToUTF8b("你已经有4个招募者了！"));return false;} }if (summons.size() >= 4)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("你已经有4个招募者了！"));
+			return false;
+}
+
+		player->GetAllMinionsByEntry(summons, eid);
+
+		if (summons.size() >= 1)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("你已经有这个招募者了！"));
+			return false;
+}
+
+
+
+		SummonPropertiesEntry const* properties = sSummonPropertiesStore.LookupEntry(713);
+		TempSummon *summon = player->GetMap()->SummonCreature(eid, *player, properties, 0, player);
+		if (!summon)
+			return true;
+        me->setDeathState(JUST_DIED);
+        me->RemoveCorpse();
+        me->SetHealth(0); // just for nice GM-mode view
+		((Guardian*)summon)->InitStatsForLevel(lvl);
+		summon->setFaction(player->getFaction());
+		((Minion*)summon)->SetFollowAngle(fl);
+                summon->GetMotionMaster()->MoveFollow(player, fl, summon->GetFollowAngle());
+                
+                summon->SetLevel(lvl);
+		summon->SetMaxHealth(lvl * 60);
+		summon->SetHealth(lvl * 60);
+		if (lvl > 20)
+		{
+			summon->SetMaxHealth(lvl * 100);
+			summon->SetHealth(lvl * 100);
+
+		}
+		if (lvl > 40)
+		{
+			summon->SetMaxHealth(lvl * 200);
+			summon->SetHealth(lvl * 200);
+
+		}
+		if (lvl > 70)
+		{
+			summon->SetMaxHealth(lvl * 300);
+			summon->SetHealth(lvl * 300);
+
+		}
+		if (lvl > 80)
+		{
+			summon->SetMaxHealth(lvl * 500);
+			summon->SetHealth(lvl * 500);
+
+		}
+		if (lvl > 85)
+		{
+			summon->SetMaxHealth(lvl * 1000);
+			summon->SetHealth(lvl * 1000);
+
+		}
+		summon->SetFullHealth();
+		uint32 dmg = 10;
+                dmg = (lvl * 10);
+		if (lvl > 20)
+			dmg = (lvl * 15);
+
+		if (lvl > 40)
+			dmg =  (lvl * 25);
+
+		if (lvl > 70)
+			dmg = (lvl * 35);
+
+
+		if (lvl > 80)
+			dmg = (lvl * 70);
+
+		if (lvl >= 86)
+			dmg = dmg + (lvl * 80);
+			
+		dmg=dmg/2+1;summon->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, dmg);
+		//summon->SetBaseWeaponDamage(OFF_ATTACK, MINDAMAGE, dmg);
+		//summon->SetBaseWeaponDamage(OFF_ATTACK, MAXDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(RANGED_ATTACK, MINDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(RANGED_ATTACK, MAXDAMAGE, dmg);
+		/*summon->SetStatFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, dmg);
+		*/summon->SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, dmg);
+	     summon->UpdateAttackPowerAndDamage();WorldDatabase.PExecute("DELETE FROM pknpc WHERE cid = %u and pknpcid=%u;", player->GetGUID(),eid);WorldDatabase.PExecute("INSERT INTO pknpc (cid,pknpcid) VALUES (%u, %u);" , player->GetGUID(),eid );
+			//summon->AI()->EnterEvadeMode();
+
+break;
+}		
+switch (action)
+            {
+case GOSSIP_ACTION_INFO_DEF+2:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+		int eid = int(creature->GetEntry());
+		std::list<Creature*> summons;
+
+		player->GetAllMinionsByEntry(summons, eid);
+
+		if (summons.size() < 1)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("当前没有这个招募者！"));
+			return false;
+}
+
+
+		if (summons.size() >= 1)
+		{
+        me->setDeathState(JUST_DIED);
+        me->RemoveCorpse();
+        me->SetHealth(0); // just for nice GM-mode view
+		player->GetSession()->SendNotification(_StringToUTF8b("解散成功！"));WorldDatabase.PExecute("DELETE FROM pknpc WHERE cid = %u and pknpcid=%u;", player->GetGUID(),eid);
+			return true;
+}
+
+}			
+
+
+            return true;
+}
+
+    CreatureAI* GetAI(Creature* creature) const
+    {
+        return new boss_bd_onyxiaAI (creature);
+    }
+
+    struct boss_bd_onyxiaAI : public ScriptedAI
+    {
+        boss_bd_onyxiaAI(Creature* creature) : ScriptedAI(creature)
+        {
+            instance = creature->GetInstanceScript();
+        }
+
+        InstanceScript* instance;
+        EventMap events;
+        uint32 m_uiDistancesCheckTimer;
+        uint32 m_uiPowerTimer;
+
+        void Reset()
+        {
+        	me->setPowerType(POWER_FOCUS);
+            if (irand(0,8)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+            //events.Reset();
+        }
+
+      
+
+        
+   void UpdatePower()
+    {
+if (me->GetPower(POWER_RAGE) < me->GetMaxPower(POWER_RAGE)/3)
+me->SetPower(POWER_RAGE, (me->GetMaxPower(POWER_RAGE)));
+
+if (me->GetPower(POWER_ENERGY) < me->GetMaxPower(POWER_ENERGY)/3)
+me->SetPower(POWER_ENERGY, (me->GetMaxPower(POWER_ENERGY)));
+
+if (me->GetPower(POWER_MANA) < me->GetMaxPower(POWER_MANA)/3)
+me->SetPower(POWER_MANA, (me->GetMaxPower(POWER_MANA)));if (me->GetPower(POWER_RUNIC_POWER) < me->GetMaxPower(POWER_RUNIC_POWER)/3) me->SetPower(POWER_RUNIC_POWER, (me->GetMaxPower(POWER_RUNIC_POWER)));if (me->GetPower(POWER_FOCUS) < me->GetMaxPower(POWER_FOCUS)/3) me->SetPower(POWER_FOCUS, (me->GetMaxPower(POWER_FOCUS)));
+    }
+
+    void JustDied(Unit* killer)
+    {
+    if (irand(0,8)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+    }
+
+
+        
+
+        void EnterCombat(Unit* /*who*/)
+        {
+            if (irand(0,58)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+            m_uiPowerTimer = 2000;
+            m_uiDistancesCheckTimer = 10000;
+            
+            
+            
+        }
+
+/*        void EnterEvadeMode()
+        {
+            //me->DespawnOrUnsummon(100);
+        }*/
+
+        void UpdateAI(uint32 diff)
+        {
+            if (!UpdateVictim())
+                return;
+
+             uint8 lvl = me->getLevel();
+             Unit* opponent = me->GetVictim();
+
+
+if (!opponent)
+return;
+float meleedist = me->GetDistance(opponent);
+	    if (_isnan(meleedist))
+		return;
+            if (meleedist>30) 
+                return;
+
+                if (me->HasUnitState(UNIT_STATE_CASTING))
+                    return;
+
+
+    uint32 SPELLA =2643;
+    uint32 SPELLB =1499;
+    uint32 SPELLC =34490;
+    uint32 SPELLD =2457;
+
+if (lvl>=10 && irand(0,8)==1)
+{
+    SPELLA =3044;
+    SPELLB =56641;
+    SPELLC =5116;
+    //SPELLD =883;	
+}
+
+if (lvl>=20 && irand(0,8)==1)
+{
+    SPELLA =3043;
+    SPELLB =3045;
+    SPELLC =19386;
+    SPELLD =13165;	
+}
+
+if (lvl>=30 && irand(0,8)==1)
+{
+    SPELLA =19577;
+    SPELLB =19801;
+   SPELLC =58434;
+    SPELLD =40504;	
+}
+
+if (lvl>=40 && irand(0,8)==1)
+{
+    SPELLA =49052;
+    SPELLB =19801;
+    SPELLC =13809;
+    //SPELLD =109260;	
+}
+
+if (lvl>=50 && irand(0,8)==1)
+{
+    SPELLA =49052;
+    SPELLB =2974;
+    SPELLC =3045;
+    SPELLD =13159;	
+}
+
+if (lvl>=60 && irand(0,8)==1)
+{
+    SPELLA =53209;
+    SPELLB =49056;
+    SPELLC =34600;
+    SPELLD =5118;
+}
+
+if (lvl>=70 && irand(0,8)==1)
+{
+    SPELLA =63672;
+    SPELLB =60053;
+    SPELLC =34600;
+    SPELLD =19263;	
+}
+
+if (lvl>=75 && irand(0,8)==1)
+{
+    SPELLA =49001;
+    SPELLB =49045;
+    SPELLC =53338;
+    SPELLD =51753;	
+}
+
+if (lvl>=76 && irand(0,8)==1)
+{
+    SPELLA =65883;
+    SPELLB =65866;
+    SPELLC =65867;
+   // SPELLD =67777;	
+}
+
+
+if (lvl>=80 && irand(0,8)==1)
+{
+    SPELLA =65880;
+    SPELLB =66207;
+    SPELLC =65877;
+    SPELLD =65871;	
+}
+
+            if (m_uiPowerTimer <= diff && GetHealthPCT(me) < 30)
+            {
+               DoCast(me, 61371);
+               m_uiPowerTimer = 2000;
+            }
+            else m_uiPowerTimer -= diff;
+
+            if (m_uiDistancesCheckTimer <= diff  && GetHealthPCT(me) < 10)
+            {
+                    me->AddAura(5016, me);
+
+                m_uiDistancesCheckTimer = 5000;
+            }
+            else m_uiDistancesCheckTimer -= diff;if (irand(0,3)==0) {if (irand(0,180)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}}
+
+           // events.Update(diff);
+
+if (irand(0, 30) == 0) DoCastVictim(SPELLA);
+else if (irand(0, 30) == 1) DoCastVictim(SPELLB);
+else if (irand(0, 30) == 2) DoCastVictim(SPELLC);
+else if (irand(0, 30) == 3) DoCastVictim(SPELLC);
+else if (irand(0, 30) == 4) DoCast(me, SPELLD);
+if (me->GetPower(POWER_RAGE) < me->GetMaxPower(POWER_RAGE)/3)me->SetPower(POWER_RAGE, (me->GetMaxPower(POWER_RAGE)));if (me->GetPower(POWER_ENERGY) < me->GetMaxPower(POWER_ENERGY)/3)me->SetPower(POWER_ENERGY, (me->GetMaxPower(POWER_ENERGY)));if (me->GetPower(POWER_MANA) < me->GetMaxPower(POWER_MANA)/3)me->SetPower(POWER_MANA, (me->GetMaxPower(POWER_MANA)));if (me->GetPower(POWER_RUNIC_POWER) < me->GetMaxPower(POWER_RUNIC_POWER)/3) me->SetPower(POWER_RUNIC_POWER, (me->GetMaxPower(POWER_RUNIC_POWER)));if (me->GetPower(POWER_FOCUS) < me->GetMaxPower(POWER_FOCUS)/3) me->SetPower(POWER_FOCUS, (me->GetMaxPower(POWER_FOCUS)));
+           /* while (uint32 eventId = events.ExecuteEvent())
+            {
+                switch (eventId)
+                {
+                    case EVENT_CLASSA:
+                    DoCastVictim(SPELLA);
+                    
+                    events.ScheduleEvent(EVENT_CLASSA, urand(2000, 4000));
+                    break;                       
+
+                    case EVENT_CLASSB:
+                    DoCastVictim(SPELLB);
+                    
+                    break;
+
+                    case EVENT_CLASSC:
+                    DoCastVictim(SPELLC);
+                    if (irand(0,6)==1) Talk(1);
+                    
+                    if (irand(0,12)==1) DoCast(me,SPELLD);
+
+                    
+                    break;
+
+                    default:
+                    break;
+                }
+            }
+*/
+if (me->HasUnitState(UNIT_STATE_CASTING)) return;if (irand(0,2)==0) DoMeleeAttackIfReady(); else             DoSpellAttackIfReady(75);
+        }
+    };
+};
+
+class class_npcdk : public CreatureScript
+{
+public:
+    class_npcdk() : CreatureScript("class_npcdk") { }
+
+ bool OnGossipHello(Player* player, Creature* creature)
+        {
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("挑战"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF );
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("招募"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("解散"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+2);
+            player->SEND_GOSSIP_MENU(907, creature->GetGUID());
+
+            return true;
+        }
+
+        bool OnGossipSelect(Player* player, Creature* creature, uint32 /*sender*/, uint32 action)
+        {
+            player->PlayerTalkClass->ClearMenus();
+            switch (action)
+            {
+            case GOSSIP_ACTION_INFO_DEF:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+
+		int lvl=int(player->getLevel());
+		me->setFaction(14);
+		me->SetLevel(lvl);
+		me->SetMaxHealth(lvl * 60);
+		me->SetHealth(lvl * 60);
+		if (lvl > 20)
+		{
+			me->SetMaxHealth(lvl * 100);
+			me->SetHealth(lvl * 100);
+
+		}
+
+
+		if (lvl > 40)
+		{
+			me->SetMaxHealth(lvl * 200);
+			me->SetHealth(lvl * 200);
+
+		}
+
+		if (lvl > 70)
+		{
+			me->SetMaxHealth(lvl * 300);
+			me->SetHealth(lvl * 300);
+
+		}
+
+
+
+		if (lvl > 80)
+		{
+			me->SetMaxHealth(lvl * 400);
+			me->SetHealth(lvl * 400);
+
+		}
+
+		if (lvl > 85)
+		{
+			me->SetMaxHealth(lvl * 500);
+			me->SetHealth(lvl * 500);
+
+		}
+
+		//me->UpdateMaxHealth();
+		me->SetFullHealth();
+		uint32 dmg = 10;
+                dmg = (lvl * 10);
+		if (lvl > 20)
+			dmg = (lvl * 15);
+
+		if (lvl > 40)
+			dmg =  (lvl * 25);
+
+		if (lvl > 70)
+			dmg = (lvl * 35);
+
+
+		if (lvl > 80)
+			dmg = (lvl * 70);
+
+		if (lvl >= 86)
+			dmg = dmg + (lvl * 80);
+			
+
+		
+		//me->SetBonusDamage(dmg);
+		dmg=dmg/2;me->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, dmg);
+		me->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(OFF_ATTACK, MINDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(OFF_ATTACK, MAXDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(RANGED_ATTACK, MINDAMAGE, dmg);
+		me->SetBaseWeaponDamage(RANGED_ATTACK, MAXDAMAGE, dmg);
+/*		me->SetStatFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, dmg);*/
+		me->SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, dmg);
+		me->UpdateDamagePhysical(BASE_ATTACK);
+	    me->UpdateDamagePhysical(OFF_ATTACK);
+	     me->UpdateAttackPowerAndDamage();
+		//me->AI()->EnterEvadeMode();
+ break;
+}
+switch (action)
+            {
+case GOSSIP_ACTION_INFO_DEF+1:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+
+		int lvl=int(player->getLevel());
+		int eid = int(creature->GetEntry());
+		int fl=int(irand(1,8));
+		std::list<Creature*> summons;
+		QueryResult result = WorldDatabase.PQuery("SELECT count(id) as sl FROM pknpc where cid= %u;",player->GetGUID());if (result){Field* fields = result->Fetch();if (fields[0].GetUInt32()>=4) {player->GetSession()->SendNotification(_StringToUTF8b("你已经有4个招募者了！"));return false;} }if (summons.size() >= 4)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("你已经有4个招募者了！"));
+			return false;
+}
+
+		player->GetAllMinionsByEntry(summons, eid);
+
+		if (summons.size() >= 1)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("你已经有这个招募者了！"));
+			return false;
+}
+
+
+
+		SummonPropertiesEntry const* properties = sSummonPropertiesStore.LookupEntry(713);
+		TempSummon *summon = player->GetMap()->SummonCreature(eid, *player, properties, 0, player);
+		if (!summon)
+			return true;
+        me->setDeathState(JUST_DIED);
+        me->RemoveCorpse();
+        me->SetHealth(0); // just for nice GM-mode view
+		((Guardian*)summon)->InitStatsForLevel(lvl);
+		summon->setFaction(player->getFaction());
+		((Minion*)summon)->SetFollowAngle(fl);
+                summon->GetMotionMaster()->MoveFollow(player, fl, summon->GetFollowAngle());
+                
+                summon->SetLevel(lvl);
+		summon->SetMaxHealth(lvl * 60);
+		summon->SetHealth(lvl * 60);
+		if (lvl > 20)
+		{
+			summon->SetMaxHealth(lvl * 100);
+			summon->SetHealth(lvl * 100);
+
+		}
+		if (lvl > 40)
+		{
+			summon->SetMaxHealth(lvl * 200);
+			summon->SetHealth(lvl * 200);
+
+		}
+		if (lvl > 70)
+		{
+			summon->SetMaxHealth(lvl * 300);
+			summon->SetHealth(lvl * 300);
+
+		}
+		if (lvl > 80)
+		{
+			summon->SetMaxHealth(lvl * 500);
+			summon->SetHealth(lvl * 500);
+
+		}
+		if (lvl > 85)
+		{
+			summon->SetMaxHealth(lvl * 1000);
+			summon->SetHealth(lvl * 1000);
+
+		}
+		summon->SetFullHealth();
+		uint32 dmg = 10;
+                dmg = (lvl * 10);
+		if (lvl > 20)
+			dmg = (lvl * 15);
+
+		if (lvl > 40)
+			dmg =  (lvl * 25);
+
+		if (lvl > 70)
+			dmg = (lvl * 35);
+
+
+		if (lvl > 80)
+			dmg = (lvl * 70);
+
+		if (lvl >= 86)
+			dmg = dmg + (lvl * 80);
+			
+		dmg=dmg/2+1;summon->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, dmg);
+		//summon->SetBaseWeaponDamage(OFF_ATTACK, MINDAMAGE, dmg);
+		//summon->SetBaseWeaponDamage(OFF_ATTACK, MAXDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(RANGED_ATTACK, MINDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(RANGED_ATTACK, MAXDAMAGE, dmg);
+		/*summon->SetStatFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, dmg);
+		*/summon->SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, dmg);
+	     summon->UpdateAttackPowerAndDamage();WorldDatabase.PExecute("DELETE FROM pknpc WHERE cid = %u and pknpcid=%u;", player->GetGUID(),eid);WorldDatabase.PExecute("INSERT INTO pknpc (cid,pknpcid) VALUES (%u, %u);" , player->GetGUID(),eid );
+			//summon->AI()->EnterEvadeMode();
+
+break;
+}		
+switch (action)
+            {
+case GOSSIP_ACTION_INFO_DEF+2:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+		int eid = int(creature->GetEntry());
+		std::list<Creature*> summons;
+
+		player->GetAllMinionsByEntry(summons, eid);
+
+		if (summons.size() < 1)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("当前没有这个招募者！"));
+			return false;
+}
+
+
+		if (summons.size() >= 1)
+		{
+        me->setDeathState(JUST_DIED);
+        me->RemoveCorpse();
+        me->SetHealth(0); // just for nice GM-mode view
+		player->GetSession()->SendNotification(_StringToUTF8b("解散成功！"));WorldDatabase.PExecute("DELETE FROM pknpc WHERE cid = %u and pknpcid=%u;", player->GetGUID(),eid);
+			return true;
+}
+
+}			
+
+
+            return true;
+}
+
+    CreatureAI* GetAI(Creature* creature) const
+    {
+        return new boss_bd_onyxiaAI (creature);
+    }
+
+    struct boss_bd_onyxiaAI : public ScriptedAI
+    {
+        boss_bd_onyxiaAI(Creature* creature) : ScriptedAI(creature)
+        {
+            instance = creature->GetInstanceScript();
+        }
+
+        InstanceScript* instance;
+        EventMap events;
+        uint32 m_uiDistancesCheckTimer;
+        uint32 m_uiPowerTimer;
+
+        void Reset()
+        {
+                        me->setPowerType(POWER_RUNIC_POWER);
+            me->SetMaxPower(POWER_RUNIC_POWER, me->GetCreatePowers(POWER_RUNIC_POWER));
+            if (irand(0,8)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+            //events.Reset();
+        }
+
+      
+
+        
+   void UpdatePower()
+    {
+if (me->GetPower(POWER_RAGE) < me->GetMaxPower(POWER_RAGE)/3)
+me->SetPower(POWER_RAGE, (me->GetMaxPower(POWER_RAGE)));
+
+if (me->GetPower(POWER_ENERGY) < me->GetMaxPower(POWER_ENERGY)/3)
+me->SetPower(POWER_ENERGY, (me->GetMaxPower(POWER_ENERGY)));
+
+if (me->GetPower(POWER_MANA) < me->GetMaxPower(POWER_MANA)/3)
+me->SetPower(POWER_MANA, (me->GetMaxPower(POWER_MANA)));if (me->GetPower(POWER_RUNIC_POWER) < me->GetMaxPower(POWER_RUNIC_POWER)/3) me->SetPower(POWER_RUNIC_POWER, (me->GetMaxPower(POWER_RUNIC_POWER)));if (me->GetPower(POWER_FOCUS) < me->GetMaxPower(POWER_FOCUS)/3) me->SetPower(POWER_FOCUS, (me->GetMaxPower(POWER_FOCUS)));
+    }
+
+    void JustDied(Unit* killer)
+    {
+    if (irand(0,8)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+    }
+
+
+        
+
+        void EnterCombat(Unit* /*who*/)
+        {
+            if (irand(0,58)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+            m_uiPowerTimer = 2000;
+            m_uiDistancesCheckTimer = 10000;
+            
+            
+            
+        }
+
+/*        void EnterEvadeMode()
+        {
+            //me->DespawnOrUnsummon(100);
+        }*/
+
+        void UpdateAI(uint32 diff)
+        {
+            if (!UpdateVictim())
+                return;
+
+             uint8 lvl = me->getLevel();
+             Unit* opponent = me->GetVictim();
+
+
+if (!opponent)
+return;
+float meleedist = me->GetDistance(opponent);
+	    if (_isnan(meleedist))
+		return;
+            if (meleedist>30) 
+                return;
+
+                if (me->HasUnitState(UNIT_STATE_CASTING))
+                    return;
+
+
+    uint32 SPELLA =40504;
+    uint32 SPELLB =78;
+    uint32 SPELLC =100;
+    uint32 SPELLD =2457;
+
+if (lvl>=10 && irand(0,8)==1)
+{
+    SPELLA =45477;
+    SPELLB =47541;
+    SPELLC =355;
+    SPELLD =48266;	
+}
+
+if (lvl>=20 && irand(0,8)==1)
+{
+    SPELLA =45462;
+    SPELLB =45902;
+    SPELLC =49143;
+    SPELLD =51052;	
+}
+
+if (lvl>=30 && irand(0,8)==1)
+{
+    SPELLA =1680;
+    SPELLB =20243;
+    SPELLC =676;
+    //SPELLD =49039;	
+}
+
+if (lvl>=40 && irand(0,8)==1)
+{
+    SPELLA =1715;
+    SPELLB =49998;
+    SPELLC =48721;
+    SPELLD =6673;	
+}
+
+if (lvl>=50 && irand(0,8)==1)
+{
+    SPELLA =50842;
+    SPELLB =48721;
+    SPELLC =47528;
+    SPELLD =48263;	
+}
+
+if (lvl>=60 && irand(0,8)==1)
+{
+    SPELLA =45524;
+    SPELLB =47476;
+    SPELLC =56222;
+    SPELLD =48792;	
+}
+
+if (lvl>=70 && irand(0,8)==1)
+{
+    SPELLA =49020;
+    SPELLB =43265;
+   SPELLC =55271;
+    SPELLD =49028;	
+}
+
+if (lvl>=76 && irand(0,8)==1)
+{
+    SPELLA =40504;
+    SPELLB =40504;
+    SPELLC =40599;
+    SPELLD =48266;	
+}
+
+if (lvl>=80 && irand(0,8)==1)
+{
+    SPELLA =66020;
+    SPELLB =66019;
+    SPELLC =66047;
+    SPELLD =66023;	
+}
+
+            if (m_uiPowerTimer <= diff && GetHealthPCT(me) < 30)
+            {
+               DoCast(me, 61371);
+               m_uiPowerTimer = 2000;
+            }
+            else m_uiPowerTimer -= diff;
+
+            if (m_uiDistancesCheckTimer <= diff  && GetHealthPCT(me) < 10)
+            {
+                    me->AddAura(5016, me);
+
+                m_uiDistancesCheckTimer = 5000;
+            }
+            else m_uiDistancesCheckTimer -= diff;if (irand(0,3)==0) {if (irand(0,180)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}}
+
+            //events.Update(diff);
+
+if (irand(0, 30) == 0) DoCastVictim(SPELLA);
+else if (irand(0, 30) == 1) DoCastVictim(SPELLB);
+else if (irand(0, 30) == 2) DoCastVictim(SPELLC);
+else if (irand(0, 30) == 3) DoCastVictim(SPELLC);
+else if (irand(0, 30) == 4) DoCast(me, SPELLD);
+if (me->GetPower(POWER_RAGE) < me->GetMaxPower(POWER_RAGE)/3)me->SetPower(POWER_RAGE, (me->GetMaxPower(POWER_RAGE)));if (me->GetPower(POWER_ENERGY) < me->GetMaxPower(POWER_ENERGY)/3)me->SetPower(POWER_ENERGY, (me->GetMaxPower(POWER_ENERGY)));if (me->GetPower(POWER_MANA) < me->GetMaxPower(POWER_MANA)/3)me->SetPower(POWER_MANA, (me->GetMaxPower(POWER_MANA)));if (me->GetPower(POWER_RUNIC_POWER) < me->GetMaxPower(POWER_RUNIC_POWER)/3) me->SetPower(POWER_RUNIC_POWER, (me->GetMaxPower(POWER_RUNIC_POWER)));if (me->GetPower(POWER_FOCUS) < me->GetMaxPower(POWER_FOCUS)/3) me->SetPower(POWER_FOCUS, (me->GetMaxPower(POWER_FOCUS)));
+           /* while (uint32 eventId = events.ExecuteEvent())
+            {
+                switch (eventId)
+                {
+                    case EVENT_CLASSA:
+                    DoCastVictim(SPELLA);
+                    
+                    events.ScheduleEvent(EVENT_CLASSA, urand(2000, 4000));
+                    break;                       
+
+                    case EVENT_CLASSB:
+                    DoCastVictim(SPELLB);
+                    
+                    break;
+
+                    case EVENT_CLASSC:
+                    DoCastVictim(SPELLC);
+                    if (irand(0,6)==1) Talk(1);
+                    
+                    if (irand(0,12)==1) DoCast(me,SPELLD);
+
+                    
+                    break;
+
+                    default:
+                    break;
+                }
+            }*/
+
+if (me->HasUnitState(UNIT_STATE_CASTING)) return;            DoMeleeAttackIfReady();
+        }
+    };
+};
+
+class class_npcdly : public CreatureScript
+{
+public:
+    class_npcdly() : CreatureScript("class_npcdly") { }
+
+ bool OnGossipHello(Player* player, Creature* creature)
+        {
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("挑战"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF );
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("招募"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("解散"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+2);
+            player->SEND_GOSSIP_MENU(907, creature->GetGUID());
+
+            return true;
+        }
+
+        bool OnGossipSelect(Player* player, Creature* creature, uint32 /*sender*/, uint32 action)
+        {
+            player->PlayerTalkClass->ClearMenus();
+            switch (action)
+            {
+            case GOSSIP_ACTION_INFO_DEF:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+
+		int lvl=int(player->getLevel());
+		me->setFaction(14);
+		me->SetLevel(lvl);
+		me->SetMaxHealth(lvl * 60);
+		me->SetHealth(lvl * 60);
+		if (lvl > 20)
+		{
+			me->SetMaxHealth(lvl * 100);
+			me->SetHealth(lvl * 100);
+
+		}
+
+
+		if (lvl > 40)
+		{
+			me->SetMaxHealth(lvl * 200);
+			me->SetHealth(lvl * 200);
+
+		}
+
+		if (lvl > 70)
+		{
+			me->SetMaxHealth(lvl * 300);
+			me->SetHealth(lvl * 300);
+
+		}
+
+
+
+		if (lvl > 80)
+		{
+			me->SetMaxHealth(lvl * 400);
+			me->SetHealth(lvl * 400);
+
+		}
+
+		if (lvl > 85)
+		{
+			me->SetMaxHealth(lvl * 500);
+			me->SetHealth(lvl * 500);
+
+		}
+
+		//me->UpdateMaxHealth();
+		me->SetFullHealth();
+		uint32 dmg = 10;
+                dmg = (lvl * 10);
+		if (lvl > 20)
+			dmg = (lvl * 15);
+
+		if (lvl > 40)
+			dmg =  (lvl * 25);
+
+		if (lvl > 70)
+			dmg = (lvl * 35);
+
+
+		if (lvl > 80)
+			dmg = (lvl * 70);
+
+		if (lvl >= 86)
+			dmg = dmg + (lvl * 80);
+			
+
+		
+		//me->SetBonusDamage(dmg);
+		dmg=dmg/2;me->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, dmg);
+		me->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(OFF_ATTACK, MINDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(OFF_ATTACK, MAXDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(RANGED_ATTACK, MINDAMAGE, dmg);
+		me->SetBaseWeaponDamage(RANGED_ATTACK, MAXDAMAGE, dmg);
+/*		me->SetStatFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, dmg);*/
+		me->SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, dmg);
+		me->UpdateDamagePhysical(BASE_ATTACK);
+	    me->UpdateDamagePhysical(OFF_ATTACK);
+	     me->UpdateAttackPowerAndDamage();
+		//me->AI()->EnterEvadeMode();
+ break;
+}
+switch (action)
+            {
+case GOSSIP_ACTION_INFO_DEF+1:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+
+		int lvl=int(player->getLevel());
+		int eid = int(creature->GetEntry());
+		int fl=int(irand(1,8));
+		std::list<Creature*> summons;
+		QueryResult result = WorldDatabase.PQuery("SELECT count(id) as sl FROM pknpc where cid= %u;",player->GetGUID());if (result){Field* fields = result->Fetch();if (fields[0].GetUInt32()>=4) {player->GetSession()->SendNotification(_StringToUTF8b("你已经有4个招募者了！"));return false;} }if (summons.size() >= 4)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("你已经有4个招募者了！"));
+			return false;
+}
+
+		player->GetAllMinionsByEntry(summons, eid);
+
+		if (summons.size() >= 1)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("你已经有这个招募者了！"));
+			return false;
+}
+
+
+
+		SummonPropertiesEntry const* properties = sSummonPropertiesStore.LookupEntry(713);
+		TempSummon *summon = player->GetMap()->SummonCreature(eid, *player, properties, 0, player);
+		if (!summon)
+			return true;
+        me->setDeathState(JUST_DIED);
+        me->RemoveCorpse();
+        me->SetHealth(0); // just for nice GM-mode view
+		((Guardian*)summon)->InitStatsForLevel(lvl);
+		summon->setFaction(player->getFaction());
+		((Minion*)summon)->SetFollowAngle(fl);
+                summon->GetMotionMaster()->MoveFollow(player, fl, summon->GetFollowAngle());
+                
+                summon->SetLevel(lvl);
+		summon->SetMaxHealth(lvl * 60);
+		summon->SetHealth(lvl * 60);
+		if (lvl > 20)
+		{
+			summon->SetMaxHealth(lvl * 100);
+			summon->SetHealth(lvl * 100);
+
+		}
+		if (lvl > 40)
+		{
+			summon->SetMaxHealth(lvl * 200);
+			summon->SetHealth(lvl * 200);
+
+		}
+		if (lvl > 70)
+		{
+			summon->SetMaxHealth(lvl * 300);
+			summon->SetHealth(lvl * 300);
+
+		}
+		if (lvl > 80)
+		{
+			summon->SetMaxHealth(lvl * 500);
+			summon->SetHealth(lvl * 500);
+
+		}
+		if (lvl > 85)
+		{
+			summon->SetMaxHealth(lvl * 1000);
+			summon->SetHealth(lvl * 1000);
+
+		}
+		summon->SetFullHealth();
+		uint32 dmg = 10;
+                dmg = (lvl * 10);
+		if (lvl > 20)
+			dmg = (lvl * 15);
+
+		if (lvl > 40)
+			dmg =  (lvl * 25);
+
+		if (lvl > 70)
+			dmg = (lvl * 35);
+
+
+		if (lvl > 80)
+			dmg = (lvl * 70);
+
+		if (lvl >= 86)
+			dmg = dmg + (lvl * 80);
+			
+		dmg=dmg/2+1;summon->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, dmg);
+		//summon->SetBaseWeaponDamage(OFF_ATTACK, MINDAMAGE, dmg);
+		//summon->SetBaseWeaponDamage(OFF_ATTACK, MAXDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(RANGED_ATTACK, MINDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(RANGED_ATTACK, MAXDAMAGE, dmg);
+		/*summon->SetStatFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, dmg);
+		*/summon->SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, dmg);
+	     summon->UpdateAttackPowerAndDamage();WorldDatabase.PExecute("DELETE FROM pknpc WHERE cid = %u and pknpcid=%u;", player->GetGUID(),eid);WorldDatabase.PExecute("INSERT INTO pknpc (cid,pknpcid) VALUES (%u, %u);" , player->GetGUID(),eid );
+			//summon->AI()->EnterEvadeMode();
+
+break;
+}		
+switch (action)
+            {
+case GOSSIP_ACTION_INFO_DEF+2:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+		int eid = int(creature->GetEntry());
+		std::list<Creature*> summons;
+
+		player->GetAllMinionsByEntry(summons, eid);
+
+		if (summons.size() < 1)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("当前没有这个招募者！"));
+			return false;
+}
+
+
+		if (summons.size() >= 1)
+		{
+        me->setDeathState(JUST_DIED);
+        me->RemoveCorpse();
+        me->SetHealth(0); // just for nice GM-mode view
+		player->GetSession()->SendNotification(_StringToUTF8b("解散成功！"));WorldDatabase.PExecute("DELETE FROM pknpc WHERE cid = %u and pknpcid=%u;", player->GetGUID(),eid);
+			return true;
+}
+
+}			
+
+
+            return true;
+}
+
+    CreatureAI* GetAI(Creature* creature) const
+    {
+        return new boss_bd_onyxiaAI (creature);
+    }
+
+    struct boss_bd_onyxiaAI : public ScriptedAI
+    {
+        boss_bd_onyxiaAI(Creature* creature) : ScriptedAI(creature)
+        {
+            instance = creature->GetInstanceScript();
+        }
+
+        InstanceScript* instance;
+        EventMap events;
+        uint32 m_uiDistancesCheckTimer;
+        uint32 m_uiPowerTimer;
+
+        void Reset()
+        {
+            if (irand(0,8)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+            //events.Reset();
+        }
+
+      
+
+        
+   void UpdatePower()
+    {
+if (me->GetPower(POWER_RAGE) < me->GetMaxPower(POWER_RAGE)/3)
+me->SetPower(POWER_RAGE, (me->GetMaxPower(POWER_RAGE)));
+
+if (me->GetPower(POWER_ENERGY) < me->GetMaxPower(POWER_ENERGY)/3)
+me->SetPower(POWER_ENERGY, (me->GetMaxPower(POWER_ENERGY)));
+
+if (me->GetPower(POWER_MANA) < me->GetMaxPower(POWER_MANA)/3)
+me->SetPower(POWER_MANA, (me->GetMaxPower(POWER_MANA)));if (me->GetPower(POWER_RUNIC_POWER) < me->GetMaxPower(POWER_RUNIC_POWER)/3) me->SetPower(POWER_RUNIC_POWER, (me->GetMaxPower(POWER_RUNIC_POWER)));if (me->GetPower(POWER_FOCUS) < me->GetMaxPower(POWER_FOCUS)/3) me->SetPower(POWER_FOCUS, (me->GetMaxPower(POWER_FOCUS)));
+    }
+
+    void JustDied(Unit* killer)
+    {
+    if (irand(0,8)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+    }
+
+
+        
+
+        void EnterCombat(Unit* /*who*/)
+        {
+            if (irand(0,58)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+            m_uiPowerTimer = 2000;
+            m_uiDistancesCheckTimer = 10000;
+            
+            
+            
+        }
+
+/*        void EnterEvadeMode()
+        {
+            //me->DespawnOrUnsummon(100);
+        }*/
+
+        void UpdateAI(uint32 diff)
+        {
+            if (!UpdateVictim())
+                return;
+
+             uint8 lvl = me->getLevel();
+             Unit* opponent = me->GetVictim();
+
+
+if (!opponent)
+return;
+float meleedist = me->GetDistance(opponent);
+	    if (_isnan(meleedist))
+		return;
+            if (meleedist>30) 
+                return;
+
+                if (me->HasUnitState(UNIT_STATE_CASTING))
+                    return;
+
+
+    uint32 SPELLA =5176;
+    uint32 SPELLB =8921;
+    uint32 SPELLC =22568;
+    uint32 SPELLD =774;
+
+if (lvl>=10 && irand(0,8)==1)
+{
+    SPELLA =339;
+    SPELLB =2912;
+    SPELLC =5487;
+    SPELLD =5232;
+}
+
+if (lvl>=20 && irand(0,8)==1)
+{
+    SPELLA =770;
+    SPELLB =53312;
+    SPELLC =770;
+    SPELLD =2090;
+}
+
+if (lvl>=30 && irand(0,8)==1)
+{
+    SPELLA =48465;
+    SPELLB =48468;
+    SPELLC =48467;
+    SPELLD =33763;	
+}
+
+if (lvl>=40 && irand(0,8)==1)
+{
+    SPELLA =6795;
+    SPELLB =9747;
+    SPELLC =9880;
+    SPELLD =9880;	
+}
+
+if (lvl>=50 && irand(0,8)==1)
+{
+    SPELLA =6785;
+    SPELLB =52610;
+    SPELLC =48574;
+    SPELLD =2782;	
+}
+
+if (lvl>=60 && irand(0,8)==1)
+{
+    SPELLA =48511;
+    SPELLB =26986;
+    SPELLC =2637;
+    SPELLD =1126;	
+}
+
+if (lvl>=70 && irand(0,8)==1)
+{
+    SPELLA =53201;
+    SPELLB =9835;
+    SPELLC =48505;
+    SPELLD =5229;	
+}
+
+if (lvl>=76 && irand(0,8)==1)
+{
+    SPELLA =22570;
+    SPELLB =40504;
+    SPELLC =5211;
+    //SPELLD =124974;	
+}
+
+if (lvl>=80 && irand(0,8)==1)
+{
+    SPELLA =65859;
+    SPELLB =65854;
+    SPELLC =65856;
+    SPELLD =66093;	
+}
+
+            if (m_uiPowerTimer <= diff && GetHealthPCT(me) < 30)
+            {
+               DoCast(me, 61371);
+               m_uiPowerTimer = 2000;
+            }
+            else m_uiPowerTimer -= diff;
+
+            if (m_uiDistancesCheckTimer <= diff  && GetHealthPCT(me) < 10)
+            {
+                    me->AddAura(5016, me);
+
+                m_uiDistancesCheckTimer = 5000;
+            }
+            else m_uiDistancesCheckTimer -= diff;if (irand(0,3)==0) {if (irand(0,180)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}}
+
+           // events.Update(diff);
+
+if (irand(0, 30) == 0) DoCastVictim(SPELLA);
+else if (irand(0, 30) == 1) DoCastVictim(SPELLB);
+else if (irand(0, 30) == 2) DoCastVictim(SPELLC);
+else if (irand(0, 30) == 3) DoCastVictim(SPELLC);
+else if (irand(0, 30) == 4) DoCast(me, SPELLD);
+if (me->GetPower(POWER_RAGE) < me->GetMaxPower(POWER_RAGE)/3)me->SetPower(POWER_RAGE, (me->GetMaxPower(POWER_RAGE)));if (me->GetPower(POWER_ENERGY) < me->GetMaxPower(POWER_ENERGY)/3)me->SetPower(POWER_ENERGY, (me->GetMaxPower(POWER_ENERGY)));if (me->GetPower(POWER_MANA) < me->GetMaxPower(POWER_MANA)/3)me->SetPower(POWER_MANA, (me->GetMaxPower(POWER_MANA)));if (me->GetPower(POWER_RUNIC_POWER) < me->GetMaxPower(POWER_RUNIC_POWER)/3) me->SetPower(POWER_RUNIC_POWER, (me->GetMaxPower(POWER_RUNIC_POWER)));if (me->GetPower(POWER_FOCUS) < me->GetMaxPower(POWER_FOCUS)/3) me->SetPower(POWER_FOCUS, (me->GetMaxPower(POWER_FOCUS)));
+            /*while (uint32 eventId = events.ExecuteEvent())
+            {
+                switch (eventId)
+                {
+                    case EVENT_CLASSA:
+                    DoCastVictim(SPELLA);
+                    
+                    events.ScheduleEvent(EVENT_CLASSA, urand(2000, 4000));
+                    break;                       
+
+                    case EVENT_CLASSB:
+                    DoCastVictim(SPELLB);
+                    
+                    break;
+
+                    case EVENT_CLASSC:
+                    DoCastVictim(SPELLC);
+                    if (irand(0,6)==1) Talk(1);
+                    
+                    if (irand(0,12)==1) DoCast(me,SPELLD);
+
+                    
+                    break;
+
+                    default:
+                    break;
+                }
+            }*/
+ if (me->HasUnitState(UNIT_STATE_CASTING)) return;if (irand(0,2)==0) DoMeleeAttackIfReady(); else DoSpellAttackIfReady(8921);
+//            DoMeleeAttackIfReady();
+        }
+    };
+};
+
+class class_npcdz : public CreatureScript
+{
+public:
+    class_npcdz() : CreatureScript("class_npcdz") { }
+
+ bool OnGossipHello(Player* player, Creature* creature)
+        {
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("挑战"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF );
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("招募"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("解散"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+2);
+            player->SEND_GOSSIP_MENU(907, creature->GetGUID());
+
+            return true;
+        }
+
+        bool OnGossipSelect(Player* player, Creature* creature, uint32 /*sender*/, uint32 action)
+        {
+            player->PlayerTalkClass->ClearMenus();
+            switch (action)
+            {
+            case GOSSIP_ACTION_INFO_DEF:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+
+		int lvl=int(player->getLevel());
+		me->setFaction(14);
+		me->SetLevel(lvl);
+		me->SetMaxHealth(lvl * 60);
+		me->SetHealth(lvl * 60);
+		if (lvl > 20)
+		{
+			me->SetMaxHealth(lvl * 100);
+			me->SetHealth(lvl * 100);
+
+		}
+
+
+		if (lvl > 40)
+		{
+			me->SetMaxHealth(lvl * 200);
+			me->SetHealth(lvl * 200);
+
+		}
+
+		if (lvl > 70)
+		{
+			me->SetMaxHealth(lvl * 300);
+			me->SetHealth(lvl * 300);
+
+		}
+
+
+
+		if (lvl > 80)
+		{
+			me->SetMaxHealth(lvl * 400);
+			me->SetHealth(lvl * 400);
+
+		}
+
+		if (lvl > 85)
+		{
+			me->SetMaxHealth(lvl * 500);
+			me->SetHealth(lvl * 500);
+
+		}
+
+		//me->UpdateMaxHealth();
+		me->SetFullHealth();
+		uint32 dmg = 10;
+                dmg = (lvl * 10);
+		if (lvl > 20)
+			dmg = (lvl * 15);
+
+		if (lvl > 40)
+			dmg =  (lvl * 25);
+
+		if (lvl > 70)
+			dmg = (lvl * 35);
+
+
+		if (lvl > 80)
+			dmg = (lvl * 70);
+
+		if (lvl >= 86)
+			dmg = dmg + (lvl * 80);
+			
+
+		
+		//me->SetBonusDamage(dmg);
+		dmg=dmg/2;me->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, dmg);
+		me->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(OFF_ATTACK, MINDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(OFF_ATTACK, MAXDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(RANGED_ATTACK, MINDAMAGE, dmg);
+		me->SetBaseWeaponDamage(RANGED_ATTACK, MAXDAMAGE, dmg);
+/*		me->SetStatFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, dmg);*/
+		me->SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, dmg);
+		me->UpdateDamagePhysical(BASE_ATTACK);
+	    me->UpdateDamagePhysical(OFF_ATTACK);
+	     me->UpdateAttackPowerAndDamage();
+		//me->AI()->EnterEvadeMode();
+ break;
+}
+switch (action)
+            {
+case GOSSIP_ACTION_INFO_DEF+1:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+
+		int lvl=int(player->getLevel());
+		int eid = int(creature->GetEntry());
+		int fl=int(irand(1,8));
+		std::list<Creature*> summons;
+		QueryResult result = WorldDatabase.PQuery("SELECT count(id) as sl FROM pknpc where cid= %u;",player->GetGUID());if (result){Field* fields = result->Fetch();if (fields[0].GetUInt32()>=4) {player->GetSession()->SendNotification(_StringToUTF8b("你已经有4个招募者了！"));return false;} }if (summons.size() >= 4)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("你已经有4个招募者了！"));
+			return false;
+}
+
+		player->GetAllMinionsByEntry(summons, eid);
+
+		if (summons.size() >= 1)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("你已经有这个招募者了！"));
+			return false;
+}
+
+
+
+		SummonPropertiesEntry const* properties = sSummonPropertiesStore.LookupEntry(713);
+		TempSummon *summon = player->GetMap()->SummonCreature(eid, *player, properties, 0, player);
+		if (!summon)
+			return true;
+        me->setDeathState(JUST_DIED);
+        me->RemoveCorpse();
+        me->SetHealth(0); // just for nice GM-mode view
+		((Guardian*)summon)->InitStatsForLevel(lvl);
+		summon->setFaction(player->getFaction());
+		((Minion*)summon)->SetFollowAngle(fl);
+                summon->GetMotionMaster()->MoveFollow(player, fl, summon->GetFollowAngle());
+                
+                summon->SetLevel(lvl);
+		summon->SetMaxHealth(lvl * 60);
+		summon->SetHealth(lvl * 60);
+		if (lvl > 20)
+		{
+			summon->SetMaxHealth(lvl * 100);
+			summon->SetHealth(lvl * 100);
+
+		}
+		if (lvl > 40)
+		{
+			summon->SetMaxHealth(lvl * 200);
+			summon->SetHealth(lvl * 200);
+
+		}
+		if (lvl > 70)
+		{
+			summon->SetMaxHealth(lvl * 300);
+			summon->SetHealth(lvl * 300);
+
+		}
+		if (lvl > 80)
+		{
+			summon->SetMaxHealth(lvl * 500);
+			summon->SetHealth(lvl * 500);
+
+		}
+		if (lvl > 85)
+		{
+			summon->SetMaxHealth(lvl * 1000);
+			summon->SetHealth(lvl * 1000);
+
+		}
+		summon->SetFullHealth();
+		uint32 dmg = 10;
+                dmg = (lvl * 10);
+		if (lvl > 20)
+			dmg = (lvl * 15);
+
+		if (lvl > 40)
+			dmg =  (lvl * 25);
+
+		if (lvl > 70)
+			dmg = (lvl * 35);
+
+
+		if (lvl > 80)
+			dmg = (lvl * 70);
+
+		if (lvl >= 86)
+			dmg = dmg + (lvl * 80);
+			
+		dmg=dmg/2+1;summon->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, dmg);
+		//summon->SetBaseWeaponDamage(OFF_ATTACK, MINDAMAGE, dmg);
+		//summon->SetBaseWeaponDamage(OFF_ATTACK, MAXDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(RANGED_ATTACK, MINDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(RANGED_ATTACK, MAXDAMAGE, dmg);
+		/*summon->SetStatFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, dmg);
+		*/summon->SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, dmg);
+	     summon->UpdateAttackPowerAndDamage();WorldDatabase.PExecute("DELETE FROM pknpc WHERE cid = %u and pknpcid=%u;", player->GetGUID(),eid);WorldDatabase.PExecute("INSERT INTO pknpc (cid,pknpcid) VALUES (%u, %u);" , player->GetGUID(),eid );
+			//summon->AI()->EnterEvadeMode();
+
+break;
+}		
+switch (action)
+            {
+case GOSSIP_ACTION_INFO_DEF+2:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+		int eid = int(creature->GetEntry());
+		std::list<Creature*> summons;
+
+		player->GetAllMinionsByEntry(summons, eid);
+
+		if (summons.size() < 1)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("当前没有这个招募者！"));
+			return false;
+}
+
+
+		if (summons.size() >= 1)
+		{
+        me->setDeathState(JUST_DIED);
+        me->RemoveCorpse();
+        me->SetHealth(0); // just for nice GM-mode view
+		player->GetSession()->SendNotification(_StringToUTF8b("解散成功！"));WorldDatabase.PExecute("DELETE FROM pknpc WHERE cid = %u and pknpcid=%u;", player->GetGUID(),eid);
+			return true;
+}
+
+}			
+
+
+            return true;
+}
+
+    CreatureAI* GetAI(Creature* creature) const
+    {
+        return new boss_bd_onyxiaAI (creature);
+    }
+
+    struct boss_bd_onyxiaAI : public ScriptedAI
+    {
+        boss_bd_onyxiaAI(Creature* creature) : ScriptedAI(creature)
+        {
+            instance = creature->GetInstanceScript();
+        }
+
+        InstanceScript* instance;
+        EventMap events;
+        uint32 m_uiDistancesCheckTimer;
+        uint32 m_uiPowerTimer;
+
+        void Reset()
+        {
+            if (irand(0,8)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+            //events.Reset();
+        }
+
+      
+
+        
+   void UpdatePower()
+    {
+if (me->GetPower(POWER_RAGE) < me->GetMaxPower(POWER_RAGE)/3)
+me->SetPower(POWER_RAGE, (me->GetMaxPower(POWER_RAGE)));
+
+if (me->GetPower(POWER_ENERGY) < me->GetMaxPower(POWER_ENERGY)/3)
+me->SetPower(POWER_ENERGY, (me->GetMaxPower(POWER_ENERGY)));
+
+if (me->GetPower(POWER_MANA) < me->GetMaxPower(POWER_MANA)/3)
+me->SetPower(POWER_MANA, (me->GetMaxPower(POWER_MANA)));if (me->GetPower(POWER_RUNIC_POWER) < me->GetMaxPower(POWER_RUNIC_POWER)/3) me->SetPower(POWER_RUNIC_POWER, (me->GetMaxPower(POWER_RUNIC_POWER)));if (me->GetPower(POWER_FOCUS) < me->GetMaxPower(POWER_FOCUS)/3) me->SetPower(POWER_FOCUS, (me->GetMaxPower(POWER_FOCUS)));
+    }
+
+    void JustDied(Unit* killer)
+    {
+    if (irand(0,8)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+    }
+
+
+        
+
+        void EnterCombat(Unit* /*who*/)
+        {
+            if (irand(0,58)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+            m_uiPowerTimer = 2000;
+            m_uiDistancesCheckTimer = 10000;
+            
+            
+            
+        }
+
+/*        void EnterEvadeMode()
+        {
+            //me->DespawnOrUnsummon(100);
+        }*/
+
+        void UpdateAI(uint32 diff)
+        {
+            if (!UpdateVictim())
+                return;
+
+             uint8 lvl = me->getLevel();
+             Unit* opponent = me->GetVictim();
+
+
+if (!opponent)
+return;
+float meleedist = me->GetDistance(opponent);
+	    if (_isnan(meleedist))
+		return;
+            if (meleedist>30) 
+                return;
+
+                if (me->HasUnitState(UNIT_STATE_CASTING))
+                    return;
+
+
+    uint32 SPELLA =1776;
+    uint32 SPELLB =78;
+    uint32 SPELLC =100;
+    uint32 SPELLD =2457;
+
+if (lvl>=10 && irand(0,8)==1)
+{
+    SPELLA =1752;
+    SPELLB =2098;
+    SPELLC =6770;
+    SPELLD =1784;	
+}
+
+if (lvl>=20 && irand(0,8)==1)
+{
+    SPELLA =1766;
+    SPELLB =48668;
+    SPELLC =1776;
+    SPELLD =2983;	
+}
+
+if (lvl>=30 && irand(0,8)==1)
+{
+    SPELLA =1833;
+    SPELLB =14183;
+    SPELLC =2094;
+    SPELLD =1856;	
+}
+
+if (lvl>=40 && irand(0,8)==1)
+{
+    SPELLA =408;
+    SPELLB =1943;
+    SPELLC =703;
+    SPELLD =13750;	
+}
+
+if (lvl>=50 && irand(0,8)==1)
+{
+    SPELLA =1943;
+    SPELLB =51722;
+    SPELLC =5938;
+    SPELLD =31224;	
+}
+
+if (lvl>=60 && irand(0,8)==1)
+{
+    SPELLA =36554;
+    SPELLB =51723;
+    SPELLC =53;
+    SPELLD =14185;	
+}
+
+if (lvl>=70 && irand(0,8)==1)
+{
+    SPELLA =5938;
+    SPELLB =8647;
+    SPELLC =26679;
+    SPELLD =14185;		
+}
+
+if (lvl>=76 && irand(0,8)==1)
+{
+    SPELLA =51690;
+    SPELLB =40504;
+    SPELLC =65940;
+    SPELLD =36554;
+}
+
+if (lvl>=80 && irand(0,8)==1)
+{
+    SPELLA =65960;
+    SPELLB =65957;
+    SPELLC =65962;
+    SPELLD =65961;	
+}
+
+            if (m_uiPowerTimer <= diff && GetHealthPCT(me) < 30)
+            {
+               DoCast(me, 61371);
+               m_uiPowerTimer = 2000;
+            }
+            else m_uiPowerTimer -= diff;
+
+            if (m_uiDistancesCheckTimer <= diff  && GetHealthPCT(me) < 10)
+            {
+                    me->AddAura(5016, me);
+
+                m_uiDistancesCheckTimer = 5000;
+            }
+            else m_uiDistancesCheckTimer -= diff;if (irand(0,3)==0) {if (irand(0,180)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}}
+
+           // events.Update(diff);
+
+if (irand(0, 30) == 0) DoCastVictim(SPELLA);
+else if (irand(0, 30) == 1) DoCastVictim(SPELLB);
+else if (irand(0, 30) == 2) DoCastVictim(SPELLC);
+else if (irand(0, 30) == 3) DoCastVictim(SPELLC);
+else if (irand(0, 30) == 4) DoCast(me, SPELLD);
+if (me->GetPower(POWER_RAGE) < me->GetMaxPower(POWER_RAGE)/3)me->SetPower(POWER_RAGE, (me->GetMaxPower(POWER_RAGE)));if (me->GetPower(POWER_ENERGY) < me->GetMaxPower(POWER_ENERGY)/3)me->SetPower(POWER_ENERGY, (me->GetMaxPower(POWER_ENERGY)));if (me->GetPower(POWER_MANA) < me->GetMaxPower(POWER_MANA)/3)me->SetPower(POWER_MANA, (me->GetMaxPower(POWER_MANA)));if (me->GetPower(POWER_RUNIC_POWER) < me->GetMaxPower(POWER_RUNIC_POWER)/3) me->SetPower(POWER_RUNIC_POWER, (me->GetMaxPower(POWER_RUNIC_POWER)));if (me->GetPower(POWER_FOCUS) < me->GetMaxPower(POWER_FOCUS)/3) me->SetPower(POWER_FOCUS, (me->GetMaxPower(POWER_FOCUS)));
+           /* while (uint32 eventId = events.ExecuteEvent())
+            {
+                switch (eventId)
+                {
+                    case EVENT_CLASSA:
+                    DoCastVictim(SPELLA);
+                    
+                    events.ScheduleEvent(EVENT_CLASSA, urand(2000, 4000));
+                    break;                       
+
+                    case EVENT_CLASSB:
+                    DoCastVictim(SPELLB);
+                    
+                    break;
+
+                    case EVENT_CLASSC:
+                    DoCastVictim(SPELLC);
+                    if (irand(0,6)==1) Talk(1);
+                    
+                    if (irand(0,12)==1) DoCast(me,SPELLD);
+
+                    
+                    break;
+
+                    default:
+                    break;
+                }
+            }*/
+
+if (me->HasUnitState(UNIT_STATE_CASTING)) return;            DoMeleeAttackIfReady();
+        }
+    };
+};
+
+
+class class_npcsm : public CreatureScript
+{
+public:
+    class_npcsm() : CreatureScript("class_npcsm") { }
+
+ bool OnGossipHello(Player* player, Creature* creature)
+        {
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("挑战"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF );
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("招募"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, _StringToUTF8b("解散"), GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+2);
+            player->SEND_GOSSIP_MENU(907, creature->GetGUID());
+
+            return true;
+        }
+
+        bool OnGossipSelect(Player* player, Creature* creature, uint32 /*sender*/, uint32 action)
+        {
+            player->PlayerTalkClass->ClearMenus();
+            switch (action)
+            {
+            case GOSSIP_ACTION_INFO_DEF:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+
+		int lvl=int(player->getLevel());
+		me->setFaction(14);
+		me->SetLevel(lvl);
+		me->SetMaxHealth(lvl * 60);
+		me->SetHealth(lvl * 60);
+		if (lvl > 20)
+		{
+			me->SetMaxHealth(lvl * 100);
+			me->SetHealth(lvl * 100);
+
+		}
+
+
+		if (lvl > 40)
+		{
+			me->SetMaxHealth(lvl * 200);
+			me->SetHealth(lvl * 200);
+
+		}
+
+		if (lvl > 70)
+		{
+			me->SetMaxHealth(lvl * 300);
+			me->SetHealth(lvl * 300);
+
+		}
+
+
+
+		if (lvl > 80)
+		{
+			me->SetMaxHealth(lvl * 400);
+			me->SetHealth(lvl * 400);
+
+		}
+
+		if (lvl > 85)
+		{
+			me->SetMaxHealth(lvl * 500);
+			me->SetHealth(lvl * 500);
+
+		}
+
+		//me->UpdateMaxHealth();
+		me->SetFullHealth();
+		uint32 dmg = 10;
+                dmg = (lvl * 10);
+		if (lvl > 20)
+			dmg = (lvl * 15);
+
+		if (lvl > 40)
+			dmg =  (lvl * 25);
+
+		if (lvl > 70)
+			dmg = (lvl * 35);
+
+
+		if (lvl > 80)
+			dmg = (lvl * 70);
+
+		if (lvl >= 86)
+			dmg = dmg + (lvl * 80);
+			
+
+		
+		//me->SetBonusDamage(dmg);
+		dmg=dmg/2;me->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, dmg);
+		me->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(OFF_ATTACK, MINDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(OFF_ATTACK, MAXDAMAGE, dmg);
+		//me->SetBaseWeaponDamage(RANGED_ATTACK, MINDAMAGE, dmg);
+		me->SetBaseWeaponDamage(RANGED_ATTACK, MAXDAMAGE, dmg);
+/*		me->SetStatFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, dmg);
+		me->SetStatFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, dmg);*/
+		me->SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, dmg);
+		me->UpdateDamagePhysical(BASE_ATTACK);
+	    me->UpdateDamagePhysical(OFF_ATTACK);
+	     me->UpdateAttackPowerAndDamage();
+		//me->AI()->EnterEvadeMode();
+ break;
+}
+switch (action)
+            {
+case GOSSIP_ACTION_INFO_DEF+1:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+
+		int lvl=int(player->getLevel());
+		int eid = int(creature->GetEntry());
+		int fl=int(irand(1,8));
+		std::list<Creature*> summons;
+		QueryResult result = WorldDatabase.PQuery("SELECT count(id) as sl FROM pknpc where cid= %u;",player->GetGUID());if (result){Field* fields = result->Fetch();if (fields[0].GetUInt32()>=4) {player->GetSession()->SendNotification(_StringToUTF8b("你已经有4个招募者了！"));return false;} }if (summons.size() >= 4)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("你已经有4个招募者了！"));
+			return false;
+}
+
+		player->GetAllMinionsByEntry(summons, eid);
+
+		if (summons.size() >= 1)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("你已经有这个招募者了！"));
+			return false;
+}
+
+
+
+		SummonPropertiesEntry const* properties = sSummonPropertiesStore.LookupEntry(713);
+		TempSummon *summon = player->GetMap()->SummonCreature(eid, *player, properties, 0, player);
+		if (!summon)
+			return true;
+        me->setDeathState(JUST_DIED);
+        me->RemoveCorpse();
+        me->SetHealth(0); // just for nice GM-mode view
+		((Guardian*)summon)->InitStatsForLevel(lvl);
+		summon->setFaction(player->getFaction());
+		((Minion*)summon)->SetFollowAngle(fl);
+                summon->GetMotionMaster()->MoveFollow(player, fl, summon->GetFollowAngle());
+                
+                summon->SetLevel(lvl);
+		summon->SetMaxHealth(lvl * 60);
+		summon->SetHealth(lvl * 60);
+		if (lvl > 20)
+		{
+			summon->SetMaxHealth(lvl * 100);
+			summon->SetHealth(lvl * 100);
+
+		}
+		if (lvl > 40)
+		{
+			summon->SetMaxHealth(lvl * 200);
+			summon->SetHealth(lvl * 200);
+
+		}
+		if (lvl > 70)
+		{
+			summon->SetMaxHealth(lvl * 300);
+			summon->SetHealth(lvl * 300);
+
+		}
+		if (lvl > 80)
+		{
+			summon->SetMaxHealth(lvl * 500);
+			summon->SetHealth(lvl * 500);
+
+		}
+		if (lvl > 85)
+		{
+			summon->SetMaxHealth(lvl * 1000);
+			summon->SetHealth(lvl * 1000);
+
+		}
+		summon->SetFullHealth();
+		uint32 dmg = 10;
+                dmg = (lvl * 10);
+		if (lvl > 20)
+			dmg = (lvl * 15);
+
+		if (lvl > 40)
+			dmg =  (lvl * 25);
+
+		if (lvl > 70)
+			dmg = (lvl * 35);
+
+
+		if (lvl > 80)
+			dmg = (lvl * 70);
+
+		if (lvl >= 86)
+			dmg = dmg + (lvl * 80);
+			
+		dmg=dmg/2+1;summon->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, dmg);
+		//summon->SetBaseWeaponDamage(OFF_ATTACK, MINDAMAGE, dmg);
+		//summon->SetBaseWeaponDamage(OFF_ATTACK, MAXDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(RANGED_ATTACK, MINDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(RANGED_ATTACK, MAXDAMAGE, dmg);
+		/*summon->SetStatFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, dmg);
+		*/summon->SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, dmg);
+	     summon->UpdateAttackPowerAndDamage();WorldDatabase.PExecute("DELETE FROM pknpc WHERE cid = %u and pknpcid=%u;", player->GetGUID(),eid);WorldDatabase.PExecute("INSERT INTO pknpc (cid,pknpcid) VALUES (%u, %u);" , player->GetGUID(),eid );
+			//summon->AI()->EnterEvadeMode();
+
+break;
+}		
+switch (action)
+            {
+case GOSSIP_ACTION_INFO_DEF+2:
+		Creature* me=creature;
+		if (!player)
+		return false;
+		
+		if (!player->getLevel())
+		return false;
+		int eid = int(creature->GetEntry());
+		std::list<Creature*> summons;
+
+		player->GetAllMinionsByEntry(summons, eid);
+
+		if (summons.size() < 1)
+		{
+		player->GetSession()->SendNotification(_StringToUTF8b("当前没有这个招募者！"));
+			return false;
+}
+
+
+		if (summons.size() >= 1)
+		{
+        me->setDeathState(JUST_DIED);
+        me->RemoveCorpse();
+        me->SetHealth(0); // just for nice GM-mode view
+		player->GetSession()->SendNotification(_StringToUTF8b("解散成功！"));WorldDatabase.PExecute("DELETE FROM pknpc WHERE cid = %u and pknpcid=%u;", player->GetGUID(),eid);
+			return true;
+}
+
+}			
+
+
+            return true;
+}
+
+    CreatureAI* GetAI(Creature* creature) const
+    {
+        return new boss_bd_onyxiaAI (creature);
+    }
+
+    struct boss_bd_onyxiaAI : public ScriptedAI
+    {
+        boss_bd_onyxiaAI(Creature* creature) : ScriptedAI(creature)
+        {
+            instance = creature->GetInstanceScript();
+        }
+
+        InstanceScript* instance;
+        EventMap events;
+        uint32 m_uiDistancesCheckTimer;
+        uint32 m_uiPowerTimer;
+
+        void Reset()
+        {
+            if (irand(0,8)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+            //events.Reset();
+        }
+
+      
+
+        
+   void UpdatePower()
+    {
+if (me->GetPower(POWER_RAGE) < me->GetMaxPower(POWER_RAGE)/3)
+me->SetPower(POWER_RAGE, (me->GetMaxPower(POWER_RAGE)));
+
+if (me->GetPower(POWER_ENERGY) < me->GetMaxPower(POWER_ENERGY)/3)
+me->SetPower(POWER_ENERGY, (me->GetMaxPower(POWER_ENERGY)));
+
+if (me->GetPower(POWER_MANA) < me->GetMaxPower(POWER_MANA)/3)
+me->SetPower(POWER_MANA, (me->GetMaxPower(POWER_MANA)));if (me->GetPower(POWER_RUNIC_POWER) < me->GetMaxPower(POWER_RUNIC_POWER)/3) me->SetPower(POWER_RUNIC_POWER, (me->GetMaxPower(POWER_RUNIC_POWER)));if (me->GetPower(POWER_FOCUS) < me->GetMaxPower(POWER_FOCUS)/3) me->SetPower(POWER_FOCUS, (me->GetMaxPower(POWER_FOCUS)));
+    }
+
+    void JustDied(Unit* killer)
+    {
+    if (irand(0,8)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+    }
+
+
+        
+
+        void EnterCombat(Unit* /*who*/)
+        {
+            if (irand(0,58)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}
+            m_uiPowerTimer = 2000;
+            m_uiDistancesCheckTimer = 10000;
+            
+            
+            
+        }
+
+/*        void EnterEvadeMode()
+        {
+            //me->DespawnOrUnsummon(100);
+        }*/
+
+        void UpdateAI(uint32 diff)
+        {
+            if (!UpdateVictim())
+                return;
+
+             uint8 lvl = me->getLevel();
+             Unit* opponent = me->GetVictim();
+
+
+if (!opponent)
+return;
+float meleedist = me->GetDistance(opponent);
+	    if (_isnan(meleedist))
+		return;
+            if (meleedist>30) 
+                return;
+
+                if (me->HasUnitState(UNIT_STATE_CASTING))
+                    return;
+
+
+    uint32 SPELLA =10605;
+    uint32 SPELLB =78;
+    uint32 SPELLC =100;
+    uint32 SPELLD =2457;
+
+if (lvl>=10 && irand(0,8)==1)
+{
+    SPELLA =403;
+    SPELLB =8042;
+    SPELLC =10414;
+    SPELLD =324;	
+}
+
+if (lvl>=20 && irand(0,8)==1)
+{
+    SPELLA =8056;
+    SPELLB =15208;
+    SPELLC =421;
+    SPELLD =974;	
+}
+
+if (lvl>=30 && irand(0,8)==1)
+{
+    SPELLA =51505;
+    SPELLB =57994;
+    SPELLC =3599;
+    SPELLD =8177;	
+}
+
+if (lvl>=40 && irand(0,8)==1)
+{
+    SPELLA =1535;
+    SPELLB =60103;
+    SPELLC =10414;
+    SPELLD =1064;	
+}
+
+if (lvl>=50 && irand(0,8)==1)
+{
+    SPELLA =17364;
+    SPELLB =73899;
+    SPELLB =15208;
+    SPELLC =10414;	
+}
+
+if (lvl>=60 && irand(0,8)==1)
+{
+    SPELLA =61882;
+    SPELLB =15208;
+    SPELLC =10414;
+    SPELLD =40504;	
+}
+
+if (lvl>=70 && irand(0,8)==1)
+{
+    SPELLA =10448;
+    SPELLB =10605;
+    SPELLC =10473;
+    SPELLD =2825;	
+}
+
+if (lvl>=76 && irand(0,8)==1)
+{
+    SPELLA =10448;
+    SPELLB =15208;
+    SPELLC =8042;
+    SPELLD =10468;	
+}
+if (lvl>=80 && irand(0,8)==1)
+{
+    SPELLA =65974;
+    SPELLB =65970;
+    SPELLC =65976;
+    SPELLD =66055;	
+}
+
+
+            if (m_uiPowerTimer <= diff && GetHealthPCT(me) < 30)
+            {
+               DoCast(me, 61371);
+               m_uiPowerTimer = 2000;
+            }
+            else m_uiPowerTimer -= diff;
+
+            if (m_uiDistancesCheckTimer <= diff  && GetHealthPCT(me) < 10)
+            {
+                    me->AddAura(5016, me);
+
+                m_uiDistancesCheckTimer = 5000;
+            }
+            else m_uiDistancesCheckTimer -= diff;if (irand(0,3)==0) {if (irand(0,180)==0){std::string text = sCreatureTextMgr->GetLocalizedChatString(irand(188888,194447),0,irand(0,9), 0, DEFAULT_LOCALE);me->Yell(text.c_str(), LANG_UNIVERSAL, me);}}
+
+           // events.Update(diff);
+
+if (irand(0, 30) == 0) DoCastVictim(SPELLA);
+else if (irand(0, 30) == 1) DoCastVictim(SPELLB);
+else if (irand(0, 30) == 2) DoCastVictim(SPELLC);
+else if (irand(0, 30) == 3) DoCastVictim(SPELLC);
+else if (irand(0, 30) == 4) DoCast(me, SPELLD);
+if (me->GetPower(POWER_RAGE) < me->GetMaxPower(POWER_RAGE)/3)me->SetPower(POWER_RAGE, (me->GetMaxPower(POWER_RAGE)));if (me->GetPower(POWER_ENERGY) < me->GetMaxPower(POWER_ENERGY)/3)me->SetPower(POWER_ENERGY, (me->GetMaxPower(POWER_ENERGY)));if (me->GetPower(POWER_MANA) < me->GetMaxPower(POWER_MANA)/3)me->SetPower(POWER_MANA, (me->GetMaxPower(POWER_MANA)));if (me->GetPower(POWER_RUNIC_POWER) < me->GetMaxPower(POWER_RUNIC_POWER)/3) me->SetPower(POWER_RUNIC_POWER, (me->GetMaxPower(POWER_RUNIC_POWER)));if (me->GetPower(POWER_FOCUS) < me->GetMaxPower(POWER_FOCUS)/3) me->SetPower(POWER_FOCUS, (me->GetMaxPower(POWER_FOCUS)));
+           /* while (uint32 eventId = events.ExecuteEvent())
+            {
+                switch (eventId)
+                {
+                    case EVENT_CLASSA:
+                    DoCastVictim(SPELLA);
+                    
+                    events.ScheduleEvent(EVENT_CLASSA, urand(2000, 4000));
+                    break;                       
+
+                    case EVENT_CLASSB:
+                    DoCastVictim(SPELLB);
+                    
+                    break;
+
+                    case EVENT_CLASSC:
+                    DoCastVictim(SPELLC);
+                    if (irand(0,6)==1) Talk(1);
+                    
+                    if (irand(0,12)==1) DoCast(me,SPELLD);
+
+                    
+                    break;
+
+                    default:
+                    break;
+                }
+            }*/
+if (me->HasUnitState(UNIT_STATE_CASTING)) return;if (irand(0,2)==0) DoMeleeAttackIfReady(); else DoSpellAttackIfReady(403);
+            //DoMeleeAttackIfReady();
+        }
+    };
+};
+
+
+
 void AddSC_boss_faction_champions()
 {
     new boss_toc_champion_controller();
@@ -2421,4 +7188,22 @@ void AddSC_boss_faction_champions()
     new spell_faction_champion_death_grip();
     new spell_toc_bloodlust();
     new spell_toc_heroism();
+
+//hxsd
+new class_npczs();
+new class_npcqs();
+
+
+new class_npcfs();
+new class_npcss();
+new class_npcms();
+
+new class_npclr();
+new class_npcdk();
+new class_npcdly();
+
+new class_npcdz();
+new class_npcsm();
+
+
 }

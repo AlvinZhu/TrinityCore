@@ -235,7 +235,7 @@ public:
     //Enable\Disable GM Mode
     static bool HandleGMCommand(ChatHandler* handler, char const* args)
     {
-        Player* _player = handler->GetSession()->GetPlayer();
+		Player* _player = handler->GetSession()->GetPlayer();
 
         if (!*args)
         {

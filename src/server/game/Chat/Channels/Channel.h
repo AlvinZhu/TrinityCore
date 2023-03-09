@@ -195,6 +195,7 @@ class TC_GAME_API Channel
         void LeaveNotify(ObjectGuid guid) const;                                      // invisible notify
         void SetOwnership(bool ownership) { _ownershipEnabled = ownership; }
         static void CleanOldChannelsInDB();
+		bool IsOn(ObjectGuid who) const { return _playersStore.count(who) != 0; }
 
     private:
         // initial packet data (notify type and channel name)
@@ -239,7 +240,6 @@ class TC_GAME_API Channel
         void SendToAllButOne(WorldPacket* data, ObjectGuid who) const;
         void SendToOne(WorldPacket* data, ObjectGuid who) const;
 
-        bool IsOn(ObjectGuid who) const { return _playersStore.count(who) != 0; }
         bool IsBanned(ObjectGuid guid) const { return _bannedStore.count(guid) != 0; }
 
         void UpdateChannelInDB() const;

@@ -82,7 +82,7 @@ bool AuctionBotBuyer::Update(AuctionHouseType houseType)
     if (eligibleItems)
     {
         // Prepare list of items to bid or buy - remove old items
-        PrepareListOfEntry(config);
+        //PrepareListOfEntry(config);
         // Process buying and bidding items
         BuyAndBidItems(config);
     }
@@ -109,12 +109,20 @@ uint32 AuctionBotBuyer::GetItemInformation(BuyerConfiguration& config)
         Item* item = sAuctionMgr->GetAItem(entry->itemGUIDLow);
         if (!item)
             continue;
+		const ItemTemplate* pTemplate = item->GetTemplate();
+		if (!pTemplate)
+			continue;
+		if (pTemplate->BuyPrice <= 0)
+			continue;
 
+		float price = float(pTemplate->BuyPrice);
         BuyerItemInfo& itemInfo = config.SameItemInfo[item->GetEntry()];
 
         // Update item entry's count and total bid prices
         // This can be used later to determine the prices and chances to bid
         uint32 itemBidPrice = entry->startbid / item->GetCount();
+		//if (itemBidPrice > uint32(price * 1.8f))
+		//	continue;
         itemInfo.TotalBidPrice = itemInfo.TotalBidPrice + itemBidPrice;
         itemInfo.BidItemCount++;
 
@@ -130,7 +138,9 @@ uint32 AuctionBotBuyer::GetItemInformation(BuyerConfiguration& config)
             // Update item entry's count and total buyout prices
             // This can be used later to determine the prices and chances to buyout
             uint32 itemBuyPrice = entry->buyout / item->GetCount();
-            itemInfo.TotalBuyPrice = itemInfo.TotalBuyPrice + itemBuyPrice;
+			if (itemBidPrice > uint32(price * 2.3f))
+				continue;
+			itemInfo.TotalBuyPrice = itemInfo.TotalBuyPrice + itemBuyPrice;
             itemInfo.BuyItemCount++;
 
             if (!itemInfo.MinBuyPrice)
@@ -142,7 +152,8 @@ uint32 AuctionBotBuyer::GetItemInformation(BuyerConfiguration& config)
         // Add/update EligibleItems if:
         // * no bid
         // * bid from player
-        if (!entry->bid || entry->bidder)
+        //if (!entry->bid || entry->bidder)
+		if (entry->buyout)
         {
             config.EligibleItems[entry->Id].LastExist = now;
             config.EligibleItems[entry->Id].AuctionId = entry->Id;
@@ -314,19 +325,21 @@ void AuctionBotBuyer::BuyAndBidItems(BuyerConfiguration& config)
         TC_LOG_DEBUG("ahbot", "AHBot: Rolling for AHentry %u:", auction->Id);
 
         // Roll buy and bid chances
-        bool successBuy = RollBuyChance(ahInfo, item, auction, bidPrice);
-        bool successBid = RollBidChance(ahInfo, item, auction, bidPrice);
+		bool successBuy = true;// RollBuyChance(ahInfo, item, auction, bidPrice);
+		bool successBid = false;// RollBidChance(ahInfo, item, auction, bidPrice);
 
         // If roll bidding succesfully and bid price is above buyout -> buyout
         // If roll for buying was successful but not for bid, buyout directly
         // If roll bidding was also successful, buy the entry with 20% chance
         // - Better bid than buy since the item is bought by bot if no player bids after
         // Otherwise bid if roll for bid was successful
-        if ((auction->buyout && successBid && bidPrice >= auction->buyout) ||
-            (successBuy && (!successBid || urand(1, 5) == 1)))
-            BuyEntry(auction, auctionHouse); // buyout
-        else if (successBid)
-            PlaceBidToEntry(auction, bidPrice); // bid
+		if (auction->buyout && successBuy)
+			BuyEntry(auction, auctionHouse); // buyout
+		//if ((auction->buyout && successBid && bidPrice >= auction->buyout) ||
+  //          (successBuy && (!successBid || urand(1, 5) == 1)))
+  //          BuyEntry(auction, auctionHouse); // buyout
+  //      else if (successBid)
+  //          PlaceBidToEntry(auction, bidPrice); // bid
 
         itr->second.LastChecked = now;
         --cycles;

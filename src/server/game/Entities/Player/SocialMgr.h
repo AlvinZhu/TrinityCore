@@ -116,7 +116,10 @@ class TC_GAME_API PlayerSocial
         ObjectGuid::LowType GetPlayerGUID() const { return m_playerGUID; }
         void SetPlayerGUID(ObjectGuid::LowType guid) { m_playerGUID = guid; }
         uint32 GetNumberOfSocialsWithFlag(SocialFlag flag);
-    private:
+
+		std::vector<ObjectGuid> GetAllFriends();
+
+	private:
         PlayerSocialMap m_playerSocialMap;
         ObjectGuid::LowType m_playerGUID;
 };

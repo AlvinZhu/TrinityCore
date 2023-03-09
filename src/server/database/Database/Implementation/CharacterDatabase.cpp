@@ -613,4 +613,18 @@ void CharacterDatabaseConnection::DoPrepareStatements()
 
     // DeserterTracker
     PrepareStatement(CHAR_INS_DESERTER_TRACK, "INSERT INTO battleground_deserters (guid, type, datetime) VALUES (?, ?, NOW())", CONNECTION_ASYNC);
+
+	// Bot
+	PrepareStatement(CHAR_SEL_NPCBOTS, "SELECT entry, race, class, roles, equipMhEx, equipOhEx, equipRhEx, "
+		"equipHead, equipShoulders, equipChest, equipWaist, equipLegs, equipFeet, equipWrist, equipHands, equipBack, equipBody, equipFinger1, equipFinger2, equipTrinket1, equipTrinket2, equipNeck FROM character_npcbot WHERE owner = ? AND active = 1", CONNECTION_SYNCH);
+	PrepareStatement(CHAR_DEL_NPCBOTS, "DELETE FROM character_npcbot WHERE owner = ?", CONNECTION_ASYNC);
+	PrepareStatement(CHAR_INS_NPCBOT, "REPLACE INTO character_npcbot (owner, entry, race, class, roles, equipMhEx, equipOhEx, equipRhEx, "
+		"equipHead, equipShoulders, equipChest, equipWaist, equipLegs, equipFeet, equipWrist, equipHands, equipBack, equipBody, equipFinger1, equipFinger2, equipTrinket1, equipTrinket2, equipNeck, active,isteam) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", CONNECTION_ASYNC);
+	PrepareStatement(CHAR_UPD_NPCBOT_EQUIP, "UPDATE character_npcbot SET equipMhEx = ?, equipOhEx = ?, equipRhEx = ?, "
+		"equipHead = ?, equipShoulders = ?, equipChest = ?, equipWaist = ?, equipLegs = ?, equipFeet = ?, equipWrist = ?, equipHands = ?, equipBack = ?, equipBody = ?, equipFinger1 = ?, equipFinger2 = ?, equipTrinket1 = ?, equipTrinket2 = ?, equipNeck = ? WHERE owner = ? AND entry = ?", CONNECTION_ASYNC);
+	PrepareStatement(CHAR_UPD_NPCBOT_ACTIVE, "UPDATE character_npcbot SET active = ? WHERE owner = ? AND entry = ?", CONNECTION_ASYNC);
+	PrepareStatement(CHAR_SEL_NPCBOT_EQUIP, "SELECT equipMhEx, equipOhEx, equipRhEx, "
+		"equipHead, equipShoulders, equipChest, equipWaist, equipLegs, equipFeet, equipWrist, equipHands, equipBack, equipBody, equipFinger1, equipFinger2, equipTrinket1, equipTrinket2, equipNeck FROM character_npcbot WHERE owner = ? AND entry = ?", CONNECTION_SYNCH);
+	PrepareStatement(CHAR_SEL_NPCBOT_ROLES, "SELECT roles FROM character_npcbot WHERE owner = ? AND entry = ?", CONNECTION_SYNCH);
+	PrepareStatement(CHAR_UPD_NPCBOT_ROLES, "UPDATE character_npcbot SET roles = ? WHERE owner = ? AND entry = ?", CONNECTION_ASYNC);
 }

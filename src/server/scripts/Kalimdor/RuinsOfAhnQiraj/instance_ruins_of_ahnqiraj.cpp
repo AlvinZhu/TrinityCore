@@ -30,7 +30,33 @@ class instance_ruins_of_ahnqiraj : public InstanceMapScript
             {
                 SetHeaders(DataHeader);
                 SetBossNumber(NUM_ENCOUNTER);
-            }
+
+				//BotAttacksForBoss = NULL;
+			}
+
+			//BotAttackCreature* BotAttacksForBoss;
+			//BotAttackCreature* GetBotAttacksCreature(Creature* boss) override
+			//{
+			//	if (boss == NULL)
+			//		return BotAttacksForBoss;
+			//	if (!BotAttacksForBoss)
+			//	{
+			//		BotAttacksForBoss = new BotAttackCreature(boss, 1000);
+			//		return BotAttacksForBoss;
+			//	}
+			//	else
+			//	{
+			//		if (BotAttacksForBoss->MatchMainCreature(boss))
+			//			return BotAttacksForBoss;
+			//		else
+			//		{
+			//			delete BotAttacksForBoss;
+			//			BotAttacksForBoss = new BotAttackCreature(boss, 1000);
+			//			return BotAttacksForBoss;
+			//		}
+			//	}
+			//	return NULL;
+			//}
 
             void OnCreatureCreate(Creature* creature) override
             {

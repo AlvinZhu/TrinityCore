@@ -98,6 +98,8 @@ struct boss_twinemperorsAI : public ScriptedAI
     bool tspellcast;
     uint32 EnrageTimer;
 
+	Position AIPullPosition[2];
+
     virtual bool IAmVeklor() = 0;
     virtual void Reset() override = 0;
     virtual void CastSpellOnBug(Creature* target) = 0;
@@ -107,6 +109,49 @@ struct boss_twinemperorsAI : public ScriptedAI
         Initialize();
         me->ClearUnitState(UNIT_STATE_STUNNED);
     }
+
+	void InitializePullPos(Creature* c1, Creature* c2)
+	{
+		if (!c1 || !c2)
+		{
+			AIPullPosition[0] = Position(0, 0, 0, 0);
+			AIPullPosition[1] = Position(0, 0, 0, 0);
+			return;
+		}
+		G3D::Vector3 pos1 = c1->GetHomePosition().GetVector3();
+		G3D::Vector3 pos2 = c2->GetHomePosition().GetVector3();
+		float lenght = (pos1 - pos2).length();
+		G3D::Vector3 p2Dir = (pos1 - pos2).directionOrZero();
+		G3D::Vector3 p1Dir = (pos2 - pos1).directionOrZero();
+		G3D::Vector3 center = pos2 + (pos1 - pos2).directionOrZero() * (lenght * 0.5f);
+		center.z = c1->GetMap()->GetHeight(c1->GetPhaseMask(), center.x, center.y, center.z);
+
+		AIPullPosition[0] = Position(center + p1Dir * 50);
+		AIPullPosition[1] = Position(center + p2Dir * 50);
+	}
+
+	Position& GetNearAIPullPos()
+	{
+		if (AIPullPosition[0].GetPositionX() == 0)
+		{
+			if (AIPullPosition[1].GetPositionX() == 0)
+				return me->GetPosition();
+			return AIPullPosition[1];
+		}
+		if (AIPullPosition[1].GetPositionX() == 0)
+		{
+			if (AIPullPosition[0].GetPositionX() == 0)
+				return me->GetPosition();
+			return AIPullPosition[0];
+		}
+
+		G3D::Vector3 pos = me->GetHomePosition().GetVector3();
+		float p1Dist = (AIPullPosition[0].GetVector3() - pos).length();
+		float p2Dist = (AIPullPosition[1].GetVector3() - pos).length();
+		if (p1Dist < p2Dist)
+			return AIPullPosition[0];
+		return AIPullPosition[1];
+	}
 
     Creature* GetOtherBoss()
     {
@@ -164,7 +209,9 @@ struct boss_twinemperorsAI : public ScriptedAI
                 otherAI->AttackStart(who);
                 otherAI->DoZoneInCombat();
             }
-        }
+			InitializePullPos(me, pOtherBoss);
+			PickBotPullMeToPosition(GetNearAIPullPos(), pOtherBoss->GetGUID());
+		}
     }
 
     void SpellHit(Unit* caster, const SpellInfo* entry) override
@@ -227,15 +274,17 @@ struct boss_twinemperorsAI : public ScriptedAI
             thisPos.Relocate(me);
             Position otherPos;
             otherPos.Relocate(pOtherBoss);
-            pOtherBoss->SetPosition(thisPos);
+			me->UpdatePosition(otherPos, true);
+			pOtherBoss->UpdatePosition(thisPos, true);
+			pOtherBoss->SetPosition(thisPos);
             me->SetPosition(otherPos);
 
-            SetAfterTeleport();
-            ENSURE_AI(boss_twinemperorsAI, pOtherBoss->AI())->SetAfterTeleport();
+			SetAfterTeleport(pOtherBoss);
+            ENSURE_AI(boss_twinemperorsAI, pOtherBoss->AI())->SetAfterTeleport(me);
         }
     }
 
-    void SetAfterTeleport()
+	void SetAfterTeleport(Creature const* pOtherBoss)
     {
         me->InterruptNonMeleeSpells(false);
         DoStopAttack();
@@ -245,7 +294,8 @@ struct boss_twinemperorsAI : public ScriptedAI
         AfterTeleport = true;
         AfterTeleportTimer = 2000;
         tspellcast = false;
-    }
+		PickBotPullMeToPosition(GetNearAIPullPos(), pOtherBoss->GetGUID());
+	}
 
     bool TryActivateAfterTTelep(uint32 diff)
     {
@@ -264,7 +314,10 @@ struct boss_twinemperorsAI : public ScriptedAI
             {
                 AfterTeleport = false;
                 me->ClearUnitState(UNIT_STATE_STUNNED);
-                if (Unit* nearu = me->SelectNearestTarget(100))
+				//Creature* pOtherBoss = GetOtherBoss();
+				//if (pOtherBoss && pOtherBoss->IsAlive())
+				//	PickBotPullMeToPosition(GetNearAIPullPos(), pOtherBoss->GetGUID());
+				if (Unit* nearu = me->SelectNearestTarget(100))
                 {
                     //DoYell(nearu->GetName(), LANG_UNIVERSAL, 0);
                     AttackStart(nearu);
@@ -411,11 +464,15 @@ public:
             UpperCut_Timer = urand(14000, 29000);
             UnbalancingStrike_Timer = urand(8000, 18000);
             Scarabs_Timer = urand(7000, 14000);
+
+			BotMe_Timer = 2000;
         }
 
         uint32 UpperCut_Timer;
         uint32 UnbalancingStrike_Timer;
         uint32 Scarabs_Timer;
+
+		uint32 BotMe_Timer;
 
         void Reset() override
         {
@@ -429,8 +486,9 @@ public:
         {
             target->setFaction(14);
             target->AI()->AttackStart(me->getThreatManager().getHostilTarget());
-            target->AddAura(SPELL_MUTATE_BUG, target);
+            //target->AddAura(SPELL_MUTATE_BUG, target);
             target->SetFullHealth();
+			BotPhysicsDPSTargetMe(target);
         }
 
         void UpdateAI(uint32 diff) override
@@ -439,41 +497,51 @@ public:
             if (!UpdateVictim())
                 return;
 
-            if (!TryActivateAfterTTelep(diff))
-                return;
+            //if (!TryActivateAfterTTelep(diff))
+            //    return;
 
             //UnbalancingStrike_Timer
-            if (UnbalancingStrike_Timer <= diff)
-            {
-                DoCastVictim(SPELL_UNBALANCING_STRIKE);
-                UnbalancingStrike_Timer = 8000 + rand32() % 12000;
-            } else UnbalancingStrike_Timer -= diff;
+            //if (UnbalancingStrike_Timer <= diff)
+            //{
+            //    DoCastVictim(SPELL_UNBALANCING_STRIKE);
+            //    UnbalancingStrike_Timer = 8000 + rand32() % 12000;
+            //} else UnbalancingStrike_Timer -= diff;
 
             if (UpperCut_Timer <= diff)
             {
                 Unit* randomMelee = SelectTarget(SELECT_TARGET_RANDOM, 0, NOMINAL_MELEE_RANGE, true);
                 if (randomMelee)
                     DoCast(randomMelee, SPELL_UPPERCUT);
-                UpperCut_Timer = 15000 + rand32() % 15000;
+				UpperCut_Timer = urand(65000, 75000);
             } else UpperCut_Timer -= diff;
 
-            HandleBugs(diff);
+            //HandleBugs(diff);
 
             //Heal brother when 60yrds close
             TryHealBrother(diff);
 
             //Teleporting to brother
-            if (Teleport_Timer <= diff)
-            {
-                TeleportToMyBrother();
-            } else Teleport_Timer -= diff;
+            //if (Teleport_Timer <= diff)
+            //{
+            //    TeleportToMyBrother();
+            //} else Teleport_Timer -= diff;
+
+			if (BotMe_Timer <= diff)
+			{
+				//if (Abuse_Bug_Timer < 1000)
+					BotPhysicsDPSTargetMe(me);
+				Creature* creature = GetOtherBoss();
+				if (creature && creature->IsAlive())
+					PickBotPullMeToPosition(GetNearAIPullPos(), creature->GetGUID());
+				BotMe_Timer = 2000;
+			}
+			else BotMe_Timer -= diff;
 
             CheckEnrage(diff);
 
             DoMeleeAttackIfReady();
         }
     };
-
 };
 
 class boss_veklor : public CreatureScript
@@ -498,14 +566,18 @@ public:
         {
             ShadowBolt_Timer = 0;
             Blizzard_Timer = urand(15000, 20000);
-            ArcaneBurst_Timer = 1000;
+            ArcaneBurst_Timer = 20000;
             Scorpions_Timer = urand(7000, 14000);
-        }
+
+			BotMe_Timer = 2000;
+		}
 
         uint32 ShadowBolt_Timer;
         uint32 Blizzard_Timer;
         uint32 ArcaneBurst_Timer;
         uint32 Scorpions_Timer;
+
+		uint32 BotMe_Timer;
 
         void Reset() override
         {
@@ -521,6 +593,7 @@ public:
             target->setFaction(14);
             target->AddAura(SPELL_EXPLODEBUG, target);
             target->SetFullHealth();
+			BotMagicDPSTargetMe(target);
         }
 
         void UpdateAI(uint32 diff) override
@@ -534,48 +607,63 @@ public:
             // which is almost impossible
             if (AfterTeleport)
                 ArcaneBurst_Timer = 5000;
-            if (!TryActivateAfterTTelep(diff))
-                return;
+            //if (!TryActivateAfterTTelep(diff))
+            //    return;
 
             //ShadowBolt_Timer
             if (ShadowBolt_Timer <= diff)
             {
                 if (!me->IsWithinDist(me->GetVictim(), 45.0f))
                     me->GetMotionMaster()->MoveChase(me->GetVictim(), VEKLOR_DIST, 0);
-                else
-                    DoCastVictim(SPELL_SHADOWBOLT);
-                ShadowBolt_Timer = 2000;
+				else
+					DoCastVictim(SPELL_SHADOWBOLT);
+				ShadowBolt_Timer = urand(30000, 45000);
             } else ShadowBolt_Timer -= diff;
 
             //Blizzard_Timer
-            if (Blizzard_Timer <= diff)
-            {
-                Unit* target = NULL;
-                target = SelectTarget(SELECT_TARGET_RANDOM, 0, 45, true);
-                if (target)
-                    DoCast(target, SPELL_BLIZZARD);
-                Blizzard_Timer = 15000 + rand32() % 15000;
-            } else Blizzard_Timer -= diff;
+			if (Blizzard_Timer <= diff)
+			{
+				Unit* target = NULL;
+				target = SelectTarget(SELECT_TARGET_RANDOM, 0, 45, true);
+				if (target)
+				{
+					DoCast(target, SPELL_BLIZZARD);
+					BotFleeLineByAngle(me, me->GetAngle(&target->GetPosition()));
+				}
+				Blizzard_Timer = urand(20000, 30000);
+			}
+			else Blizzard_Timer -= diff;
 
-            if (ArcaneBurst_Timer <= diff)
-            {
-                if (Unit* mvic = SelectTarget(SELECT_TARGET_NEAREST, 0, NOMINAL_MELEE_RANGE, true))
-                {
-                    DoCast(mvic, SPELL_ARCANEBURST);
-                    ArcaneBurst_Timer = 5000;
-                }
-            } else ArcaneBurst_Timer -= diff;
+            //if (ArcaneBurst_Timer <= diff)
+            //{
+            //    if (Unit* mvic = SelectTarget(SELECT_TARGET_NEAREST, 0, NOMINAL_MELEE_RANGE, true))
+            //    {
+            //        DoCast(mvic, SPELL_ARCANEBURST);
+            //        ArcaneBurst_Timer = 20000;
+            //    }
+            //} else ArcaneBurst_Timer -= diff;
 
-            HandleBugs(diff);
+            //HandleBugs(diff);
 
             //Heal brother when 60yrds close
             TryHealBrother(diff);
 
             //Teleporting to brother
-            if (Teleport_Timer <= diff)
-            {
-                TeleportToMyBrother();
-            } else Teleport_Timer -= diff;
+            //if (Teleport_Timer <= diff)
+            //{
+            //    TeleportToMyBrother();
+            //} else Teleport_Timer -= diff;
+
+			if (BotMe_Timer <= diff)
+			{
+				//if (Abuse_Bug_Timer < 1000)
+					BotMagicDPSTargetMe(me);
+				Creature* creature = GetOtherBoss();
+				if (creature && creature->IsAlive())
+					PickBotPullMeToPosition(GetNearAIPullPos(), creature->GetGUID());
+				BotMe_Timer = 2000;
+			}
+			else BotMe_Timer -= diff;
 
             CheckEnrage(diff);
 

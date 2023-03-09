@@ -22,6 +22,7 @@
 #include "SpellInfo.h"
 #include "WorldPacket.h"
 #include "Opcodes.h"
+#include "BotGroupAI.h"
 
 enum Texts
 {
@@ -135,11 +136,11 @@ class boss_ossirian : public CreatureScript
             {
                 _EnterCombat();
                 events.Reset();
-                events.ScheduleEvent(EVENT_SILENCE, 30000);
+                events.ScheduleEvent(EVENT_SILENCE, 75000);
                 events.ScheduleEvent(EVENT_CYCLONE, 20000);
-                events.ScheduleEvent(EVENT_STOMP, 30000);
+                events.ScheduleEvent(EVENT_STOMP, 50000);
 
-                DoCast(me, SPELL_SUPREME);
+                //DoCast(me, SPELL_SUPREME);
                 Talk(SAY_AGGRO);
 
                 Map* map = me->GetMap();
@@ -148,14 +149,16 @@ class boss_ossirian : public CreatureScript
                 data << uint32(WEATHER_STATE_HEAVY_SANDSTORM) << float(1) << uint8(0);
                 map->SendToPlayers(&data);
 
-                for (uint8 i = 0; i < NUM_TORNADOS; ++i)
-                {
-                    Position Point = me->GetRandomPoint(RoomCenter, RoomRadius);
-                    if (Creature* Tornado = map->SummonCreature(NPC_SAND_VORTEX, Point))
-                        Tornado->CastSpell(Tornado, SPELL_SAND_STORM, true);
-                }
+                //for (uint8 i = 0; i < NUM_TORNADOS; ++i)
+                //{
+                //    Position Point = me->GetRandomPoint(RoomCenter, RoomRadius);
+                //    if (Creature* Tornado = map->SummonCreature(NPC_SAND_VORTEX, Point))
+                //        Tornado->CastSpell(Tornado, SPELL_SAND_STORM, true);
+                //}
 
-                SpawnNextCrystal();
+				if (me->HasAura(SPELL_SUPREME))
+					me->RemoveAurasDueToSpell(SPELL_SUPREME);
+				SpawnNextCrystal();
             }
 
             void KilledUnit(Unit* /*victim*/) override
@@ -236,30 +239,37 @@ class boss_ossirian : public CreatureScript
                     }
                 }
 
-                if (ApplySupreme)
-                {
-                    DoCast(me, SPELL_SUPREME);
-                    Talk(SAY_SUPREME);
-                }
+                //if (ApplySupreme)
+                //{
+                //    DoCast(me, SPELL_SUPREME);
+                //    Talk(SAY_SUPREME);
+                //}
 
                 while (uint32 eventId = events.ExecuteEvent())
                 {
                     switch (eventId)
                     {
-                        case EVENT_SILENCE:
-                            DoCast(me, SPELL_SILENCE);
-                            events.ScheduleEvent(EVENT_SILENCE, urand(20000, 30000));
-                            break;
-                        case EVENT_CYCLONE:
-                            DoCastVictim(SPELL_CYCLONE);
-                            events.ScheduleEvent(EVENT_CYCLONE, 20000);
-                            break;
-                        case EVENT_STOMP:
-                            DoCast(me, SPELL_STOMP);
-                            events.ScheduleEvent(EVENT_STOMP, 30000);
-                            break;
-                        default:
-                            break;
+					case EVENT_SILENCE:
+						DoCast(me, SPELL_SILENCE);
+						events.ScheduleEvent(EVENT_SILENCE, urand(60000, 80000));
+						break;
+					case EVENT_CYCLONE:
+						DoCastVictim(SPELL_CYCLONE);
+						if (Unit* pUnit = me->GetVictim())
+						{
+							if (BotGroupAI* pGroupAI = dynamic_cast<BotGroupAI*>(pUnit->GetAI()))
+							{
+								pGroupAI->AddWaitSpecialAura(SPELL_CYCLONE);
+							}
+						}
+						events.ScheduleEvent(EVENT_CYCLONE, 25000);
+						break;
+					case EVENT_STOMP:
+						DoCast(me, SPELL_STOMP);
+						events.ScheduleEvent(EVENT_STOMP, 50000);
+						break;
+					default:
+						break;
                     }
                 }
 

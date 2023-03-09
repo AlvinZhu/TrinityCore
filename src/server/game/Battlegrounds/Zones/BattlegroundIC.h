@@ -932,7 +932,8 @@ class BattlegroundIC : public Battleground
         void RemovePlayer(Player* player, ObjectGuid guid, uint32 team) override;
         void HandleAreaTrigger(Player* player, uint32 trigger) override;
         bool SetupBattleground() override;
-        void SpawnLeader(uint32 teamid);
+		void ResetBGSubclass() override;
+		void SpawnLeader(uint32 teamid);
         void HandleKillUnit(Creature* unit, Player* killer) override;
         void HandleKillPlayer(Player* player, Player* killer) override;
         void EndBattleground(uint32 winner) override;
@@ -941,6 +942,10 @@ class BattlegroundIC : public Battleground
         void DestroyGate(Player* player, GameObject* go) override;
 
         WorldSafeLocsEntry const* GetClosestGraveYard(Player* player) override;
+		Creature const* GetClosestGraveCreature(const Player* player) override;
+		GameObject const* GetClosestEnemyFlagByRange(Player* player, float range);
+		uint32 GetNodeObjectType(uint32 type);
+		bool NodeIsOccupied(uint32 type, TeamId team);
 
         /* Scorekeeping */
         void FillInitialWorldStates(WorldPacket& data) override;

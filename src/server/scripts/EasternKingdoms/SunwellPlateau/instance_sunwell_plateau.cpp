@@ -126,18 +126,20 @@ class instance_sunwell_plateau : public InstanceMapScript
 
             void OnGameObjectCreate(GameObject* go) override
             {
-                switch (go->GetEntry())
+				switch (go->GetEntry())
                 {
-                    case GO_FORCE_FIELD:
+					case GO_FIRE_BARRIER:
+						go->Delete();
+						break;
+					case GO_FORCE_FIELD:
                     case GO_BOSS_COLLISION_1:
                     case GO_BOSS_COLLISION_2:
-                    case GO_FIRE_BARRIER:
                     case GO_MURUS_GATE_1:
                     case GO_MURUS_GATE_2:
-                        AddDoor(go, true);
+						AddDoor(go, true);
                         break;
                     default:
-                        break;
+						break;
                 }
             }
 
@@ -146,7 +148,7 @@ class instance_sunwell_plateau : public InstanceMapScript
                 switch (go->GetEntry())
                 {
                     case GO_FIRE_BARRIER:
-                    case GO_MURUS_GATE_1:
+					case GO_MURUS_GATE_1:
                     case GO_MURUS_GATE_2:
                     case GO_BOSS_COLLISION_1:
                     case GO_BOSS_COLLISION_2:

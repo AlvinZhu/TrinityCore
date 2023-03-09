@@ -744,6 +744,17 @@ public:
 
     void ResetTimes();
 
+	std::list<ObjectGuid> GetAllMemberGUID()
+	{
+		std::list<ObjectGuid> guids;
+		for (Members::iterator itr = m_members.begin(); itr != m_members.end(); ++itr)
+		{
+			Member* pMember = itr->second;
+			guids.push_back(pMember->GetGUID());
+		}
+		return guids;
+	}
+
 protected:
     ObjectGuid::LowType m_id;
     std::string m_name;

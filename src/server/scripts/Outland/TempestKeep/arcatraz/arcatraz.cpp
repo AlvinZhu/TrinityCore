@@ -538,6 +538,7 @@ class npc_zerekethvoidzone : public CreatureScript
             void Reset() override
             {
                 me->SetUInt32Value(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_NONE);
+                me->SetUInt32Value(UNIT_NPC_FLAGS, 0);
                 me->setFaction(16);
                 me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
 

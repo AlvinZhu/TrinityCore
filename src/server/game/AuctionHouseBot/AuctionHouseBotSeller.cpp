@@ -18,6 +18,7 @@
 #include "Log.h"
 #include "DBCStores.h"
 #include "ObjectMgr.h"
+#include "World.h"
 #include "AuctionHouseMgr.h"
 #include "AuctionHouseBotSeller.h"
 
@@ -76,17 +77,17 @@ bool AuctionBotSeller::Initialize()
 
     TC_LOG_DEBUG("ahbot", "Loading loot items for filter..");
     QueryResult result = WorldDatabase.PQuery(
-        "SELECT `item` FROM `creature_loot_template` WHERE `Reference` = 0 UNION "
-        "SELECT `item` FROM `disenchant_loot_template` WHERE `Reference` = 0 UNION "
-        "SELECT `item` FROM `fishing_loot_template` WHERE `Reference` = 0 UNION "
-        "SELECT `item` FROM `gameobject_loot_template` WHERE `Reference` = 0 UNION "
-        "SELECT `item` FROM `item_loot_template` WHERE `Reference` = 0 UNION "
-        "SELECT `item` FROM `milling_loot_template` WHERE `Reference` = 0 UNION "
-        "SELECT `item` FROM `pickpocketing_loot_template` WHERE `Reference` = 0 UNION "
-        "SELECT `item` FROM `prospecting_loot_template` WHERE `Reference` = 0 UNION "
-        "SELECT `item` FROM `reference_loot_template` WHERE `Reference` = 0 UNION "
-        "SELECT `item` FROM `skinning_loot_template` WHERE `Reference` = 0 UNION "
-        "SELECT `item` FROM `spell_loot_template` WHERE `Reference` = 0");
+        "SELECT  distinct `item` FROM `creature_loot_template` WHERE `Reference` = 0 and item <= 50000 UNION "
+        "SELECT  distinct `item` FROM `disenchant_loot_template` WHERE `Reference` = 0 UNION "
+        "SELECT  distinct `item` FROM `fishing_loot_template` WHERE `Reference` = 0 UNION "
+        "SELECT  distinct `item` FROM `gameobject_loot_template` WHERE `Reference` = 0 UNION "
+        "SELECT  distinct `item` FROM `item_loot_template` WHERE `Reference` = 0 UNION "
+        "SELECT  distinct `item` FROM `milling_loot_template` WHERE `Reference` = 0 UNION "
+        "SELECT  distinct `item` FROM `pickpocketing_loot_template` WHERE `Reference` = 0 UNION "
+        "SELECT  distinct `item` FROM `prospecting_loot_template` WHERE `Reference` = 0 UNION "
+        "SELECT  distinct `item` FROM `reference_loot_template` WHERE `Reference` = 0 UNION "
+        "SELECT  distinct `item` FROM `skinning_loot_template` WHERE `Reference` = 0 UNION "
+        "SELECT  distinct `item` FROM `spell_loot_template` WHERE `Reference` = 0");
 
     if (result)
     {
@@ -735,6 +736,12 @@ void AuctionBotSeller::SetPricesOfItem(ItemTemplate const* itemProto, SellerConf
     uint32 basePrice = buyp * .5;
     range = buyp * .4;
     bidp = urand(static_cast<uint32>(basePrice - range + 0.5f), static_cast<uint32>(basePrice + range + 0.5f)) + 1;
+
+	// UP Price
+	bidp *= 2.0f;
+	bidp *= 2.0f;
+	buyp += uint32( float(buyp) * (float(itemProto->Quality) * 0.8f) );
+	bidp += uint32( float(bidp) * (float(itemProto->Quality) * 0.8f) );
 }
 
 // Determines the stack size to use for the item
@@ -958,7 +965,8 @@ void AuctionBotSeller::AddNewAuctions(SellerConfiguration& config)
     while (GetItemsToSell(config, itemsToSell, allItems) && items > 0)
     {
         --items;
-
+if (irand(0,6)==1)
+{
         // Select random position from missed items table
         uint32 pos = urand(0, itemsToSell.size() - 1);
 
@@ -1023,6 +1031,8 @@ void AuctionBotSeller::AddNewAuctions(SellerConfiguration& config)
         auctionEntry->itemGUIDLow = item->GetGUID().GetCounter();
         auctionEntry->itemEntry = item->GetEntry();
         auctionEntry->startbid = bidPrice;
+//一口价问题
+        if (buyoutPrice<=bidPrice) buyoutPrice=bidPrice+irand(8,188);
         auctionEntry->buyout = buyoutPrice;
         auctionEntry->houseId = houseid;
         auctionEntry->bidder = 0;
@@ -1037,16 +1047,23 @@ void AuctionBotSeller::AddNewAuctions(SellerConfiguration& config)
         auctionEntry->SaveToDB(trans);
 
         auctionHouse->AddAuction(auctionEntry);
-
         ++count;
     }
+    } 
     CharacterDatabase.CommitTransaction(trans);
 
     TC_LOG_DEBUG("ahbot", "AHBot: Added %u items to auction", count);
+	//char text[128] = { 0 };
+	//sprintf_s(text, 127, "|cffff8800拍卖行上架新商品 <%d> 份。|r", count);
+	//std::string ahText;
+	//consoleToUtf8(std::string(text), ahText);
+	//sWorld->SendGlobalText(ahText.c_str(), NULL);
 }
 
 bool AuctionBotSeller::Update(AuctionHouseType houseType)
 {
+	if (houseType == AUCTION_HOUSE_NEUTRAL)
+		return false;
     if (sAuctionBotConfig->GetConfigItemAmountRatio(houseType) > 0)
     {
         TC_LOG_DEBUG("ahbot", "AHBot: %s selling ...", AuctionBotConfig::GetHouseTypeName(houseType));

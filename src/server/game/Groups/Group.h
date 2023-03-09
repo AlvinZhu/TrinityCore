@@ -24,6 +24,8 @@
 #include "LootMgr.h"
 #include "QueryResult.h"
 #include "SharedDefines.h"
+#include "BotGroupAI.h"
+#include "BotAI.h"
 
 class Battlefield;
 class Battleground;
@@ -145,6 +147,8 @@ class Roll : public LootValidatorRef
         uint8 totalPass;
         uint8 itemSlot;
         uint8 rollVoteMask;
+
+		std::set<ObjectGuid> rolledPlayers;
 };
 
 struct InstanceGroupBind
@@ -158,6 +162,7 @@ struct InstanceGroupBind
 
 /** request member stats checken **/
 /// @todo uninvite people that not accepted invite
+typedef std::vector<Roll*> Rolls;
 class TC_GAME_API Group
 {
     public:
@@ -176,8 +181,6 @@ class TC_GAME_API Group
     protected:
         typedef MemberSlotList::iterator member_witerator;
         typedef std::set<Player*> InvitesList;
-
-        typedef std::vector<Roll*> Rolls;
 
     public:
         Group();
@@ -324,7 +327,28 @@ class TC_GAME_API Group
         // FG: evil hacks
         void BroadcastGroupUpdate(void);
 
+		// Bot group AI
+		Rolls& GetAllRolls() { return RollId; }
+		void PlayerBotRoll(Player* player, const Roll& roll);
+		bool GiveAtGroupPos(ObjectGuid& guid, uint32& index, uint32& count);
+		bool GroupExistRealPlayer();
+		bool GroupExistPlayerBot();
+		bool AllGroupNotCombat();
+		bool AllGroupIsIDLE();
+		void AllGroupBotGiveXP(uint32 XP);
+		Unit* GetGroupTankTarget();
+		std::vector<ObjectGuid> GetGroupMemberFromNeedRevivePlayer(uint32 forMap);
+		void ResetRaidDungeon();
+		void ClearAllGroupForceFleeState();
+		void ProcessGroupBotCommand(Player* srcPlayer, std::string& cmd);
+		void OnLeaderChangePhase(Player* changeTarget, uint32 newPhase);
+
+        //Bot
+		ObjectGuid const *GetTargetIcons() const { return m_targetIcons; }
+
     protected:
+		Creature* SearchSeduceCreature(Player* centerPlayer);
+		BotGroupAI* SearchExecuteSeduceBotAI();
         bool _setMembersGroup(ObjectGuid guid, uint8 group);
         void _homebindIfInstance(Player* player);
 

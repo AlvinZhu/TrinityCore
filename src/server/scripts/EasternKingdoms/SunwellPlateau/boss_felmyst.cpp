@@ -144,7 +144,7 @@ public:
 
             events.Reset();
 
-            me->SetDisableGravity(true);
+            //me->SetDisableGravity(true);
             me->SetFloatValue(UNIT_FIELD_BOUNDINGRADIUS, 10);
             me->SetFloatValue(UNIT_FIELD_COMBATREACH, 10);
 
@@ -249,7 +249,7 @@ public:
                     me->CastStop(SPELL_FOG_BREATH);
                     me->RemoveAurasDueToSpell(SPELL_FOG_BREATH);
                     me->StopMoving();
-                    me->SetSpeedRate(MOVE_RUN, 2.0f);
+                    me->SetSpeed(MOVE_RUN, 2.0f);
 
                     events.ScheduleEvent(EVENT_CLEAVE, urand(5000, 10000));
                     events.ScheduleEvent(EVENT_CORROSION, urand(10000, 20000));
@@ -258,7 +258,7 @@ public:
                     events.ScheduleEvent(EVENT_FLIGHT, 60000);
                     break;
                 case PHASE_FLIGHT:
-                    me->SetDisableGravity(true);
+                    //me->SetDisableGravity(true);
                     events.ScheduleEvent(EVENT_FLIGHT_SEQUENCE, 1000);
                     uiFlightCount = 0;
                     uiBreathCount = 0;
@@ -392,7 +392,7 @@ public:
                     }
                     break;
                 case 10:
-                    me->SetDisableGravity(false);
+                    //me->SetDisableGravity(false);
                     me->HandleEmoteCommand(EMOTE_ONESHOT_LAND);
                     EnterPhase(PHASE_GROUND);
                     AttackStart(SelectTarget(SELECT_TARGET_TOPAGGRO));
@@ -401,7 +401,7 @@ public:
             ++uiFlightCount;
         }
 
-        void UpdateAI(uint32 diff) override
+         void UpdateAI(uint32 diff) override
         {
             if (!UpdateVictim())
             {
@@ -530,7 +530,7 @@ public:
         npc_felmyst_vaporAI(Creature* creature) : ScriptedAI(creature)
         {
             me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
-            me->SetSpeedRate(MOVE_RUN, 0.8f);
+            me->SetSpeed(MOVE_RUN, 0.8f);
         }
 
         void Reset() override { }

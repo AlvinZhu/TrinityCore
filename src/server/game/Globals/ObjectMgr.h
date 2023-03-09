@@ -136,6 +136,22 @@ struct GameTele
 
 typedef std::unordered_map<uint32, GameTele > GameTeleContainer;
 
+#define MAX_CREATURE_OUTFIT_DISPLAYS 11
+struct CreatureOutfit
+{
+	uint8 race;
+	uint8 gender;
+	uint8 face;
+	uint8 skin;
+	uint8 hair;
+	uint8 facialhair;
+	uint8 haircolor;
+	uint32 displayId;
+	uint32 outfit[MAX_CREATURE_OUTFIT_DISPLAYS];
+};
+
+typedef std::unordered_map<uint32, CreatureOutfit> CreatureOutfitContainer;
+
 enum ScriptsType
 {
     SCRIPTS_FIRST = 1,
@@ -841,6 +857,9 @@ class TC_GAME_API ObjectMgr
 
         AccessRequirement const* GetAccessRequirement(uint32 mapid, Difficulty difficulty) const
         {
+			//if (mapid == 269) // 进入黑色沼泽的判断去掉
+			if (mapid != 650)
+				return NULL;
             AccessRequirementContainer::const_iterator itr = _accessRequirementStore.find(MAKE_PAIR32(mapid, difficulty));
             if (itr != _accessRequirementStore.end())
                 return itr->second;
@@ -1250,6 +1269,9 @@ class TC_GAME_API ObjectMgr
         bool AddGameTele(GameTele& data);
         bool DeleteGameTele(std::string const& name);
 
+		//阳光-待定
+		CreatureOutfitContainer const& GetCreatureOutfitBOTMap() const { return _creatureOutfitStore; }
+
         TrainerSpellData const* GetNpcTrainerSpells(uint32 entry) const
         {
             CacheTrainerSpellContainer::const_iterator  iter = _cacheTrainerSpellStore.find(entry);
@@ -1402,6 +1424,7 @@ class TC_GAME_API ObjectMgr
         PageTextContainer _pageTextStore;
         InstanceTemplateContainer _instanceTemplateStore;
 
+		CreatureOutfitContainer _creatureOutfitStore;
     private:
         void LoadScripts(ScriptsType type);
         void LoadQuestRelationsHelper(QuestRelations& map, QuestRelationsReverse* reverseMap, std::string const& table, bool starter, bool go);
@@ -1485,5 +1508,5 @@ class TC_GAME_API ObjectMgr
 };
 
 #define sObjectMgr ObjectMgr::instance()
-
+std::string Format(char const *format, ...);
 #endif

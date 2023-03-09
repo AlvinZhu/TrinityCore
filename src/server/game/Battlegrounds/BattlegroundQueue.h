@@ -92,7 +92,17 @@ class TC_GAME_API BattlegroundQueue
         void PlayerInvitedToBGUpdateAverageWaitTime(GroupQueueInfo* ginfo, BattlegroundBracketId bracket_id);
         uint32 GetAverageQueueWaitTime(GroupQueueInfo* ginfo, BattlegroundBracketId bracket_id) const;
 
-        typedef std::map<ObjectGuid, PlayerQueueInfo> QueuedPlayersMap;
+		bool ExistQueueByRatedArena(ObjectGuid& guid, bool isRated);
+		bool CheckRatedArenaMatch(BattlegroundBracketId bracket_id);
+		GroupQueueInfo* GetFirstRealPlayerGroupInfo(BattlegroundBracketId bracket_id, BattlegroundQueueGroupTypes groupType);
+		bool TryGatherPlayerBySelfRatedArena(BattlegroundBracketId bracket_id, GroupQueueInfo* gInfo);
+		bool TryGatherPlayerByEnemyRatedArena(BattlegroundBracketId bracket_id, GroupQueueInfo* gInfo, bool needBroadcast = false);
+		void RatedArenaAllPlayerBotEnter(BattlegroundBracketId bracket_id);
+		bool ExistRealPlayer(const PvPDifficultyEntry* bracketEntry, bool isRated = false);
+		bool QueryNeedPlayerCount(BattlegroundTypeId bgTypeID, BattlegroundBracketId bracket_id, uint32 aaType, int32& needAlliance, int32& needHorde);
+		void AllPlayerBotLeaveQueueFromRatedArena(BattlegroundBracketId bracket_id);
+
+		typedef std::map<ObjectGuid, PlayerQueueInfo> QueuedPlayersMap;
         QueuedPlayersMap m_QueuedPlayers;
 
         //do NOT use deque because deque.erase() invalidates ALL iterators
@@ -128,7 +138,6 @@ class TC_GAME_API BattlegroundQueue
         SelectionPool m_SelectionPools[BG_TEAMS_COUNT];
         uint32 GetPlayersInQueue(TeamId id);
     private:
-
         bool InviteGroupToBG(GroupQueueInfo* ginfo, Battleground* bg, uint32 side);
         uint32 m_WaitTimes[BG_TEAMS_COUNT][MAX_BATTLEGROUND_BRACKETS][COUNT_OF_PLAYERS_TO_AVERAGE_WAIT_TIME];
         uint32 m_WaitTimeLastPlayer[BG_TEAMS_COUNT][MAX_BATTLEGROUND_BRACKETS];

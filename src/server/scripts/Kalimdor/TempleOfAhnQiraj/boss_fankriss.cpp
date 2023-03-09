@@ -136,6 +136,7 @@ public:
                         SummonSpawn(SelectTarget(SELECT_TARGET_RANDOM, 0));
                         break;
                 }
+				ClearBotMeTarget(false);
                 SpawnSpawns_Timer = urand(30000, 60000);
             } else SpawnSpawns_Timer -= diff;
 

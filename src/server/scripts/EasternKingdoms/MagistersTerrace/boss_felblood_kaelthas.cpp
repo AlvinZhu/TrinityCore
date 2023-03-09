@@ -397,19 +397,19 @@ public:
                                 GravityLapseTimer = 30000;
                                 GravityLapsePhase = 4;
 
-                                for (uint8 i = 0; i < 3; ++i)
-                                {
-                                    Unit* target = NULL;
-                                    target = SelectTarget(SELECT_TARGET_RANDOM, 0);
+                                //for (uint8 i = 0; i < 3; ++i)
+                                //{
+                                //    Unit* target = NULL;
+                                //    target = SelectTarget(SELECT_TARGET_RANDOM, 0);
 
-                                    Creature* Orb = DoSpawnCreature(CREATURE_ARCANE_SPHERE, 5, 5, 0, 0, TEMPSUMMON_TIMED_OR_CORPSE_DESPAWN, 30000);
-                                    if (Orb && target)
-                                    {
-                                        Orb->SetSpeedRate(MOVE_RUN, 0.5f);
-                                        Orb->AddThreat(target, 1000000.0f);
-                                        Orb->AI()->AttackStart(target);
-                                    }
-                                }
+                                //    Creature* Orb = DoSpawnCreature(CREATURE_ARCANE_SPHERE, 5, 5, 0, 0, TEMPSUMMON_TIMED_OR_CORPSE_DESPAWN, 30000);
+                                //    if (Orb && target)
+                                //    {
+                                //        Orb->SetSpeedRate(MOVE_RUN, 0.5f);
+                                //        Orb->AddThreat(target, 1000000.0f);
+                                //        Orb->AI()->AttackStart(target);
+                                //    }
+                                //}
 
                                 DoCast(me, SPELL_GRAVITY_LAPSE_CHANNEL);
                                 break;
@@ -585,13 +585,13 @@ public:
             if (!UpdateVictim())
                 return;
 
-            if (BurnTimer <= diff)
-            {
-                //spell Burn should possible do this, but it doesn't, so do this for now.
-                uint16 dmg = urand(1650, 2050);
-                me->DealDamage(me, dmg, 0, DOT, SPELL_SCHOOL_MASK_FIRE, NULL, false);
-                BurnTimer += 2000;
-            } BurnTimer -= diff;
+            //if (BurnTimer <= diff)
+            //{
+            //    //spell Burn should possible do this, but it doesn't, so do this for now.
+            //    uint16 dmg = urand(1650, 2050);
+            //    me->DealDamage(me, dmg, 0, DOT, SPELL_SCHOOL_MASK_FIRE, NULL, false);
+            //    BurnTimer += 2000;
+            //} BurnTimer -= diff;
 
             DoMeleeAttackIfReady();
         }
@@ -618,9 +618,11 @@ public:
         void Initialize()
         {
             HatchTimer = 10000;
+			BotAITimer = 2000;
         }
 
-        uint32 HatchTimer;
+		uint32 HatchTimer;
+		uint32 BotAITimer;
 
         void Reset() override
         {
@@ -638,7 +640,14 @@ public:
                 me->SummonCreature(CREATURE_PHOENIX, 0.0f, 0.0f, 0.0f, 0.0f, TEMPSUMMON_TIMED_OR_CORPSE_DESPAWN, 60000);
                 me->KillSelf();
             } else HatchTimer -= diff;
-        }
+
+			if (BotAITimer <= diff)
+			{
+				BotAllTargetMe(true);
+				BotAITimer = 2000;
+			}
+			else BotAITimer -= diff;
+		}
     };
 };
 

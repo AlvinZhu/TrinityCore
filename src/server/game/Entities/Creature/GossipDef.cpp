@@ -211,34 +211,37 @@ void PlayerMenu::SendGossipMenu(uint32 titleTextId, ObjectGuid objectGUID)
     data << uint32(0);                                  // max count 0x20
     uint32 count = 0;
 
-    // Store this instead of checking the Singleton every loop iteration
-    bool questLevelInTitle = sWorld->getBoolConfig(CONFIG_UI_QUESTLEVELS_IN_DIALOGS);
+	if (titleTextId > 1)
+	{
+		// Store this instead of checking the Singleton every loop iteration
+		bool questLevelInTitle = sWorld->getBoolConfig(CONFIG_UI_QUESTLEVELS_IN_DIALOGS);
 
-    for (uint8 i = 0; i < _questMenu.GetMenuItemCount(); ++i)
-    {
-        QuestMenuItem const& item = _questMenu.GetItem(i);
-        uint32 questID = item.QuestId;
-        if (Quest const* quest = sObjectMgr->GetQuestTemplate(questID))
-        {
-            ++count;
-            data << uint32(questID);
-            data << uint32(item.QuestIcon);
-            data << int32(quest->GetQuestLevel());
-            data << uint32(quest->GetFlags());              // 3.3.3 quest flags
-            data << uint8(0);                               // 3.3.3 changes icon: blue question or yellow exclamation
-            std::string title = quest->GetTitle();
+		for (uint8 i = 0; i < _questMenu.GetMenuItemCount(); ++i)
+		{
+			QuestMenuItem const& item = _questMenu.GetItem(i);
+			uint32 questID = item.QuestId;
+			if (Quest const* quest = sObjectMgr->GetQuestTemplate(questID))
+			{
+				++count;
+				data << uint32(questID);
+				data << uint32(item.QuestIcon);
+				data << int32(quest->GetQuestLevel());
+				data << uint32(quest->GetFlags());              // 3.3.3 quest flags
+				data << uint8(0);                               // 3.3.3 changes icon: blue question or yellow exclamation
+				std::string title = quest->GetTitle();
 
-            int32 locale = _session->GetSessionDbLocaleIndex();
-            if (locale >= 0)
-                if (QuestLocale const* localeData = sObjectMgr->GetQuestLocale(questID))
-                    ObjectMgr::GetLocaleString(localeData->Title, locale, title);
+				int32 locale = _session->GetSessionDbLocaleIndex();
+				if (locale >= 0)
+					if (QuestLocale const* localeData = sObjectMgr->GetQuestLocale(questID))
+						ObjectMgr::GetLocaleString(localeData->Title, locale, title);
 
-            if (questLevelInTitle)
-                AddQuestLevelToTitle(title, quest->GetQuestLevel());
+				if (questLevelInTitle)
+					AddQuestLevelToTitle(title, quest->GetQuestLevel());
 
-            data << title;                                  // max 0x200
-        }
-    }
+				data << title;                                  // max 0x200
+			}
+		}
+	}
 
     data.put<uint8>(count_pos, count);
     _session->SendPacket(&data);

@@ -180,8 +180,8 @@ class boss_eregos : public CreatureScript
 
             void DamageTaken(Unit* /*attacker*/, uint32& /*damage*/) override
             {
-                if (!IsHeroic())
-                    return;
+//                if (!IsHeroic())
+//                    return;
 
                 if ( (me->GetHealthPct() < 60.0f  && me->GetHealthPct() > 20.0f && _phase < PHASE_FIRST_PLANAR)
                     || (me->GetHealthPct() < 20.0f && _phase < PHASE_SECOND_PLANAR) )

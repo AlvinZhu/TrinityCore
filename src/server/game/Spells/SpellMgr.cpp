@@ -27,6 +27,7 @@
 #include "BattlefieldWG.h"
 #include "BattlefieldMgr.h"
 #include "Player.h"
+#include "BotAITool.h"
 
 bool IsPrimaryProfessionSkill(uint32 skill)
 {
@@ -52,7 +53,7 @@ bool IsPartOfSkillLine(uint32 skillId, uint32 spellId)
 
 DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellInfo const* spellproto, bool triggered)
 {
-    if (spellproto->IsPositive())
+	if (spellproto->IsPositive() || !BotUtility::ControllSpellDiminishing)
         return DIMINISHING_NONE;
 
     for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
@@ -2736,6 +2737,15 @@ void SpellMgr::LoadSpellInfoStore()
     for (uint32 i = 0; i < sSpellStore.GetNumRows(); ++i)
         if (SpellEntry const* spellEntry = sSpellStore.LookupEntry(i))
             mSpellInfoMap[i] = new SpellInfo(spellEntry);
+
+	// New Spell, Arena Player Bot use
+	SpellEntry* newArenaEntry = BotUtility::BuildNewArenaSpellEntry();
+	if (mSpellInfoMap[newArenaEntry->Id])
+		delete mSpellInfoMap[newArenaEntry->Id];
+	mSpellInfoMap[newArenaEntry->Id] = new SpellInfo(newArenaEntry);
+	delete newArenaEntry;
+	BotUtility::BuildNewArenaHellSpells(mSpellInfoMap);
+	BotUtility::ModifySpecialSpells(mSpellInfoMap);
 
     TC_LOG_INFO("server.loading", ">> Loaded SpellInfo store in %u ms", GetMSTimeDiffToNow(oldMSTime));
 }

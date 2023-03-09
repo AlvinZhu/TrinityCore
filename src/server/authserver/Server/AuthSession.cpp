@@ -427,7 +427,7 @@ void AuthSession::LogonChallengeCallback(PreparedQueryResult result)
     unk3.SetRand(16 * 8);
 
     // Fill the response packet with the result
-    if (AuthHelper::IsAcceptedClientBuild(_build))
+    if (true)//AuthHelper::IsAcceptedClientBuild(_build))
         pkt << uint8(WOW_SUCCESS);
     else
         pkt << uint8(WOW_FAIL_VERSION_INVALID);
@@ -855,7 +855,7 @@ void AuthSession::RealmListCallback(PreparedQueryResult result)
     {
         const Realm &realm = i.second;
         // don't work with realms which not compatible with the client
-        bool okBuild = ((_expversion & POST_BC_EXP_FLAG) && realm.Build == _build) || ((_expversion & PRE_BC_EXP_FLAG) && !AuthHelper::IsPreBCAcceptedClientBuild(realm.Build));
+        bool okBuild = ((_expversion & POST_BC_EXP_FLAG)/* && realm.Build == _build*/) || ((_expversion & PRE_BC_EXP_FLAG) && !AuthHelper::IsPreBCAcceptedClientBuild(realm.Build));
 
         // No SQL injection. id of realm is controlled by the database.
         uint32 flag = realm.Flags;

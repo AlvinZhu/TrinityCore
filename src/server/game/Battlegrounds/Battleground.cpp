@@ -34,6 +34,8 @@
 #include "Util.h"
 #include "WorldPacket.h"
 #include "Transport.h"
+#include "PlayerBotMgr.h"
+#include "CommandBG.h"
 
 namespace Trinity
 {
@@ -286,9 +288,11 @@ inline void Battleground::_CheckSafePositions(uint32 diff)
         {
             if (Player* player = ObjectAccessor::FindPlayer(itr->first))
             {
+
+/*
                 if (player->IsGameMaster())
                     continue;
-
+*/
                 Position pos = player->GetPosition();
                 Position const* startPos = GetTeamStartPosition(Battleground::GetTeamIndexByTeamId(player->GetBGTeam()));
                 if (pos.GetExactDistSq(startPos) > maxDist)
@@ -382,6 +386,14 @@ inline void Battleground::_ProcessResurrect(uint32 diff)
             player->CastSpell(player, 6962, true);
             player->CastSpell(player, SPELL_SPIRIT_HEAL_MANA, true);
             player->SpawnCorpseBones(false);
+
+			BattlegroundMap* pBGMap = GetBgMap();
+			if (pBGMap)
+			{
+				CommandBG* pCommander = pBGMap->GetCommander(player->GetTeamId());
+				if (pCommander)
+					pCommander->OnPlayerRevive(player);
+			}
         }
         m_ResurrectQueue.clear();
     }
@@ -477,12 +489,16 @@ inline void Battleground::_ProcessJoin(uint32 diff)
     {
         m_Events |= BG_STARTING_EVENT_2;
         SendMessageToAll(StartMessageIds[BG_STARTING_EVENT_SECOND], CHAT_MSG_BG_SYSTEM_NEUTRAL);
+		m_Map->InsureCommander(GetTypeID());
+		m_Map->ReadyCommander();
     }
     // After 30 or 15 seconds, warning is signaled
     else if (GetStartDelayTime() <= StartDelayTimes[BG_STARTING_EVENT_THIRD] && !(m_Events & BG_STARTING_EVENT_3))
     {
         m_Events |= BG_STARTING_EVENT_3;
         SendMessageToAll(StartMessageIds[BG_STARTING_EVENT_THIRD], CHAT_MSG_BG_SYSTEM_NEUTRAL);
+		m_Map->InsureCommander(GetTypeID());
+		m_Map->ReadyCommander();
     }
     // Delay expired (after 2 or 1 minute)
     else if (GetStartDelayTime() <= 0 && !(m_Events & BG_STARTING_EVENT_4))
@@ -819,15 +835,19 @@ void Battleground::EndBattleground(uint32 winner)
         // Reward winner team
         if (team == winner)
         {
-            if (IsRandom() || BattlegroundMgr::IsBGWeekend(GetTypeID()))
+			if (IsRandom())// || BattlegroundMgr::IsBGWeekend(GetTypeID()))
             {
                 UpdatePlayerScore(player, SCORE_BONUS_HONOR, GetBonusHonorFromKill(winner_kills));
-                if (CanAwardArenaPoints())
-                    player->ModifyArenaPoints(winner_arena);
+//                 if (CanAwardArenaPoints())
+//                     player->ModifyArenaPoints(winner_arena);
                 if (!player->GetRandomWinner())
                     player->SetRandomWinner(true);
             }
-
+			else if (isArena() && isRated())
+			{
+				if (CanAwardArenaPoints())
+					player->ModifyArenaPoints(winner_arena);
+			}
             player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_WIN_BG, 1);
         }
         else
@@ -847,6 +867,16 @@ void Battleground::EndBattleground(uint32 winner)
         sBattlegroundMgr->BuildBattlegroundStatusPacket(&data, this, player->GetBattlegroundQueueIndex(bgQueueTypeId), STATUS_IN_PROGRESS, TIME_TO_AUTOREMOVE, GetStartTime(), GetArenaType(), player->GetBGTeam());
         player->SendDirectMessage(&data);
         player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_COMPLETE_BATTLEGROUND, 1);
+
+		if (player->IsPlayerBot())
+		{
+			PlayerBotSession* pSession = dynamic_cast<PlayerBotSession*>((WorldSession*)player->GetSession());
+			if (pSession)
+			{
+				BotGlobleSchedule schedule1(BotGlobleScheduleType::BGSType_LeaveBG, 0);
+				pSession->PushScheduleToQueue(schedule1);
+			}
+		}
     }
 
     if (winmsg_id)
@@ -1004,6 +1034,12 @@ void Battleground::Reset()
     for (uint8 i = 0; i < BG_TEAMS_COUNT; ++i)
         _arenaTeamScores[i].Reset();
 
+	if (m_Map)
+	{
+		m_Map->InsureCommander(GetTypeID());
+		m_Map->ResetCommander();
+	}
+
     ResetBGSubclass();
 }
 
@@ -1018,6 +1054,12 @@ void Battleground::StartBattleground()
     // This must be done here, because we need to have already invited some players when first BG::Update() method is executed
     // and it doesn't matter if we call StartBattleground() more times, because m_Battlegrounds is a map and instance id never changes
     sBattlegroundMgr->AddBattleground(this);
+
+	if (m_Map)
+	{
+		m_Map->InsureCommander(GetTypeID());
+		m_Map->InitCommander();
+	}
 
     if (m_IsRated)
         TC_LOG_DEBUG("bg.arena", "Arena match type: %u for Team1Id: %u - Team2Id: %u started.", m_ArenaType, m_ArenaTeamIds[TEAM_ALLIANCE], m_ArenaTeamIds[TEAM_HORDE]);
@@ -1159,7 +1201,7 @@ void Battleground::EventPlayerLoggedOut(Player* player)
 // This method should be called only once ... it adds pointer to queue
 void Battleground::AddToBGFreeSlotQueue()
 {
-    if (!m_InBGFreeSlotQueue && isBattleground())
+	if (!m_InBGFreeSlotQueue && !isRated())// && isBattleground())
     {
         sBattlegroundMgr->AddToBGFreeSlotQueue(m_TypeID, this);
         m_InBGFreeSlotQueue = true;
@@ -1181,7 +1223,7 @@ void Battleground::RemoveFromBGFreeSlotQueue()
 uint32 Battleground::GetFreeSlotsForTeam(uint32 Team) const
 {
     // if BG is starting and CONFIG_BATTLEGROUND_INVITATION_TYPE == BG_QUEUE_INVITATION_TYPE_NO_BALANCE, invite anyone
-    if (GetStatus() == STATUS_WAIT_JOIN && sWorld->getIntConfig(CONFIG_BATTLEGROUND_INVITATION_TYPE) == BG_QUEUE_INVITATION_TYPE_NO_BALANCE)
+	if (GetStatus() == STATUS_WAIT_JOIN)// && sWorld->getIntConfig(CONFIG_BATTLEGROUND_INVITATION_TYPE) == BG_QUEUE_INVITATION_TYPE_NO_BALANCE)
         return (GetInvitedCount(Team) < GetMaxPlayersPerTeam()) ? GetMaxPlayersPerTeam() - GetInvitedCount(Team) : 0;
 
     // if BG is already started or CONFIG_BATTLEGROUND_INVITATION_TYPE != BG_QUEUE_INVITATION_TYPE_NO_BALANCE, do not allow to join too much players of one faction
@@ -1293,13 +1335,22 @@ bool Battleground::UpdatePlayerScore(Player* player, uint32 type, uint32 value, 
 
 void Battleground::AddPlayerToResurrectQueue(ObjectGuid npc_guid, ObjectGuid player_guid)
 {
+	GuidVector& pids = m_ReviveQueue[npc_guid];
+	for (ObjectGuid& id : pids)
+	{
+		if (id == player_guid)
+		{
+			return;
+		}
+	}
     m_ReviveQueue[npc_guid].push_back(player_guid);
 
     Player* player = ObjectAccessor::FindPlayer(player_guid);
     if (!player)
         return;
 
-    player->CastSpell(player, SPELL_WAITING_FOR_RESURRECT, true);
+	if (!player->HasAura(SPELL_WAITING_FOR_RESURRECT))
+		player->CastSpell(player, SPELL_WAITING_FOR_RESURRECT, true);
 }
 
 void Battleground::RemovePlayerFromResurrectQueue(ObjectGuid player_guid)
@@ -1319,6 +1370,25 @@ void Battleground::RemovePlayerFromResurrectQueue(ObjectGuid player_guid)
     }
 }
 
+bool Battleground::HasJoinNearGrave(Player* player)
+{
+	if (!player)
+		return false;
+	const Creature* pCreature = GetClosestGraveCreature(player);
+	if (!pCreature || !pCreature->IsSpiritService())
+		return false;
+	GuidVector& ghostList = m_ReviveQueue[pCreature->GetGUID()];
+	if (ghostList.empty())
+		return false;
+	ObjectGuid& playerGuid = player->GetGUID();
+	for (GuidVector::const_iterator itr = ghostList.begin(); itr != ghostList.end(); ++itr)
+	{
+		if ((*itr) == playerGuid)
+			return true;
+	}
+	return false;
+}
+
 void Battleground::RelocateDeadPlayers(ObjectGuid guideGuid)
 {
     // Those who are waiting to resurrect at this node are taken to the closest own node's graveyard
@@ -1335,8 +1405,15 @@ void Battleground::RelocateDeadPlayers(ObjectGuid guideGuid)
             if (!closestGrave)
                 closestGrave = GetClosestGraveYard(player);
 
-            if (closestGrave)
-                player->TeleportTo(GetMapId(), closestGrave->x, closestGrave->y, closestGrave->z, player->GetOrientation());
+			if (closestGrave)
+			{
+				player->TeleportTo(GetMapId(), closestGrave->x, closestGrave->y, closestGrave->z, player->GetOrientation());
+				if (player->IsPlayerBot())
+				{
+					//needInNewQueuePlayers.push_back(player);
+					player->UpdatePosition(closestGrave->x, closestGrave->y, closestGrave->z, player->GetOrientation(), true);
+				}
+			}
         }
         ghostList.clear();
     }
@@ -1877,4 +1954,19 @@ bool Battleground::CheckAchievementCriteriaMeet(uint32 criteriaId, Player const*
 uint8 Battleground::GetUniqueBracketId() const
 {
     return GetMinLevel() / 10;
+}
+
+bool Battleground::ExistRealPlayer()
+{
+	for (BattlegroundPlayerMap::iterator itPlayer = m_Players.begin();
+		itPlayer != m_Players.end();
+		itPlayer++)
+	{
+		Player* player = ObjectAccessor::FindConnectedPlayer(itPlayer->first);
+		if (player && !player->IsPlayerBot())
+		{
+			return true;
+		}
+	}
+	return false;
 }

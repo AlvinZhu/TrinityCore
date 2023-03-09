@@ -307,6 +307,25 @@ public:
                 case FLYING:
                     if (!UpdateVictim())
                         return;
+                    if (!me->HealthAbovePct(85))
+				{
+ Phase = SKADI;
+                     me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_NON_ATTACKABLE);
+                    me->SetCanFly(false);
+                    me->Dismount();
+                    if (Creature* pGrauf = me->SummonCreature(NPC_GRAUF, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), 0, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 3*IN_MILLISECONDS))
+                    {
+                        pGrauf->GetMotionMaster()->MoveFall();
+                        pGrauf->HandleEmoteCommand(EMOTE_ONESHOT_FLYDEATH);
+                    }
+                    me->GetMotionMaster()->MoveJump(Location[4], 5.0f, 10.0f);
+                    me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_NON_ATTACKABLE);
+                    Talk(SAY_DRAKE_DEATH);
+                    m_uiCrushTimer = 8000;
+                    m_uiPoisonedSpearTimer = 10000;
+                    m_uiWhirlwindTimer = 20000;
+                    AttackStart(SelectTarget(SELECT_TARGET_RANDOM));					
+				}
 
                     if (me->GetPositionX() >= 519)
                     {
@@ -381,14 +400,18 @@ public:
                     if (!UpdateVictim())
                         return;
 
+
+
                     if (m_uiCrushTimer <= diff)
                     {
+me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_NON_ATTACKABLE);
                         DoCastVictim(SPELL_CRUSH);
                         m_uiCrushTimer = 8000;
                     } else m_uiCrushTimer -= diff;
 
                     if (m_uiPoisonedSpearTimer <= diff)
                     {
+me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_NON_ATTACKABLE);
                         if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM))
                             DoCast(target, SPELL_POISONED_SPEAR);
                         m_uiPoisonedSpearTimer = 10000;
@@ -474,8 +497,11 @@ public:
             return false;
 
         if (Creature* pSkadi = ObjectAccessor::GetCreature(*go, instance->GetGuidData(DATA_SKADI_THE_RUTHLESS)))
+{
             player->CastSpell(pSkadi, SPELL_RAPID_FIRE, true);
-
+ player->CastSpell(pSkadi, SPELL_HARPOON_DAMAGE, true);
+ pSkadi->SetHealth(pSkadi->GetHealth() - pSkadi->GetMaxHealth() / 30);
+}
         return false;
     }
 

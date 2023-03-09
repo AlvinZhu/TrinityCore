@@ -1,5 +1,5 @@
-/*
- * Copyright (C) 2008-2016 TrinityCore <http://www.trinitycore.org/>
+ /*
+ * Copyright (C) 2008-2015 TrinityCore <http://www.trinitycore.org/>
  * Copyright (C) 2006-2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -254,7 +254,7 @@ public:
             if (uiChargeTimer <= uiDiff)
             {
                 Map::PlayerList const& players = me->GetMap()->GetPlayers();
-                if (!players.isEmpty())
+                if (me->GetMap()->IsDungeon() && !players.isEmpty())
                 {
                     for (Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
                     {
@@ -281,7 +281,7 @@ public:
                 if (Unit* pPassenger = pVehicle->GetPassenger(SEAT_ID_0))
                 {
                     Map::PlayerList const& players = me->GetMap()->GetPlayers();
-                    if (!players.isEmpty())
+                    if (me->GetMap()->IsDungeon() && !players.isEmpty())
                     {
                         for (Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
                         {
@@ -326,9 +326,9 @@ public:
             uiPhase = 0;
             uiPhaseTimer = 0;
 
-            me->SetReactState(REACT_PASSIVE);
+            //me->SetReactState(REACT_PASSIVE);
             // THIS IS A HACK, SHOULD BE REMOVED WHEN THE EVENT IS FULL SCRIPTED
-            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_IMMUNE_TO_PC);
+            //me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_IMMUNE_TO_PC);
         }
 
         void Initialize()
@@ -385,22 +385,25 @@ public:
                 bHome = true;
             }
 
-            if (uiPhaseTimer <= uiDiff)
+            //if (uiPhaseTimer <= uiDiff)
+            if (1 == 1)
             {
-                if (uiPhase == 1)
+                //if (uiPhase == 1)
+                if (1 == 1)
                 {
                     AggroAllPlayers(me);
                     uiPhase = 0;
                 }
             }else uiPhaseTimer -= uiDiff;
 
-            if (!UpdateVictim() || me->HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT))
+            //if (!UpdateVictim() || me->HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT))
+            if (!UpdateVictim())
                 return;
 
             if (uiInterceptTimer <= uiDiff)
             {
                 Map::PlayerList const& players = me->GetMap()->GetPlayers();
-                if (!players.isEmpty())
+                if (me->GetMap()->IsDungeon() && !players.isEmpty())
                 {
                     for (Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
                     {
@@ -463,9 +466,9 @@ public:
             uiPhase = 0;
             uiPhaseTimer = 0;
 
-            me->SetReactState(REACT_PASSIVE);
+            //me->SetReactState(REACT_PASSIVE);
             // THIS IS A HACK, SHOULD BE REMOVED WHEN THE EVENT IS FULL SCRIPTED
-            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_IMMUNE_TO_PC);
+            //me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_IMMUNE_TO_PC);
         }
 
         void Initialize()
@@ -526,9 +529,11 @@ public:
                 bHome = true;
             }
 
-            if (uiPhaseTimer <= uiDiff)
+            //if (uiPhaseTimer <= uiDiff)
+            if (1 == 1)
             {
-                if (uiPhase == 1)
+                //if (uiPhase == 1)
+                if (1 == 1)
                 {
                     AggroAllPlayers(me);
                     uiPhase = 0;
@@ -542,7 +547,8 @@ public:
                 uiFireBallTimer = 5000;
             } else uiFireBallTimer -= uiDiff;
 
-            if (!UpdateVictim() || me->HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT))
+            //if (!UpdateVictim() || me->HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT))
+            if (!UpdateVictim())
                 return;
 
             if (uiFireBallTimer <= uiDiff)
@@ -606,9 +612,9 @@ public:
             uiPhase = 0;
             uiPhaseTimer = 0;
 
-            me->SetReactState(REACT_PASSIVE);
+            //me->SetReactState(REACT_PASSIVE);
             // THIS IS A HACK, SHOULD BE REMOVED WHEN THE EVENT IS FULL SCRIPTED
-            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_IMMUNE_TO_PC);
+            //me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_IMMUNE_TO_PC);
         }
 
         void Initialize()
@@ -675,16 +681,19 @@ public:
                 bHome = true;
             }
 
-            if (uiPhaseTimer <= uiDiff)
+            //if (uiPhaseTimer <= uiDiff)
+            if (1 == 1)
             {
-                if (uiPhase == 1)
+                //if (uiPhase == 1)
+                if (1 == 1)
                 {
                     AggroAllPlayers(me);
                     uiPhase = 0;
                 }
             }else uiPhaseTimer -= uiDiff;
 
-            if (!UpdateVictim() || me->HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT))
+            //if (!UpdateVictim() || me->HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT))
+            if (!UpdateVictim())
                 return;
 
             if (uiChainLightningTimer <= uiDiff)
@@ -757,9 +766,9 @@ public:
             uiPhase = 0;
             uiPhaseTimer = 0;
 
-            me->SetReactState(REACT_PASSIVE);
+            //me->SetReactState(REACT_PASSIVE);
             // THIS IS A HACK, SHOULD BE REMOVED WHEN THE EVENT IS FULL SCRIPTED
-            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_IMMUNE_TO_PC);
+            //me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_IMMUNE_TO_PC);
         }
 
         void Initialize()
@@ -825,16 +834,19 @@ public:
                 bHome = true;
             }
 
-            if (uiPhaseTimer <= uiDiff)
+            //if (uiPhaseTimer <= uiDiff)
+            if (1 == 1)
             {
-                if (uiPhase == 1)
+                //if (uiPhase == 1)
+                if (1 == 1)
                 {
                     AggroAllPlayers(me);
                     uiPhase = 0;
                 }
             }else uiPhaseTimer -= uiDiff;
 
-            if (!UpdateVictim() || me->HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT))
+            //if (!UpdateVictim() || me->HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT))
+            if (!UpdateVictim() )
                 return;
 
             if (uiLightningArrowsTimer <= uiDiff)
@@ -867,7 +879,7 @@ public:
                 else
                 {
                     Map::PlayerList const& players = me->GetMap()->GetPlayers();
-                    if (!players.isEmpty())
+                    if (me->GetMap()->IsDungeon() && !players.isEmpty())
                     {
                         for (Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
                         {
@@ -917,9 +929,9 @@ public:
             uiPhase = 0;
             uiPhaseTimer = 0;
 
-            me->SetReactState(REACT_PASSIVE);
+            //me->SetReactState(REACT_PASSIVE);
             // THIS IS A HACK, SHOULD BE REMOVED WHEN THE EVENT IS FULL SCRIPTED
-            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_IMMUNE_TO_PC);
+            //me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_IMMUNE_TO_PC);
         }
 
         void Initialize()
@@ -977,16 +989,19 @@ public:
                 bHome = true;
             }
 
-            if (uiPhaseTimer <= uiDiff)
+            //if (uiPhaseTimer <= uiDiff)
+            if (1 == 1)
             {
-                if (uiPhase == 1)
+                //if (uiPhase == 1)
+                if (1 == 1)
                 {
                     AggroAllPlayers(me);
                     uiPhase = 0;
                 }
             } else uiPhaseTimer -= uiDiff;
 
-            if (!UpdateVictim() || me->HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT))
+            //if (!UpdateVictim() || me->HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT))
+                if (!UpdateVictim() )
                 return;
 
             if (uiEviscerateTimer <= uiDiff)

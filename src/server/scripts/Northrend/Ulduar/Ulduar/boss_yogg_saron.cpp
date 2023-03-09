@@ -430,6 +430,322 @@ class StartAttackEvent : public BasicEvent
         Creature* _owner;
 };
 
+class boss_voice_of_yogg_sarona : public CreatureScript
+{
+    public:
+        boss_voice_of_yogg_sarona() : CreatureScript("boss_voice_of_yogg_sarona") { }
+
+        struct boss_voice_of_yogg_saronAI : public BossAI
+        {
+
+            boss_voice_of_yogg_saronAI(Creature* creature) : BossAI(creature, BOSS_YOGG_SARON)
+            {
+                Initialize();
+                SetCombatMovement(false);
+            }
+
+            void Initialize()
+            {
+                _guardiansCount = 0;
+                _guardianTimer = 20000;
+                _illusionShattered = false;
+            }
+
+            void MoveInLineOfSight(Unit* who) 
+
+            {
+                // TODO: MoveInLineOfSight doesn't work for such a big distance
+                //if (who->GetTypeId() == TYPEID_PLAYER && me->GetDistance2d(who) < 99.0f && !me->IsInCombat())
+                    me->SetInCombatWithZone();
+            }
+
+          /*  void EnterEvadeMode() 
+            {
+                BossAI::EnterEvadeMode();
+
+                for (uint8 i = DATA_SARA; i <= DATA_MIMIRON_YS; ++i)
+                    if (Creature* creature = ObjectAccessor::GetCreature(*me, instance->GetGuidData(i)))
+                        creature->AI()->EnterEvadeMode();
+
+                // not sure, spoken by Sara (sound), regarding to wowwiki Voice whispers it
+                Map::PlayerList const& players = me->GetMap()->GetPlayers();
+                for (Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
+                    if (Player* player = itr->GetSource())
+                    {
+                        if (events.IsInPhase(PHASE_ONE))
+                            Talk(WHISPER_VOICE_PHASE_1_WIPE, player);
+
+                        player->RemoveAurasDueToSpell(SPELL_SANITY);
+                        player->RemoveAurasDueToSpell(SPELL_INSANE);
+                    }
+            }*/
+
+            void Reset() 
+            {
+                _Reset();
+                events.SetPhase(PHASE_ONE);
+
+                instance->SetData(DATA_DRIVE_ME_CRAZY, uint32(true));
+                instance->DoStopTimedAchievement(ACHIEVEMENT_TIMED_TYPE_EVENT, ACHIEV_TIMED_START_EVENT);
+
+                Initialize();
+
+                bool clockwise = false;
+                std::list<TempSummon*> clouds;
+                me->SummonCreatureGroup(CREATURE_GROUP_CLOUDS, &clouds);
+                clouds.sort(Trinity::ObjectDistanceOrderPred(me, true));
+                for (std::list<TempSummon*>::const_iterator itr = clouds.begin(); itr != clouds.end(); ++itr)
+                {
+                    (*itr)->AI()->DoAction(int32(clockwise));
+                    clockwise = !clockwise;
+                }
+            }
+
+            void EnterCombat(Unit* /*who*/)  
+            {
+            	Talk(SAY_YOGG_SARON_SPAWN);
+            	
+                if (Creature* sara = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_SARA)))
+                    sara->SetInCombatWith(me);
+
+                for (uint8 i = DATA_FREYA_YS; i <= DATA_MIMIRON_YS; ++i)
+                    if (Creature* keeper = ObjectAccessor::GetCreature(*me, instance->GetGuidData(i)))
+                        keeper->SetInCombatWith(me);
+
+                instance->DoStartTimedAchievement(ACHIEVEMENT_TIMED_TYPE_EVENT, ACHIEV_TIMED_START_EVENT);
+
+                me->CastCustomSpell(SPELL_SUMMON_GUARDIAN_2, SPELLVALUE_MAX_TARGETS, 1);
+                DoCast(me, SPELL_SANITY_PERIODIC);
+
+                events.ScheduleEvent(EVENT_LOCK_DOOR, 15000);
+                events.ScheduleEvent(EVENT_SUMMON_GUARDIAN_OF_YOGG_SARON, _guardianTimer, 0, PHASE_ONE);
+                events.ScheduleEvent(EVENT_EXTINGUISH_ALL_LIFE, 900000);    // 15 minutes
+            }
+
+            void JustDied(Unit* killer) 
+            {
+                
+
+
+             Talk(SAY_YOGG_SARON_DEATH);
+
+			 // don't despawn Yogg-Saron's corpse, remove him from SummonList!
+			 if (Creature* yogg = ObjectAccessor::GetCreature(*me, instance->GetGuidData(BOSS_YOGG_SARON)))
+				 summons.Despawn(yogg);
+
+
+                Map::PlayerList const& players = me->GetMap()->GetPlayers();
+                for (Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
+                    if (Player* player = itr->GetSource())
+                    {
+                        player->RemoveAurasDueToSpell(SPELL_SANITY);
+                        player->RemoveAurasDueToSpell(SPELL_INSANE);
+                    }
+
+                BossAI::JustDied(killer);
+            }
+
+            void UpdateAI(uint32 diff) 
+            {
+                if (!UpdateVictim())
+                    return;
+
+                events.Update(diff);
+
+
+                if (me->HasUnitState(UNIT_STATE_CASTING))
+                    return;
+if (irand(0,10)==0)
+{
+            	if (irand(0,20)==5 )
+{
+                	DoCastVictim(40904);
+ return;
+}
+ else                	if (irand(0,20)==6 )
+{
+                	DoCastVictim(41238);
+ return;
+}
+else                	if (irand(0,20)==4 )
+                	{
+                	Talk(EMOTE_YOGG_SARON_EMPOWERING_SHADOWS);
+                	DoCastVictim(64456);
+ return;
+}
+else                	if (irand(0,20)==0 )
+                	               	{
+                	DoCastVictim(64022);
+ return;
+}
+else                	if (irand(0,20)==1 )
+                	               	               	{
+                	DoCastVictim(64163);
+ return;
+}
+else if (irand(0,20)==2 )
+ {
+                	DoCastVictim(64164);
+ return;
+}
+ else                	if (irand(0,20)==3 )
+{
+                            Talk(SAY_YOGG_SARON_DEAFENING_ROAR);
+                            Talk(EMOTE_YOGG_SARON_DEAFENING_ROAR);
+                	DoCastVictim(64189);
+ return;
+}
+
+}
+
+              // don't summon tentacles when illusion is shattered, delay them
+                if (_illusionShattered)
+                   events.DelayEvents(diff, EVENT_GROUP_SUMMON_TENTACLES);
+
+
+                while (uint32 eventId = events.ExecuteEvent())
+                {
+
+ 
+                    switch (eventId)
+                    {
+                        case EVENT_LOCK_DOOR:
+                            DoCast(me, SPELL_INSANE_PERIODIC);
+                            instance->SetBossState(BOSS_YOGG_SARON, IN_PROGRESS);
+                            break;
+                        case EVENT_EXTINGUISH_ALL_LIFE:
+                            if (Creature* yogg = ObjectAccessor::GetCreature(*me, instance->GetGuidData(BOSS_YOGG_SARON)))
+                            {
+                                yogg->AI()->Talk(EMOTE_YOGG_SARON_EXTINGUISH_ALL_LIFE, me);
+                                yogg->CastSpell((Unit*)NULL, SPELL_EXTINGUISH_ALL_LIFE, true);
+                            }
+                            events.ScheduleEvent(EVENT_EXTINGUISH_ALL_LIFE, 10000);    // cast it again after a short while, players can survive
+                            break;
+                        case EVENT_SUMMON_GUARDIAN_OF_YOGG_SARON:
+                            me->CastCustomSpell(SPELL_SUMMON_GUARDIAN_2, SPELLVALUE_MAX_TARGETS, 1);
+                            ++_guardiansCount;
+                            if (_guardiansCount <= 6 && _guardiansCount % 3 == 0)
+                                _guardianTimer -= 5000;
+                            events.ScheduleEvent(EVENT_SUMMON_GUARDIAN_OF_YOGG_SARON, _guardianTimer, 0, PHASE_ONE);
+                            break;
+                        case EVENT_SUMMON_CORRUPTOR_TENTACLE:
+                            DoCastAOE(SPELL_CORRUPTOR_TENTACLE_SUMMON);
+                            events.ScheduleEvent(EVENT_SUMMON_CORRUPTOR_TENTACLE, 30000, EVENT_GROUP_SUMMON_TENTACLES, PHASE_TWO);
+                            break;
+                        case EVENT_SUMMON_CONSTRICTOR_TENTACLE:
+                            me->CastCustomSpell(SPELL_CONSTRICTOR_TENTACLE, SPELLVALUE_MAX_TARGETS, 1);
+                            events.ScheduleEvent(EVENT_SUMMON_CONSTRICTOR_TENTACLE, 25000, EVENT_GROUP_SUMMON_TENTACLES, PHASE_TWO);
+                            break;
+                        case EVENT_SUMMON_CRUSHER_TENTACLE:
+                            DoCastAOE(SPELL_CRUSHER_TENTACLE_SUMMON);
+                            events.ScheduleEvent(EVENT_SUMMON_CRUSHER_TENTACLE, 60000, EVENT_GROUP_SUMMON_TENTACLES, PHASE_TWO);
+                            break;
+                        case EVENT_ILLUSION:
+                        {
+                            if (Creature* yogg = ObjectAccessor::GetCreature(*me, instance->GetGuidData(BOSS_YOGG_SARON)))
+                            {
+                                yogg->AI()->Talk(EMOTE_YOGG_SARON_MADNESS);
+                                yogg->AI()->Talk(SAY_YOGG_SARON_MADNESS);
+                            }
+
+                            me->SummonCreatureGroup(CREATURE_GROUP_PORTALS_10);
+                            if (me->GetMap()->Is25ManRaid())
+                                me->SummonCreatureGroup(CREATURE_GROUP_PORTALS_25);
+
+                            uint8 illusion = urand(CHAMBER_ILLUSION, STORMWIND_ILLUSION);
+                            instance->SetData(DATA_ILLUSION, illusion);
+
+                            if (Creature* brain = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_BRAIN_OF_YOGG_SARON)))
+                                brain->AI()->DoAction(ACTION_INDUCE_MADNESS);
+                            events.ScheduleEvent(EVENT_ILLUSION, 80000, 0, PHASE_TWO);  // wowwiki says 80 secs, wowhead says something about 90 secs
+                            break;
+                        }
+                        case EVENT_SUMMON_IMMORTAL_GUARDIAN:
+                            DoCastAOE(SPELL_IMMORTAL_GUARDIAN);
+                            events.ScheduleEvent(EVENT_SUMMON_IMMORTAL_GUARDIAN, 15000, 0, PHASE_THREE);
+                            break;
+                        default:
+                            break;
+                    }
+                DoMeleeAttackIfReady();
+                }
+               DoMeleeAttackIfReady(); 
+            }
+
+            void DoAction(int32 action) 
+            {
+                switch (action)
+                {
+                    case ACTION_PHASE_TRANSFORM:
+                        events.SetPhase(PHASE_TRANSFORM);
+                        summons.DespawnEntry(NPC_OMINOUS_CLOUD);
+                        break;
+                    case ACTION_PHASE_TWO:
+                        events.SetPhase(PHASE_TWO);
+                        me->SummonCreature(NPC_YOGG_SARON, YoggSaronSpawnPos);
+                        if (Creature* brain = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_BRAIN_OF_YOGG_SARON)))
+                            brain->SetInCombatWithZone();
+                        events.ScheduleEvent(EVENT_SUMMON_CORRUPTOR_TENTACLE, 1, EVENT_GROUP_SUMMON_TENTACLES, PHASE_TWO);
+                        events.ScheduleEvent(EVENT_SUMMON_CONSTRICTOR_TENTACLE, 1, EVENT_GROUP_SUMMON_TENTACLES, PHASE_TWO);
+                        events.ScheduleEvent(EVENT_SUMMON_CRUSHER_TENTACLE, 1, EVENT_GROUP_SUMMON_TENTACLES, PHASE_TWO);
+                        events.ScheduleEvent(EVENT_ILLUSION, 60000, 0, PHASE_TWO);
+                        break;
+                    case ACTION_TOGGLE_SHATTERED_ILLUSION:
+                        _illusionShattered = !_illusionShattered;
+                        break;
+                    case ACTION_PHASE_THREE:
+                        events.SetPhase(PHASE_THREE);
+                        events.ScheduleEvent(EVENT_SUMMON_IMMORTAL_GUARDIAN, 1000, 0, PHASE_THREE);
+                        break;
+                    default:
+                        break;
+                }
+           // DoMeleeAttackIfReady(); 
+            }
+
+            void JustSummoned(Creature* summon) 
+            {
+                switch (summon->GetEntry())
+                {
+                    case NPC_GUARDIAN_OF_YOGG_SARON:
+                        summon->m_Events.AddEvent(new StartAttackEvent(me, summon), summon->m_Events.CalculateTime(1000));
+                        break;
+                    case NPC_YOGG_SARON:
+                        summon->HandleEmoteCommand(EMOTE_ONESHOT_EMERGE);
+                        break;
+                    case NPC_CONSTRICTOR_TENTACLE:
+                        summon->CastSpell(summon, SPELL_LUNGE, true);
+                        break;
+                    case NPC_CRUSHER_TENTACLE:
+                    case NPC_CORRUPTOR_TENTACLE:
+                        summon->SetReactState(REACT_PASSIVE);
+                        summon->HandleEmoteCommand(EMOTE_ONESHOT_EMERGE);
+                        summon->m_Events.AddEvent(new StartAttackEvent(me, summon), summon->m_Events.CalculateTime(5000));
+                        break;
+                    case NPC_DESCEND_INTO_MADNESS:
+                        summon->CastSpell(summon, SPELL_TELEPORT_PORTAL_VISUAL, true);
+                        break;
+                    case NPC_IMMORTAL_GUARDIAN:
+                        summon->CastSpell(summon, SPELL_SIMPLE_TELEPORT, true);
+                        break;
+                }
+
+                BossAI::JustSummoned(summon);
+            }
+
+        private:
+            uint8 _guardiansCount;
+            uint32 _guardianTimer;
+            bool _illusionShattered;
+        };
+
+        CreatureAI* GetAI(Creature* creature) const 
+        {
+            return GetUlduarAI<boss_voice_of_yogg_saronAI>(creature);
+        }
+};
+
+
 class boss_voice_of_yogg_saron : public CreatureScript
 {
     public:
@@ -3180,6 +3496,7 @@ class spell_yogg_saron_hodirs_protective_gaze : public SpellScriptLoader     // 
 
 void AddSC_boss_yogg_saron()
 {
+//    new boss_voice_of_yogg_sarona();
     new boss_voice_of_yogg_saron();
     new boss_sara();
     new boss_yogg_saron();

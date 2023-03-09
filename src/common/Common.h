@@ -128,11 +128,37 @@ enum LocaleConstant
     TOTAL_LOCALES
 };
 
+//hxsd UTF8
+inline char* _StringToUTF8(const char *strGBK, ...)
+{
+	int len = MultiByteToWideChar(CP_ACP, 0, (LPCTSTR)strGBK, -1, NULL, 0);
+	WCHAR * wszUtf8 = new WCHAR[len + 1];
+	//memset(wszUtf8, 0, len * 2 + 2); 
+	MultiByteToWideChar(CP_ACP, 0, (LPCTSTR)strGBK, -1, wszUtf8, len);
+	len = WideCharToMultiByte(CP_UTF8, 0, wszUtf8, -1, NULL, 0, NULL, NULL);
+	char *szUtf8 = new char[len + 1];
+	memset(szUtf8, 0, len + 1);
+	WideCharToMultiByte(CP_UTF8, 0, wszUtf8, -1, szUtf8, len, NULL, NULL);
+	return szUtf8;
+}
+//UTF8
+
 #define DEFAULT_LOCALE LOCALE_enUS
 
 #define MAX_LOCALES 8
 #define MAX_ACCOUNT_TUTORIAL_VALUES 8
-
+inline char* GBKToUtf8(const char *strGBK, ...)
+{
+	int len = MultiByteToWideChar(CP_ACP, 0, (LPCTSTR)strGBK, -1, NULL, 0);
+	WCHAR * wszUtf8 = new WCHAR[len + 1];
+	//memset(wszUtf8, 0, len * 2 + 2); 
+	MultiByteToWideChar(CP_ACP, 0, (LPCTSTR)strGBK, -1, wszUtf8, len);
+	len = WideCharToMultiByte(CP_UTF8, 0, wszUtf8, -1, NULL, 0, NULL, NULL);
+	char *szUtf8 = new char[len + 1];
+	memset(szUtf8, 0, len + 1);
+	WideCharToMultiByte(CP_UTF8, 0, wszUtf8, -1, szUtf8, len, NULL, NULL);
+	return szUtf8;
+}
 extern "C" TC_COMMON_API char const* localeNames[TOTAL_LOCALES];
 
 TC_COMMON_API LocaleConstant GetLocaleByName(const std::string& name);

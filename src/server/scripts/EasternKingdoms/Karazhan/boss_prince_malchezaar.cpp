@@ -541,7 +541,7 @@ public:
             {
                 if (EnfeebleTimer <= diff)
                 {
-                    EnfeebleHealthEffect();
+                    //EnfeebleHealthEffect();
                     EnfeebleTimer = 30000;
                     ShadowNovaTimer = 5000;
                     EnfeebleResetTimer = 9000;

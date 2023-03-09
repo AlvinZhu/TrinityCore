@@ -46,7 +46,13 @@
 #include "WorldPacket.h"
 #include "WorldSession.h"
 #include "Metric.h"
+#include "PlayerBotMgr.h"
+#include "FieldBotMgr.h"
+#include "OnlineMgr.h"
+#include "BotMovementAI.h"
 
+//bot
+#include "Config.h"
 
 class LoginQueryHolder : public SQLQueryHolder
 {
@@ -648,7 +654,11 @@ void WorldSession::HandleCharCreateCallback(PreparedQueryResult result, Characte
             newChar.CleanupsBeforeDelete();
             delete createInfo;
             _charCreateCallback.Reset();
-            break;
+ 			if (IsBotSession())
+				sPlayerBotMgr->OnPlayerBotCreate(newChar.GetGUID(), GetAccountId(), newChar.GetName(), newChar.GetByteValue(PLAYER_BYTES_3, PLAYER_BYTES_3_OFFSET_GENDER), newChar.getRace(), newChar.getClass(), newChar.getLevel());
+			else
+				sPlayerBotMgr->OnAccountBotCreate(newChar.GetGUID(), GetAccountId(), newChar.GetName(), newChar.GetByteValue(PLAYER_BYTES_3, PLAYER_BYTES_3_OFFSET_GENDER), newChar.getRace(), newChar.getClass(), newChar.getLevel());
+           break;
         }
     }
 }
@@ -720,7 +730,7 @@ void WorldSession::HandleCharDeleteOpcode(WorldPacket& recvData)
 
     sCalendarMgr->RemoveAllPlayerEventsAndInvites(guid);
     Player::DeleteFromDB(guid, accountId);
-
+	sPlayerBotMgr->OnAccountBotDelete(guid, accountId);
     SendCharDelete(CHAR_DELETE_SUCCESS);
 }
 
@@ -740,7 +750,7 @@ void WorldSession::HandlePlayerLoginOpcode(WorldPacket& recvData)
 
     recvData >> playerGuid;
 
-    if (!IsLegitCharacterForAccount(playerGuid))
+    if (!IsBotSession() && !IsLegitCharacterForAccount(playerGuid))
     {
         TC_LOG_ERROR("network", "Account (%u) can't login with that character (%s).", GetAccountId(), playerGuid.ToString().c_str());
         KickPlayer();
@@ -1000,9 +1010,58 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder* holder)
     // Handle Login-Achievements (should be handled after loading)
     _player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_ON_LOGIN, 1);
 
+    //the only place where we check if it has NPC bots
+    if (sConfigMgr->GetBoolDefault("Bot.EnableNpcBots", true))
+    {
+        PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_NPCBOTS);
+        stmt->setUInt32(0, pCurrChar->GetGUIDLow());
+        PreparedQueryResult result = CharacterDatabase.Query(stmt);
+        if (result)
+        {
+            uint32 m_bot_entry = 0;
+            uint8 m_bot_race = 0;
+            uint8 m_bot_class = 0;
+            uint32 equips[18];
+            do
+            {
+                Field* fields = result->Fetch();
+                m_bot_entry = fields[0].GetUInt32();
+                m_bot_race = fields[1].GetUInt8();
+                m_bot_class = fields[2].GetInt8();
+                for (uint8 i = 0; i != 18; ++i)
+                    equips[i] = fields[i + 4].GetUInt32();
+
+                if (m_bot_entry && m_bot_race && m_bot_class)
+                    pCurrChar->SetBotMustBeCreated(m_bot_entry, m_bot_race, m_bot_class, equips);
+
+            } while (result->NextRow());
+        }
+    }
+
     sScriptMgr->OnPlayerLogin(pCurrChar, firstLogin);
 
     TC_METRIC_EVENT("player_events", "Login", pCurrChar->GetName());
+	if (IsBotSession())
+	{
+		sPlayerBotMgr->OnPlayerBotLogin(this, pCurrChar);
+	}
+	else
+	{
+		pCurrChar->IsAIEnabled = true;
+		pCurrChar->NeedChangeAI = false;
+		pCurrChar->SetAI(new BotMovementAI(pCurrChar));
+	int32 isok = sConfigMgr->GetIntDefault("pbot", 1);
+	if (isok>=1)
+{
+		sPlayerBotMgr->LoginFriendBotByPlayer(pCurrChar);
+		sPlayerBotMgr->LoginGroupBotByPlayer(pCurrChar);
+}
+		sFieldBotMgr->OnRealPlayerLogin(pCurrChar);
+
+	}
+	uint32 talent = PlayerBotSetting::FindPlayerTalentType(pCurrChar);
+	sOnlineMgr->CharaterOnline(GetAccountId(), uint32(pCurrChar->GetGUID().GetRawValue()),
+		pCurrChar->GetName(), pCurrChar->getRace(), pCurrChar->getClass(), pCurrChar->getLevel(), talent);
 
     delete holder;
 }

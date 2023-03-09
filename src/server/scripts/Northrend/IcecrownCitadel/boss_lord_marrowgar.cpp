@@ -146,10 +146,10 @@ class boss_lord_marrowgar : public CreatureScript
                 me->RemoveAurasDueToSpell(SPELL_BONE_STORM);
                 me->RemoveAurasDueToSpell(SPELL_BERSERK);
                 events.ScheduleEvent(EVENT_ENABLE_BONE_SLICE, 10000);
-                events.ScheduleEvent(EVENT_BONE_SPIKE_GRAVEYARD, 15000, EVENT_GROUP_SPECIAL);
-                events.ScheduleEvent(EVENT_COLDFLAME, 5000, EVENT_GROUP_SPECIAL);
+                events.ScheduleEvent(EVENT_BONE_SPIKE_GRAVEYARD, 35000, EVENT_GROUP_SPECIAL);
+                events.ScheduleEvent(EVENT_COLDFLAME, 25000, EVENT_GROUP_SPECIAL);
                 events.ScheduleEvent(EVENT_WARN_BONE_STORM, urand(45000, 50000));
-                events.ScheduleEvent(EVENT_ENRAGE, 600000);
+                events.ScheduleEvent(EVENT_ENRAGE, 1200000);
                 _introDone = false;
                 _boneSlice = false;
                 _boneSpikeImmune.clear();
@@ -189,7 +189,12 @@ class boss_lord_marrowgar : public CreatureScript
                 if (!UpdateVictim())
                     return;
 
-                events.Update(diff);
+				if (InstanceScript* inst = me->GetInstanceScript())
+				{
+					if (BotAttackCreature* pBotAttack = inst->GetBotAttacksCreature(me))
+						pBotAttack->UpdateNeedAttackCreatures(diff, this, true);
+				}
+				events.Update(diff);
 
                 if (me->HasUnitState(UNIT_STATE_CASTING))
                     return;
@@ -201,30 +206,31 @@ class boss_lord_marrowgar : public CreatureScript
                         case EVENT_BONE_SPIKE_GRAVEYARD:
                             if (IsHeroic() || !me->HasAura(SPELL_BONE_STORM))
                                 DoCast(me, SPELL_BONE_SPIKE_GRAVEYARD);
-                            events.ScheduleEvent(EVENT_BONE_SPIKE_GRAVEYARD, urand(15000, 20000), EVENT_GROUP_SPECIAL);
+                            events.ScheduleEvent(EVENT_BONE_SPIKE_GRAVEYARD, urand(35000, 40000), EVENT_GROUP_SPECIAL);
                             break;
-                        case EVENT_COLDFLAME:
-                            _coldflameLastPos.Relocate(me);
-                            _coldflameTarget.Clear();
-                            if (!me->HasAura(SPELL_BONE_STORM))
-                                DoCastAOE(SPELL_COLDFLAME_NORMAL);
-                            else
-                                DoCast(me, SPELL_COLDFLAME_BONE_STORM);
-                            events.ScheduleEvent(EVENT_COLDFLAME, 5000, EVENT_GROUP_SPECIAL);
-                            break;
+                        //case EVENT_COLDFLAME:
+                        //    _coldflameLastPos.Relocate(me);
+                        //    _coldflameTarget.Clear();
+                        //    if (!me->HasAura(SPELL_BONE_STORM))
+                        //        DoCastAOE(SPELL_COLDFLAME_NORMAL);
+                        //    else
+                        //        DoCast(me, SPELL_COLDFLAME_BONE_STORM);
+                        //    events.ScheduleEvent(EVENT_COLDFLAME, 30000, EVENT_GROUP_SPECIAL);
+                        //    break;
                         case EVENT_WARN_BONE_STORM:
                             _boneSlice = false;
                             Talk(EMOTE_BONE_STORM);
                             me->FinishSpell(CURRENT_MELEE_SPELL, false);
                             DoCast(me, SPELL_BONE_STORM);
-                            events.DelayEvents(3000, EVENT_GROUP_SPECIAL);
+							//BotCruxFleeByRange(me->GetObjectSize() + 25);
+							events.DelayEvents(3000, EVENT_GROUP_SPECIAL);
                             events.ScheduleEvent(EVENT_BONE_STORM_BEGIN, 3050);
                             events.ScheduleEvent(EVENT_WARN_BONE_STORM, urand(90000, 95000));
                             break;
                         case EVENT_BONE_STORM_BEGIN:
                             if (Aura* pStorm = me->GetAura(SPELL_BONE_STORM))
                                 pStorm->SetDuration(int32(_boneStormDuration));
-                            me->SetSpeedRate(MOVE_RUN, _baseSpeed*3.0f);
+                            me->SetSpeedRate(MOVE_RUN, _baseSpeed*0.01f);
                             Talk(SAY_BONE_STORM);
                             events.ScheduleEvent(EVENT_BONE_STORM_END, _boneStormDuration+1);
                             // no break here
@@ -236,7 +242,7 @@ class boss_lord_marrowgar : public CreatureScript
                                 unit = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true);
                             if (unit)
                                 me->GetMotionMaster()->MovePoint(POINT_TARGET_BONESTORM_PLAYER, *unit);
-                            break;
+							break;
                         }
                         case EVENT_BONE_STORM_END:
                             if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() == POINT_MOTION_TYPE)
@@ -248,9 +254,9 @@ class boss_lord_marrowgar : public CreatureScript
                             if (!IsHeroic())
                                 events.RescheduleEvent(EVENT_BONE_SPIKE_GRAVEYARD, 15000, EVENT_GROUP_SPECIAL);
                             break;
-                        case EVENT_ENABLE_BONE_SLICE:
-                            _boneSlice = true;
-                            break;
+                        //case EVENT_ENABLE_BONE_SLICE:
+                        //    _boneSlice = true;
+                        //    break;
                         case EVENT_ENRAGE:
                             DoCast(me, SPELL_BERSERK, true);
                             Talk(SAY_BERSERK);
@@ -259,8 +265,11 @@ class boss_lord_marrowgar : public CreatureScript
                 }
 
                 // We should not melee attack when storming
-                if (me->HasAura(SPELL_BONE_STORM))
-                    return;
+				if (me->HasAura(SPELL_BONE_STORM))
+				{
+					//BotCruxFleeByRange(me->GetObjectSize() + 25);
+					return;
+				}
 
                 // 10 seconds since encounter start Bone Slice replaces melee attacks
                 if (_boneSlice && !me->GetCurrentSpell(CURRENT_MELEE_SPELL))
@@ -363,6 +372,7 @@ class npc_coldflame : public CreatureScript
         {
             npc_coldflameAI(Creature* creature) : ScriptedAI(creature)
             {
+				botFleeTimer = 0;
             }
 
             void IsSummonedBy(Unit* owner) override
@@ -411,11 +421,30 @@ class npc_coldflame : public CreatureScript
                     me->NearTeleportTo(newPos.GetPositionX(), newPos.GetPositionY(), me->GetPositionZ(), me->GetOrientation());
                     DoCast(SPELL_COLDFLAME_SUMMON);
                     _events.ScheduleEvent(EVENT_COLDFLAME_TRIGGER, 500);
-                }
+				}
+
+				botFleeTimer += diff;
+				if (botFleeTimer > 1500)
+				{
+					botFleeTimer = 0;
+
+					if (InstanceScript* inst = me->GetInstanceScript())
+					{
+						if (BotAttackCreature* pBotAttack = inst->GetBotAttacksCreature(NULL))
+						{
+							if (Creature* boss = pBotAttack->GetMainCreature())
+							{
+								if (boss->GetDistance(me->GetPosition()) < boss->GetObjectSize() * 2.5f)
+									BotFleeLineByAngle(boss, boss->GetAngle(&me->GetPosition()), false);
+							}
+						}
+					}
+				}
             }
 
         private:
             EventMap _events;
+			uint32 botFleeTimer;
         };
 
         CreatureAI* GetAI(Creature* creature) const override
@@ -457,7 +486,15 @@ class npc_bone_spike : public CreatureScript
             {
                 DoCast(summoner, SPELL_IMPALED);
                 summoner->CastSpell(me, SPELL_RIDE_VEHICLE, true);
-                _events.ScheduleEvent(EVENT_FAIL_BONED, 8000);
+				me->SetHealth(me->GetMaxHealth() / 3);
+				me->SetMaxHealth(me->GetHealth());
+				//BotAllTargetMe(true);
+				if (InstanceScript* inst = me->GetInstanceScript())
+				{
+					if (BotAttackCreature* pBotAttack = inst->GetBotAttacksCreature(NULL))
+						pBotAttack->AddNewCreatureNeedAttack(me, 9);
+				}
+				_events.ScheduleEvent(EVENT_FAIL_BONED, 8000);
                 _hasTrappedUnit = true;
             }
 
@@ -479,8 +516,8 @@ class npc_bone_spike : public CreatureScript
             {
                 if (!_hasTrappedUnit)
                     return;
-
-                _events.Update(diff);
+				
+				_events.Update(diff);
 
                 if (_events.ExecuteEvent() == EVENT_FAIL_BONED)
                     if (InstanceScript* instance = me->GetInstanceScript())
@@ -649,7 +686,8 @@ class spell_marrowgar_bone_spike_graveyard : public SpellScriptLoader
                     for (std::list<Unit*>::const_iterator itr = targets.begin(); itr != targets.end(); ++itr, ++i)
                     {
                         Unit* target = *itr;
-                        target->CastSpell(target, BoneSpikeSummonId[i], true);
+                        if (irand(0,3)==1) target->RemoveAurasDueToSpell(SPELL_IMPALED);
+                        if (irand(0,3)==2) target->CastSpell(target, BoneSpikeSummonId[i], true);
                     }
 
                     marrowgarAI->Talk(SAY_BONESPIKE);

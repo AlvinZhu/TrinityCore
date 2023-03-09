@@ -126,7 +126,7 @@ public:
         Player* target = handler->getSelectedPlayerOrSelf();
         if (CheckModifyResources(handler, args, target, hp, hpmax))
         {
-            NotifyModification(handler, target, LANG_YOU_CHANGE_HP, LANG_YOURS_HP_CHANGED, hp, hpmax);
+            //NotifyModification(handler, target, LANG_YOU_CHANGE_HP, LANG_YOURS_HP_CHANGED, hp, hpmax);
             target->SetMaxHealth(hpmax);
             target->SetHealth(hp);
             return true;
@@ -142,7 +142,7 @@ public:
 
         if (CheckModifyResources(handler, args, target, mana, manamax))
         {
-            NotifyModification(handler, target, LANG_YOU_CHANGE_MANA, LANG_YOURS_MANA_CHANGED, mana, manamax);
+            //NotifyModification(handler, target, LANG_YOU_CHANGE_MANA, LANG_YOURS_MANA_CHANGED, mana, manamax);
             target->SetMaxPower(POWER_MANA, manamax);
             target->SetPower(POWER_MANA, mana);
             return true;
@@ -158,7 +158,7 @@ public:
         int8 const energyMultiplier = 10;
         if (CheckModifyResources(handler, args, target, energy, energymax, energyMultiplier))
         {
-            NotifyModification(handler, target, LANG_YOU_CHANGE_ENERGY, LANG_YOURS_ENERGY_CHANGED, energy / energyMultiplier, energymax / energyMultiplier);
+            //NotifyModification(handler, target, LANG_YOU_CHANGE_ENERGY, LANG_YOURS_ENERGY_CHANGED, energy / energyMultiplier, energymax / energyMultiplier);
             target->SetMaxPower(POWER_ENERGY, energymax);
             target->SetPower(POWER_ENERGY, energy);
             TC_LOG_DEBUG("misc", handler->GetTrinityString(LANG_CURRENT_ENERGY), target->GetMaxPower(POWER_ENERGY));
@@ -175,7 +175,7 @@ public:
         int8 const rageMultiplier = 10;
         if (CheckModifyResources(handler, args, target, rage, ragemax, rageMultiplier))
         {
-            NotifyModification(handler, target, LANG_YOU_CHANGE_RAGE, LANG_YOURS_RAGE_CHANGED, rage / rageMultiplier, ragemax / rageMultiplier);
+            //NotifyModification(handler, target, LANG_YOU_CHANGE_RAGE, LANG_YOURS_RAGE_CHANGED, rage / rageMultiplier, ragemax / rageMultiplier);
             target->SetMaxPower(POWER_RAGE, ragemax);
             target->SetPower(POWER_RAGE, rage);
             return true;
@@ -191,7 +191,7 @@ public:
         int8 const runeMultiplier = 10;
         if (CheckModifyResources(handler, args, target, rune, runemax, runeMultiplier))
         {
-            NotifyModification(handler, target, LANG_YOU_CHANGE_RUNIC_POWER, LANG_YOURS_RUNIC_POWER_CHANGED, rune / runeMultiplier, runemax / runeMultiplier);
+            //NotifyModification(handler, target, LANG_YOU_CHANGE_RUNIC_POWER, LANG_YOURS_RUNIC_POWER_CHANGED, rune / runeMultiplier, runemax / runeMultiplier);
             target->SetMaxPower(POWER_RUNIC_POWER, runemax);
             target->SetPower(POWER_RUNIC_POWER, rune);
             return true;
@@ -343,6 +343,13 @@ public:
 
         if (target->GetTypeId() == TYPEID_PLAYER)
         {
+			if (target->ToPlayer()->IsPlayerBot())
+			{
+				std::string outString;
+				consoleToUtf8(std::string("不允许修改机器人的天赋点数。"), outString);
+				sWorld->SendGlobalText(outString.c_str(), NULL);
+				return true;
+			}
             // check online security
             if (handler->HasLowerSecurity(target->ToPlayer(), ObjectGuid::Empty))
                 return false;
@@ -413,7 +420,7 @@ public:
         Player* target = handler->getSelectedPlayerOrSelf();
         if (CheckModifySpeed(handler, args, target, allSpeed, 0.1f, 50.0f))
         {
-            NotifyModification(handler, target, LANG_YOU_CHANGE_ASPEED, LANG_YOURS_ASPEED_CHANGED, allSpeed);
+            //NotifyModification(handler, target, LANG_YOU_CHANGE_ASPEED, LANG_YOURS_ASPEED_CHANGED, allSpeed);
             target->SetSpeedRate(MOVE_WALK, allSpeed);
             target->SetSpeedRate(MOVE_RUN, allSpeed);
             target->SetSpeedRate(MOVE_SWIM, allSpeed);
@@ -430,7 +437,7 @@ public:
         Player* target = handler->getSelectedPlayerOrSelf();
         if (CheckModifySpeed(handler, args, target, Speed, 0.1f, 50.0f))
         {
-            NotifyModification(handler, target, LANG_YOU_CHANGE_SPEED, LANG_YOURS_SPEED_CHANGED, Speed);
+            //NotifyModification(handler, target, LANG_YOU_CHANGE_SPEED, LANG_YOURS_SPEED_CHANGED, Speed);
             target->SetSpeedRate(MOVE_RUN, Speed);
             return true;
         }
@@ -444,7 +451,7 @@ public:
         Player* target = handler->getSelectedPlayerOrSelf();
         if (CheckModifySpeed(handler, args, target, swimSpeed, 0.1f, 50.0f))
         {
-            NotifyModification(handler, target, LANG_YOU_CHANGE_SWIM_SPEED, LANG_YOURS_SWIM_SPEED_CHANGED, swimSpeed);
+            //NotifyModification(handler, target, LANG_YOU_CHANGE_SWIM_SPEED, LANG_YOURS_SWIM_SPEED_CHANGED, swimSpeed);
             target->SetSpeedRate(MOVE_SWIM, swimSpeed);
             return true;
         }
@@ -458,7 +465,7 @@ public:
         Player* target = handler->getSelectedPlayerOrSelf();
         if (CheckModifySpeed(handler, args, target, backSpeed, 0.1f, 50.0f))
         {
-            NotifyModification(handler, target, LANG_YOU_CHANGE_BACK_SPEED, LANG_YOURS_BACK_SPEED_CHANGED, backSpeed);
+            //NotifyModification(handler, target, LANG_YOU_CHANGE_BACK_SPEED, LANG_YOURS_BACK_SPEED_CHANGED, backSpeed);
             target->SetSpeedRate(MOVE_RUN_BACK, backSpeed);
             return true;
         }
@@ -472,7 +479,7 @@ public:
         Player* target = handler->getSelectedPlayerOrSelf();
         if (CheckModifySpeed(handler, args, target, flySpeed, 0.1f, 50.0f, false))
         {
-            NotifyModification(handler, target, LANG_YOU_CHANGE_FLY_SPEED, LANG_YOURS_FLY_SPEED_CHANGED, flySpeed);
+            //NotifyModification(handler, target, LANG_YOU_CHANGE_FLY_SPEED, LANG_YOURS_FLY_SPEED_CHANGED, flySpeed);
             target->SetSpeedRate(MOVE_FLIGHT, flySpeed);
             return true;
         }
@@ -486,7 +493,7 @@ public:
         Unit* target = handler->getSelectedUnit();
         if (CheckModifySpeed(handler, args, target, Scale, 0.1f, 10.0f, false))
         {
-            NotifyModification(handler, target, LANG_YOU_CHANGE_SIZE, LANG_YOURS_SIZE_CHANGED, Scale);
+            //NotifyModification(handler, target, LANG_YOU_CHANGE_SIZE, LANG_YOURS_SIZE_CHANGED, Scale);
             target->SetObjectScale(Scale);
             return true;
         }
@@ -731,7 +738,7 @@ public:
         if (handler->HasLowerSecurity(target, ObjectGuid::Empty))
             return false;
 
-        NotifyModification(handler, target, LANG_YOU_GIVE_MOUNT, LANG_MOUNT_GIVED);
+        //NotifyModification(handler, target, LANG_YOU_GIVE_MOUNT, LANG_MOUNT_GIVED);
 
         target->SetUInt32Value(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP);
         target->Mount(mId);
@@ -941,6 +948,10 @@ public:
             return false;
 
         amount = atoi(rankTxt);
+if (amount>=42000) amount=42000;
+	if (amount < -42000) amount=-42000;
+
+        
         if ((amount == 0) && (rankTxt[0] != '-') && !isdigit(rankTxt[0]))
         {
             std::string rankStr = rankTxt;
@@ -1004,11 +1015,13 @@ public:
             handler->SetSentErrorMessage(true);
             return false;
         }
-
+if (amount>=42000) amount=42000;
+	if (amount < -42000) amount=-42000;
         target->GetReputationMgr().SetOneFactionReputation(factionEntry, amount, false);
         target->GetReputationMgr().SendState(target->GetReputationMgr().GetState(factionEntry));
-        handler->PSendSysMessage(LANG_COMMAND_MODIFY_REP, factionEntry->name[handler->GetSessionDbcLocale()], factionId,
-            handler->GetNameLink(target).c_str(), target->GetReputationMgr().GetReputation(factionEntry));
+//hxsd fix
+//        handler->PSendSysMessage(LANG_COMMAND_MODIFY_REP, factionEntry->name[handler->GetSessionDbcLocale()], factionId,
+  //          handler->GetNameLink(target).c_str(), target->GetReputationMgr().GetReputation(factionEntry));
         return true;
     }
 

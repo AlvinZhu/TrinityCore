@@ -97,8 +97,9 @@ public:
             { "unpossess",        rbac::RBAC_PERM_COMMAND_UNPOSSESS,        false, &HandleUnPossessCommand,        "" },
             { "unstuck",          rbac::RBAC_PERM_COMMAND_UNSTUCK,           true, &HandleUnstuckCommand,          "" },
             { "wchange",          rbac::RBAC_PERM_COMMAND_WCHANGE,          false, &HandleChangeWeather,           "" },
-            { "mailbox",          rbac::RBAC_PERM_COMMAND_MAILBOX,          false, &HandleMailBoxCommand,          "" },
-        };
+			{ "mailbox",			rbac::RBAC_PERM_COMMAND_MAILBOX,			false, &HandleMailBoxCommand,			"" },
+			{ "unbinding",		rbac::RBAC_PERM_COMMAND_UNBINDING,			false, &HandleUnbindingCommand,			"" },
+		};
         return commandTable;
     }
 
@@ -236,7 +237,7 @@ public:
             mapId, (mapEntry ? mapEntry->name[handler->GetSessionDbcLocale()] : unknown),
             zoneId, (zoneEntry ? zoneEntry->area_name[handler->GetSessionDbcLocale()] : unknown),
             areaId, (areaEntry ? areaEntry->area_name[handler->GetSessionDbcLocale()] : unknown),
-            object->GetPhaseMask(),
+            //object->GetPhaseMask(),
             object->GetPositionX(), object->GetPositionY(), object->GetPositionZ(), object->GetOrientation());
         if (Transport* transport = object->GetTransport())
             handler->PSendSysMessage(LANG_TRANSPORT_POSITION,
@@ -2317,8 +2318,8 @@ public:
         }
 
         // check online security
-        if (handler->HasLowerSecurity(target, ObjectGuid::Empty))
-            return false;
+        //if (handler->HasLowerSecurity(target, ObjectGuid::Empty))
+        //    return false;
 
         target->CombatStop();
         target->getHostileRefManager().deleteReferences();
@@ -2620,6 +2621,90 @@ public:
         handler->GetSession()->SendShowMailBox(player->GetGUID());
         return true;
     }
+
+	static bool HandleUnbindingCommand(ChatHandler* handler, char const* args)
+	{
+		Player* player = handler->GetSession()->GetPlayer();
+		if (!player)
+			return false;
+		uint32 itemId = 0;
+		if (args && args[0] == '[')                                        // [name] manual form
+		{
+			char const* itemNameStr = strtok((char*)args, "]");
+			if (itemNameStr && itemNameStr[0])
+			{
+				std::string itemName = itemNameStr + 1;
+				WorldDatabase.EscapeString(itemName);
+
+				PreparedStatement* stmt = WorldDatabase.GetPreparedStatement(WORLD_SEL_ITEM_TEMPLATE_BY_NAME);
+				stmt->setString(0, itemName);
+				PreparedQueryResult result = WorldDatabase.Query(stmt);
+
+				if (!result)
+					return false;
+				itemId = result->Fetch()->GetUInt32();
+			}
+			else
+				return false;
+		}
+		else if (args && args[0] != 0)
+		{
+			char const* id = handler->extractKeyFromLink((char*)args, "Hitem");
+			if (!id)
+				return false;
+			itemId = atoul(id);
+		}
+
+		uint32 uncount = 0;
+		if (itemId)
+		{
+			Item* item = player->GetItemByEntry(itemId);
+			if (!item)
+				return false;
+			if (item->IsSoulBound())
+			{
+				item->SetBinding(false);
+				uncount = 1;
+			}
+		}
+		else
+		{
+			for (uint8 i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; ++i)
+			{
+				if (Item* pItem = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+				{
+					if (pItem->IsSoulBound())
+					{
+						pItem->SetBinding(false);
+						++uncount;
+					}
+				}
+			}
+
+			for (uint8 i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; ++i)
+			{
+				if (Bag* pBag = player->GetBagByPos(i))
+				{
+					for (uint32 j = 0; j < pBag->GetBagSize(); ++j)
+					{
+						if (Item* pItem = pBag->GetItemByPos(j))
+						{
+							if (pItem->IsSoulBound())
+							{
+								pItem->SetBinding(false);
+								++uncount;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		char text[128] = { 0 };
+		sprintf_s(text, "Un binding item count %d.", uncount);
+		handler->SendSysMessage(text);
+		return true;
+	}
 };
 
 void AddSC_misc_commandscript()

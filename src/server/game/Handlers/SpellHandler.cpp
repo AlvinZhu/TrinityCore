@@ -26,11 +26,13 @@
 #include "Opcodes.h"
 #include "Spell.h"
 #include "Totem.h"
+#include "../../scripts/Custom/Transmogrification.h"
 #include "ScriptMgr.h"
 #include "GameObjectAI.h"
 #include "SpellAuraEffects.h"
 #include "Player.h"
 #include "Config.h"
+#include "CustomTalkMenu.h"
 
 void WorldSession::HandleClientCastFlags(WorldPacket& recvPacket, uint8 castFlags, SpellCastTargets& targets)
 {
@@ -314,6 +316,11 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
         recvPacket.rfinish(); // prevent spam at ignore packet
         return;
     }
+	//if (_player->HasAuraWithMechanic(1 << Mechanics::MECHANIC_FEAR))
+	//{
+	//	recvPacket.rfinish();
+	//	return;
+	//}
 
     SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
     if (!spellInfo)
@@ -383,7 +390,27 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
 
     Spell* spell = new Spell(caster, spellInfo, TRIGGERED_NONE, ObjectGuid::Empty, false);
     spell->m_cast_count = castCount;                       // set count of casts
-    spell->prepare(&targets);
+    SpellCastResult castResult = spell->prepare(&targets);
+	if (castResult == SPELL_CAST_OK)
+	{
+		if (spellId == 21651 && _player->IsInWorld() && _player->InBattleground())
+		{
+			int32 needTarget = 3;
+			std::list<Player*> playersNearby;
+			_player->GetPlayerListInGrid(playersNearby, 40);
+			for (Player* pVisionPlayer : playersNearby)
+			{
+				if (!pVisionPlayer->IsAlive())
+					continue;
+				if (pVisionPlayer->GetTeamId() == _player->GetTeamId())
+					continue;
+				pVisionPlayer->SetSelection(_player->GetGUID());
+				--needTarget;
+				if (needTarget <= 0)
+					break;
+			}
+		}
+	}
 }
 
 void WorldSession::HandleCancelCastOpcode(WorldPacket& recvPacket)
@@ -576,6 +603,36 @@ void WorldSession::HandleMirrorImageDataRequest(WorldPacket& recvData)
     if (!unit)
         return;
 
+    //bot
+    if (unit->ToCreature())
+    {
+        CreatureOutfitContainer const& outfits = sObjectMgr->GetCreatureOutfitBOTMap();
+        CreatureOutfitContainer::const_iterator it = outfits.find(unit->GetEntry());
+        if (it != outfits.end())
+        {
+            WorldPacket data(SMSG_MIRRORIMAGE_DATA, 68);
+            data << uint64(guid);
+            data << uint32(unit->GetNativeDisplayId()); // displayId
+            data << uint8(it->second.race);             // race
+            data << uint8(it->second.gender);           // gender
+            data << uint8(unit->getClass());            // class
+            data << uint8(it->second.skin);             // skin
+            data << uint8(it->second.face);             // face
+            data << uint8(it->second.hair);             // hair
+            data << uint8(it->second.haircolor);        // haircolor
+            data << uint8(it->second.facialhair);       // facialhair
+            data << uint32(0);                          // guildId
+
+            // item displays
+            for (uint8 i = 0; i != MAX_CREATURE_OUTFIT_DISPLAYS; ++i)
+                data << uint32(it->second.outfit[i]);
+
+            SendPacket(&data);
+            return;
+        }
+    }
+    //end bot
+
     if (!unit->HasAuraType(SPELL_AURA_CLONE_CASTER))
         return;
 
@@ -625,7 +682,12 @@ void WorldSession::HandleMirrorImageDataRequest(WorldPacket& recvData)
             else if (*itr == EQUIPMENT_SLOT_BACK && player->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_HIDE_CLOAK))
                 data << uint32(0);
             else if (Item const* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, *itr))
-                data << uint32(item->GetTemplate()->DisplayInfoID);
+            {
+                if (uint32 entry = sTransmogrification->GetFakeEntry(item))
+                    data << uint32(sObjectMgr->GetItemTemplate(entry)->DisplayInfoID);
+                else
+                    data << uint32(item->GetTemplate()->DisplayInfoID);
+            }
             else
                 data << uint32(0);
         }

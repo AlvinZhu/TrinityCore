@@ -137,8 +137,8 @@ void AuctionBotConfig::GetConfigFromFile()
 
     SetConfig(CONFIG_AHBOT_BUYPRICE_SELLER, "AuctionHouseBot.BuyPrice.Seller", true);
 
-    SetConfig(CONFIG_AHBOT_ITEMS_PER_CYCLE_BOOST, "AuctionHouseBot.ItemsPerCycle.Boost", 1000);
-    SetConfig(CONFIG_AHBOT_ITEMS_PER_CYCLE_NORMAL, "AuctionHouseBot.ItemsPerCycle.Normal", 20);
+	SetConfig(CONFIG_AHBOT_ITEMS_PER_CYCLE_BOOST, /*"AuctionHouseBot.ItemsPerCycle.Boost",*/ 50);// 1000);
+	SetConfig(CONFIG_AHBOT_ITEMS_PER_CYCLE_NORMAL, /*"AuctionHouseBot.ItemsPerCycle.Normal",*/ 15);// 20);
 
     SetConfig(CONFIG_AHBOT_ITEM_MIN_ITEM_LEVEL, "AuctionHouseBot.Items.ItemLevel.Min", 0);
     SetConfig(CONFIG_AHBOT_ITEM_MAX_ITEM_LEVEL, "AuctionHouseBot.Items.ItemLevel.Max", 0);
@@ -217,7 +217,7 @@ void AuctionBotConfig::GetConfigFromFile()
     SetConfig(CONFIG_AHBOT_MINTIME, "AuctionHouseBot.MinTime", 1);
     SetConfig(CONFIG_AHBOT_MAXTIME, "AuctionHouseBot.MaxTime", 72);
 
-    SetConfigMinMax(CONFIG_AHBOT_BUYER_RECHECK_INTERVAL, "AuctionHouseBot.Buyer.Recheck.Interval", 20, 1, DAY / MINUTE);
+	SetConfigMinMax(CONFIG_AHBOT_BUYER_RECHECK_INTERVAL, "AuctionHouseBot.Buyer.Recheck.Interval", 1, 1, 2);// DAY / MINUTE);
     SetConfig(CONFIG_AHBOT_BUYER_BASEPRICE_GRAY, "AuctionHouseBot.Buyer.Baseprice.Gray", 3504);
     SetConfig(CONFIG_AHBOT_BUYER_BASEPRICE_WHITE, "AuctionHouseBot.Buyer.Baseprice.White", 5429);
     SetConfig(CONFIG_AHBOT_BUYER_BASEPRICE_GREEN, "AuctionHouseBot.Buyer.Baseprice.Green", 21752);
@@ -465,7 +465,7 @@ void AuctionHouseBot::Update()
             _operationSelector = 0;
 
         // one success update per call
-        if (successStep)
-            break;
+        //if (successStep)
+        //    break;
     }
 }

@@ -28,6 +28,7 @@
 #include "Opcodes.h"
 #include "Guild.h"
 #include "ArenaTeam.h"
+#include "PlayerBotSession.h"
 
 #define CHARTER_DISPLAY_ID 16161
 
@@ -102,9 +103,9 @@ void WorldSession::HandlePetitionBuyOpcode(WorldPacket& recvData)
     else
     {
         /// @todo find correct opcode
-        if (_player->getLevel() < sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL))
+        if (_player->getLevel() < 80)//sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL))
         {
-            SendNotification(LANG_ARENA_ONE_TOOLOW, sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL));
+			SendNotification(LANG_ARENA_ONE_TOOLOW, 80);// sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL));
             return;
         }
 
@@ -699,22 +700,37 @@ void WorldSession::HandleOfferPetitionOpcode(WorldPacket& recvData)
     if (result)
         signs = uint8(result->GetRowCount());
 
-    WorldPacket data(SMSG_PETITION_SHOW_SIGNATURES, (8+8+4+signs+signs*12));
-    data << uint64(petitionguid);                           // petition guid
-    data << uint64(_player->GetGUID());                     // owner guid
-    data << uint32(petitionguid.GetCounter());              // guild guid
-    data << uint8(signs);                                   // sign's count
+	if (player->IsPlayerBot())
+	{
+		if (PlayerBotSession* pSession = dynamic_cast<PlayerBotSession*>(player->GetSession()))
+		{
+			uint64 fullguid = uint64(petitionguid);
+			uint32 lowguid = uint32(fullguid);
+			uint32 highguid = uint32(fullguid >> 32);
+			BotGlobleSchedule schedule1(BotGlobleScheduleType::BGSType_OfferPetitionSign, 0);
+			schedule1.parameter1 = lowguid;
+			schedule1.parameter2 = highguid;
+			pSession->PushScheduleToQueue(schedule1);
+		}
+	}
+	else
+	{
+		WorldPacket data(SMSG_PETITION_SHOW_SIGNATURES, (8 + 8 + 4 + signs + signs * 12));
+		data << uint64(petitionguid);                           // petition guid
+		data << uint64(_player->GetGUID());                     // owner guid
+		data << uint32(petitionguid.GetCounter());              // guild guid
+		data << uint8(signs);                                   // sign's count
 
-    for (uint8 i = 1; i <= signs; ++i)
-    {
-        Field* fields2 = result->Fetch();
-        data << uint64(ObjectGuid(HighGuid::Player, fields2[0].GetUInt32())); // Player GUID
-        data << uint32(0);                                  // there 0 ...
+		for (uint8 i = 1; i <= signs; ++i)
+		{
+			Field* fields2 = result->Fetch();
+			data << uint64(ObjectGuid(HighGuid::Player, fields2[0].GetUInt32())); // Player GUID
+			data << uint32(0);                                  // there 0 ...
 
-        result->NextRow();
-    }
-
-    player->GetSession()->SendPacket(&data);
+			result->NextRow();
+		}
+		player->GetSession()->SendPacket(&data);
+	}
 }
 
 void WorldSession::HandleTurnInPetitionOpcode(WorldPacket& recvData)

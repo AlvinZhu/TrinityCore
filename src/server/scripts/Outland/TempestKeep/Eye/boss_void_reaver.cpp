@@ -84,7 +84,7 @@ class boss_void_reaver : public CreatureScript
                 _EnterCombat();
 
                 events.ScheduleEvent(EVENT_POUNDING, 15000);
-                events.ScheduleEvent(EVENT_ARCANE_ORB, 3000);
+                events.ScheduleEvent(EVENT_ARCANE_ORB, 15000);
                 events.ScheduleEvent(EVENT_KNOCK_AWAY, 30000);
                 events.ScheduleEvent(EVENT_BERSERK, 600000);
             }
@@ -103,11 +103,11 @@ class boss_void_reaver : public CreatureScript
                 {
                     switch (eventId)
                     {
-                        case EVENT_POUNDING:
-                            DoCastVictim(SPELL_POUNDING);
-                            Talk(SAY_POUNDING);
-                            events.ScheduleEvent(EVENT_POUNDING, 15000);
-                            break;
+                        //case EVENT_POUNDING:
+                        //    DoCastVictim(SPELL_POUNDING);
+                        //    Talk(SAY_POUNDING);
+                        //    events.ScheduleEvent(EVENT_POUNDING, 15000);
+                        //    break;
                         case EVENT_ARCANE_ORB:
                         {
                             Unit* target = NULL;
@@ -129,27 +129,30 @@ class boss_void_reaver : public CreatureScript
                             else
                                 target = me->GetVictim();
 
-                            if (target)
-                                me->CastSpell(target, SPELL_ARCANE_ORB, false, NULL, NULL);
+							if (target)
+							{
+								me->CastSpell(target, SPELL_ARCANE_ORB, false, NULL, NULL);
+								//BotFleeLineByAngle(me, me->GetAngle(&target->GetPosition()));
+							}
 
-                            events.ScheduleEvent(EVENT_ARCANE_ORB, 3000);
+                            events.ScheduleEvent(EVENT_ARCANE_ORB, 15000);
                             break;
                         }
                         case EVENT_KNOCK_AWAY:
-                            DoCastVictim(SPELL_KNOCK_AWAY);
-                            // Drop 25% aggro
-                            if (DoGetThreat(me->GetVictim()))
-                                DoModifyThreatPercent(me->GetVictim(), -25);
+                            //DoCastVictim(SPELL_KNOCK_AWAY);
+                            //// Drop 25% aggro
+                            //if (DoGetThreat(me->GetVictim()))
+                            //    DoModifyThreatPercent(me->GetVictim(), -25);
 
-                            events.ScheduleEvent(EVENT_KNOCK_AWAY, 30000);
-                            break;
-                        case EVENT_BERSERK:
-                            if (!Enraged)
-                            {
-                                DoCast(me, SPELL_BERSERK);
-                                Enraged = true;
-                            }
-                            break;
+                            //events.ScheduleEvent(EVENT_KNOCK_AWAY, 30000);
+                            //break;
+                        //case EVENT_BERSERK:
+                        //    if (!Enraged)
+                        //    {
+                        //        DoCast(me, SPELL_BERSERK);
+                        //        Enraged = true;
+                        //    }
+                        //    break;
                         default:
                             break;
                     }

@@ -81,7 +81,10 @@ class boss_ayamiss : public CreatureScript
             boss_ayamissAI(Creature* creature) : BossAI(creature, DATA_AYAMISS)
             {
                 Initialize();
-            }
+				instScript = creature->GetInstanceScript();
+			}
+
+			InstanceScript* instScript;
 
             void Initialize()
             {
@@ -102,10 +105,20 @@ class boss_ayamiss : public CreatureScript
                 {
                     case NPC_SWARMER:
                         _swarmers.push_back(who->GetGUID());
-                        break;
+						if (instScript)
+						{
+							if (BotAttackCreature* pBotAttack = instScript->GetBotAttacksCreature(me))
+								pBotAttack->AddNewCreatureNeedAttack(who, 3);
+						}
+						break;
                     case NPC_LARVA:
                         who->GetMotionMaster()->MovePoint(POINT_PARALYZE, AltarPos);
-                        break;
+						if (instScript)
+						{
+							if (BotAttackCreature* pBotAttack = instScript->GetBotAttacksCreature(me))
+								pBotAttack->AddNewCreatureNeedAttack(who, 18);
+						}
+						break;
                     case NPC_HORNET:
                         if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM))
                             who->AI()->AttackStart(target);
@@ -177,24 +190,28 @@ class boss_ayamiss : public CreatureScript
                     DoMeleeAttackIfReady();
                 }
 
-                if (!_enraged && me->GetHealthPct() < 20.0f)
+                if (!_enraged && me->GetHealthPct() < 8.0f)
                 {
                     DoCast(me, SPELL_FRENZY);
                     Talk(EMOTE_FRENZY);
                     _enraged = true;
                 }
+				if (BotAttackCreature* pBotAttack = instScript->GetBotAttacksCreature(me))
+				{
+					pBotAttack->UpdateNeedAttackCreatures(diff, this, true);
+				}
 
                 while (uint32 eventId = events.ExecuteEvent())
                 {
                     switch (eventId)
                     {
-                        case EVENT_STINGER_SPRAY:
-                            DoCast(me, SPELL_STINGER_SPRAY);
-                            events.ScheduleEvent(EVENT_STINGER_SPRAY, urand(15000, 20000));
-                            break;
+                        //case EVENT_STINGER_SPRAY:
+                        //    DoCast(me, SPELL_STINGER_SPRAY);
+                        //    events.ScheduleEvent(EVENT_STINGER_SPRAY, urand(15000, 20000));
+                        //    break;
                         case EVENT_POISON_STINGER:
                             DoCastVictim(SPELL_POISON_STINGER);
-                            events.ScheduleEvent(EVENT_POISON_STINGER, urand(2000, 3000));
+                            events.ScheduleEvent(EVENT_POISON_STINGER, urand(10000, 18000));
                             break;
                         case EVENT_PARALYZE:
                             if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 0, true))
@@ -202,7 +219,7 @@ class boss_ayamiss : public CreatureScript
                                 DoCast(target, SPELL_PARALYZE);
                                 instance->SetGuidData(DATA_PARALYZED, target->GetGUID());
                                 uint8 Index = urand(0, 1);
-                                me->SummonCreature(NPC_LARVA, LarvaPos[Index], TEMPSUMMON_TIMED_OR_CORPSE_DESPAWN, 30000);
+                                //me->SummonCreature(NPC_LARVA, LarvaPos[Index], TEMPSUMMON_TIMED_OR_CORPSE_DESPAWN, 30000);
                             }
                             events.ScheduleEvent(EVENT_PARALYZE, 15000);
                             break;
@@ -219,16 +236,16 @@ class boss_ayamiss : public CreatureScript
                         {
                             Position Pos = me->GetRandomPoint(SwarmerPos, 80.0f);
                             me->SummonCreature(NPC_SWARMER, Pos);
-                            events.ScheduleEvent(EVENT_SUMMON_SWARMER, 5000);
+                            events.ScheduleEvent(EVENT_SUMMON_SWARMER, 10000);
                             break;
                         }
                         case EVENT_TRASH:
                             DoCastVictim(SPELL_TRASH);
-                            events.ScheduleEvent(EVENT_TRASH, urand(5000, 7000));
+                            events.ScheduleEvent(EVENT_TRASH, urand(15000, 20000));
                             break;
                         case EVENT_LASH:
                             DoCastVictim(SPELL_LASH);
-                            events.ScheduleEvent(EVENT_LASH, urand(8000, 15000));
+                            events.ScheduleEvent(EVENT_LASH, urand(20000, 25000));
                             break;
                     }
                 }
@@ -259,10 +276,10 @@ class npc_hive_zara_larva : public CreatureScript
 
             void MovementInform(uint32 type, uint32 id) override
             {
-                if (type == POINT_MOTION_TYPE)
-                    if (id == POINT_PARALYZE)
-                        if (Player* target = ObjectAccessor::GetPlayer(*me, _instance->GetGuidData(DATA_PARALYZED)))
-                            DoCast(target, SPELL_FEED); // Omnomnom
+                //if (type == POINT_MOTION_TYPE)
+                //    if (id == POINT_PARALYZE)
+                //        if (Player* target = ObjectAccessor::GetPlayer(*me, _instance->GetGuidData(DATA_PARALYZED)))
+                //            DoCast(target, SPELL_FEED); // Omnomnom
             }
 
             void MoveInLineOfSight(Unit* who) override

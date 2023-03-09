@@ -458,7 +458,7 @@ void Aura::_UnapplyForTarget(Unit* target, Unit* caster, AuraApplication * auraA
 void Aura::_Remove(AuraRemoveMode removeMode)
 {
     ASSERT (!m_isRemoved);
-    m_isRemoved = true;
+	m_isRemoved = true;
     ApplicationMap::iterator appItr = m_applications.begin();
     for (appItr = m_applications.begin(); appItr != m_applications.end();)
     {

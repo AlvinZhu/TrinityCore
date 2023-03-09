@@ -1525,16 +1525,33 @@ void Guild::HandleInviteMember(WorldSession* session, std::string const& name)
     if (pInvitee->GetSocial()->HasIgnore(player->GetGUID().GetCounter()))
         return;
 
-    if (!sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_INTERACTION_GUILD) && pInvitee->GetTeam() != player->GetTeam())
+    if (/*!sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_INTERACTION_GUILD) && */pInvitee->GetTeam() != player->GetTeam())
     {
         SendCommandResult(session, GUILD_COMMAND_INVITE, ERR_GUILD_NOT_ALLIED, name);
         return;
     }
     // Invited player cannot be in another guild
-    if (pInvitee->GetGuildId())
+    if (uint32 guildID = pInvitee->GetGuildId())
     {
-        SendCommandResult(session, GUILD_COMMAND_INVITE, ERR_ALREADY_IN_GUILD_S, name);
-        return;
+		Guild* pInviteeGuild = pInvitee->GetGuild();
+		if (!pInviteeGuild || player->GetGuildId() == guildID)
+			return;
+		if (pInviteeGuild->GetLeaderGUID() == pInvitee->GetGUID() && pInviteeGuild->GetMemberCount() > 1)
+		{
+			SendCommandResult(session, GUILD_COMMAND_INVITE, ERR_ALREADY_IN_GUILD_S, name);
+			return;
+		}
+		if (!pInvitee->IsPlayerBot())
+		{
+			SendCommandResult(session, GUILD_COMMAND_INVITE, ERR_ALREADY_IN_GUILD_S, name);
+			return;
+		}
+		pInviteeGuild->HandleLeaveMember(pInvitee->GetSession());
+		if (pInvitee->GetGuildId() || pInvitee->GetGuild())
+		{
+			SendCommandResult(session, GUILD_COMMAND_INVITE, ERR_ALREADY_IN_GUILD_S, name);
+			return;
+		}
     }
     // Invited player cannot be invited
     if (pInvitee->GetGuildIdInvited())

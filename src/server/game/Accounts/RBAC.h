@@ -59,9 +59,9 @@ enum RBACPermissions
     //  7 - reuse
     //  8 - reuse
     //  9 - reuse
-    RBAC_PERM_USE_CHARACTER_TEMPLATES                        = 10, // not on 3.3.5a
+    // 10 - reuse
     RBAC_PERM_LOG_GM_TRADE                                   = 11,
-    RBAC_PERM_SKIP_CHECK_CHARACTER_CREATION_DEMON_HUNTER     = 12, // not on 3.3.5a
+    // 12 - reuse
     RBAC_PERM_SKIP_CHECK_INSTANCE_REQUIRED_BOSSES            = 13,
     RBAC_PERM_SKIP_CHECK_CHARACTER_CREATION_TEAMMASK         = 14,
     RBAC_PERM_SKIP_CHECK_CHARACTER_CREATION_CLASSMASK        = 15,
@@ -111,16 +111,7 @@ enum RBACPermissions
     RBAC_PERM_COMMAND_RBAC_ACC_PERM_DENY                     = 204,
     RBAC_PERM_COMMAND_RBAC_ACC_PERM_REVOKE                   = 205,
     RBAC_PERM_COMMAND_RBAC_LIST                              = 206,
-    RBAC_PERM_COMMAND_BNET_ACCOUNT                           = 207, // not on 3.3.5a
-    RBAC_PERM_COMMAND_BNET_ACCOUNT_CREATE                    = 208, // not on 3.3.5a
-    RBAC_PERM_COMMAND_BNET_ACCOUNT_LOCK_COUNTRY              = 209, // not on 3.3.5a
-    RBAC_PERM_COMMAND_BNET_ACCOUNT_LOCK_IP                   = 210, // not on 3.3.5a
-    RBAC_PERM_COMMAND_BNET_ACCOUNT_PASSWORD                  = 211, // not on 3.3.5a
-    RBAC_PERM_COMMAND_BNET_ACCOUNT_SET                       = 212, // not on 3.3.5a
-    RBAC_PERM_COMMAND_BNET_ACCOUNT_SET_PASSWORD              = 213, // not on 3.3.5a
-    RBAC_PERM_COMMAND_BNET_ACCOUNT_LINK                      = 214, // not on 3.3.5a
-    RBAC_PERM_COMMAND_BNET_ACCOUNT_UNLINK                    = 215, // not on 3.3.5a
-    RBAC_PERM_COMMAND_BNET_ACCOUNT_CREATE_GAME               = 216, // not on 3.3.5a
+    // 207 - 216 do NOT use
     RBAC_PERM_COMMAND_ACCOUNT                                = 217,
     RBAC_PERM_COMMAND_ACCOUNT_ADDON                          = 218,
     RBAC_PERM_COMMAND_ACCOUNT_CREATE                         = 219,
@@ -679,8 +670,8 @@ enum RBACPermissions
     RBAC_PERM_COMMAND_WP_UNLOAD                              = 772,
     RBAC_PERM_COMMAND_WP_RELOAD                              = 773,
     RBAC_PERM_COMMAND_WP_SHOW                                = 774,
-    RBAC_PERM_COMMAND_MODIFY_CURRENCY                        = 775, // not on 3.3.5a
-    RBAC_PERM_COMMAND_DEBUG_PHASE                            = 776, // not on 3.3.5a
+    RBAC_PERM_COMMAND_MODIFY_CURRENCY                        = 775, // only 6.x
+    RBAC_PERM_COMMAND_DEBUG_PHASE                            = 776, // only 6.x
     RBAC_PERM_COMMAND_MAILBOX                                = 777,
     RBAC_PERM_COMMAND_AHBOT                                  = 778,
     RBAC_PERM_COMMAND_AHBOT_ITEMS                            = 779,
@@ -703,42 +694,7 @@ enum RBACPermissions
     RBAC_PERM_COMMAND_INSTANCE_GET_BOSS_STATE                = 796,
     RBAC_PERM_COMMAND_PVPSTATS                               = 797,
     RBAC_PERM_COMMAND_MODIFY_XP                              = 798,
-    RBAC_PERM_COMMAND_GO_BUG_TICKET                          = 799, // not on 3.3.5a
-    RBAC_PERM_COMMAND_GO_COMPLAINT_TICKET                    = 800, // not on 3.3.5a
-    RBAC_PERM_COMMAND_GO_SUGGESTION_TICKET                   = 801, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_BUG                             = 802, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_COMPLAINT                       = 803, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_SUGGESTION                      = 804, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_BUG_ASSIGN                      = 805, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_BUG_CLOSE                       = 806, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_BUG_CLOSEDLIST                  = 807, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_BUG_COMMENT                     = 808, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_BUG_DELETE                      = 809, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_BUG_LIST                        = 810, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_BUG_UNASSIGN                    = 811, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_BUG_VIEW                        = 812, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_COMPLAINT_ASSIGN                = 813, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_COMPLAINT_CLOSE                 = 814, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_COMPLAINT_CLOSEDLIST            = 815, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_COMPLAINT_COMMENT               = 816, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_COMPLAINT_DELETE                = 817, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_COMPLAINT_LIST                  = 818, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_COMPLAINT_UNASSIGN              = 819, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_COMPLAINT_VIEW                  = 820, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_SUGGESTION_ASSIGN               = 821, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_SUGGESTION_CLOSE                = 822, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_SUGGESTION_CLOSEDLIST           = 823, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_SUGGESTION_COMMENT              = 824, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_SUGGESTION_DELETE               = 825, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_SUGGESTION_LIST                 = 826, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_SUGGESTION_UNASSIGN             = 827, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_SUGGESTION_VIEW                 = 828, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_RESET_ALL                       = 829, // not on 3.3.5a
-    // 830 reuse
-    RBAC_PERM_COMMAND_TICKET_RESET_BUG                       = 831, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_RESET_COMPLAINT                 = 832, // not on 3.3.5a
-    RBAC_PERM_COMMAND_TICKET_RESET_SUGGESTION                = 833, // not on 3.3.5a
-    RBAC_PERM_COMMAND_GO_QUEST                               = 834, // not on 3.3.5a
+    // 799 - 834 6.x only
     RBAC_PERM_COMMAND_DEBUG_LOADCELLS                        = 835,
     RBAC_PERM_COMMAND_DEBUG_BOUNDARY                         = 836,
     RBAC_PERM_COMMAND_NPC_EVADE                              = 837,
@@ -747,8 +703,48 @@ enum RBACPermissions
     RBAC_PERM_COMMAND_SERVER_RESTART_FORCE                   = 840,
     RBAC_PERM_COMMAND_NEARGRAVEYARD                          = 841,
 
+	RBAC_PERM_COMMAND_UNBINDING							= 999,
+
     // custom permissions 1000+
-    RBAC_PERM_MAX
+	RBAC_PREM_COMMAND_RESETCUSTOMGOSSIP = 1000,
+	RBAC_PREM_COMMAND_PBOTACCOUNT = 1001,
+	RBAC_PREM_COMMAND_PBOTACCOUNT_LOGINALL = 1002,
+	RBAC_PREM_COMMAND_PBOTACCOUNT_BOTCREATE = 1003,
+	RBAC_PREM_COMMAND_PBOTAI = 1004,
+	RBAC_PREM_COMMAND_PBOTAI_MOVETO = 1005,
+	RBAC_PREM_COMMAND_PBOTAI_MOVEPOINTS = 1006,
+	RBAC_PREM_COMMAND_PBOTACCOUNT_LOGOUTALL = 1007,
+	RBAC_PREM_COMMAND_PBOTACCOUNT_RESETLEVEL = 1008,
+	RBAC_PREM_COMMAND_PBOTAI_ADD_AIWP = 1009,
+	RBAC_PREM_COMMAND_PBOTAI_DEL_AIWP = 1010,
+	RBAC_PREM_COMMAND_PBOTAI_MOV_AIWP = 1011,
+	RBAC_PREM_COMMAND_PBOTAI_SHOWALL_AIWP = 1012,
+	RBAC_PREM_COMMAND_PBOTAI_END_BG = 1013,
+	RBAC_PREM_COMMAND_PBOTAI_POINTSDESC = 1014,
+	RBAC_PREM_COMMAND_PBOTACCOUNT_LOGINCLASSES = 1015,
+	RBAC_PREM_COMMAND_PBOTAI_FACETO = 1016,
+	RBAC_PREM_COMMAND_PBOTAI_DEBUGTARGET = 1017,
+	RBAC_PREM_COMMAND_PBOTAI_SEARCH = 1018,
+	RBAC_PREM_COMMAND_PBOTAI_TELEPORT = 1019,
+	RBAC_PREM_COMMAND_PBOTAI_ABFLAG = 1020,
+	RBAC_PREM_COMMAND_PBOTAI_FINDGO = 1021,
+	RBAC_PREM_COMMAND_PBOTAI_ECP = 1022,
+	RBAC_PREM_COMMAND_PBOTAI_RESETPVPEQUIP = 1023,
+	RBAC_PREM_COMMAND_PBOTAI_PETTALENTS = 1024,
+	RBAC_PREM_COMMAND_PBOTAI_SEARCHGO = 1025,
+	RBAC_PREM_COMMAND_PBOTAI_TESTROLL = 1026,
+
+	//NpcBot command permissions
+	RBAC_PERM_COMMAND_NPCBOT                                 = 1100,
+	RBAC_PERM_COMMAND_NPCBOT_ADD                             = 1101,
+	RBAC_PERM_COMMAND_NPCBOT_REMOVE                          = 1102,
+	RBAC_PERM_COMMAND_NPCBOT_RESET                           = 1103,
+	RBAC_PERM_COMMAND_NPCBOT_CMD                             = 1104,
+	RBAC_PERM_COMMAND_NPCBOT_DIST                            = 1105,
+	RBAC_PERM_COMMAND_NPCBOT_INFO                            = 1106,
+	RBAC_PERM_COMMAND_NPCBOT_HELPER                          = 1107,
+	RBAC_PERM_COMMAND_NPCBOT_REVIVE                          = 1108,
+	RBAC_PERM_MAX
 };
 
 enum RBACCommandResult
@@ -826,10 +822,10 @@ class TC_GAME_API RBACData
          * }
          * @endcode
          */
-        bool HasPermission(uint32 permission) const
-        {
-            return _globalPerms.find(permission) != _globalPerms.end();
-        }
+		//bool HasPermission(uint32 permission) const
+		//{
+		//	return _globalPerms.find(permission) != _globalPerms.end();
+		//}
 
         // Functions enabled to be used by command system
         /// Returns all the granted permissions (after computation)

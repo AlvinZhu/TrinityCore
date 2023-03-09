@@ -375,6 +375,9 @@ class TC_GAME_API ItemScript : public ScriptObject
 
         // Called when the item is destroyed.
         virtual bool OnRemove(Player* /*player*/, Item* /*item*/) { return false; }
+
+		// Called when a player selects an option in an item gossip window
+		virtual bool OnItemSelect(Player* /*player*/, Item* /*item*/, uint32 /*sender*/, uint32 /*action*/) { return false; }//阳光-增加-物品接口
 };
 
 class TC_GAME_API UnitScript : public ScriptObject
@@ -946,6 +949,7 @@ class TC_GAME_API ScriptMgr
         bool OnItemUse(Player* player, Item* item, SpellCastTargets const& targets);
         bool OnItemExpire(Player* player, ItemTemplate const* proto);
         bool OnItemRemove(Player* player, Item* item);
+		bool OnItemSelect(Player* player, Item* item, uint32 sender, uint32 action);//阳光-增加-物品接口
 
     public: /* CreatureScript */
 

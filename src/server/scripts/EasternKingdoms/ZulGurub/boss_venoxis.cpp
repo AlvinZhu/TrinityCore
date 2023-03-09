@@ -183,6 +183,7 @@ class boss_venoxis : public CreatureScript
                             break;
                         case EVENT_RENEW:
                             DoCast(me, SPELL_RENEW);
+							BotBlockCastingMe();
                             events.ScheduleEvent(EVENT_RENEW, urand(25000, 30000), 0, PHASE_ONE);
                             break;
                         case EVENT_HOLY_NOVA:
@@ -203,28 +204,37 @@ class boss_venoxis : public CreatureScript
                             events.ScheduleEvent(EVENT_HOLY_NOVA, urand(45000, 75000), 0, PHASE_ONE);
                             break;
                         case EVENT_HOLY_FIRE:
-                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM))
-                                DoCast(target, SPELL_HOLY_FIRE);
+							if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM))
+							{
+								DoCast(target, SPELL_HOLY_FIRE);
+								BotBlockCastingMe();
+							}
                             events.ScheduleEvent(EVENT_HOLY_FIRE, urand(45000, 60000), 0, PHASE_ONE);
                             break;
-                        case EVENT_HOLY_WRATH:
-                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM))
-                                DoCast(target, SPELL_HOLY_WRATH);
-                            events.ScheduleEvent(EVENT_HOLY_WRATH, urand(45000, 60000), 0, PHASE_ONE);
-                            break;
+                        //case EVENT_HOLY_WRATH:
+                        //    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM))
+                        //        DoCast(target, SPELL_HOLY_WRATH);
+                        //    events.ScheduleEvent(EVENT_HOLY_WRATH, urand(45000, 60000), 0, PHASE_ONE);
+                        //    break;
 
                         //
                         // snake form spells and Actions
                         //
 
                         case EVENT_VENOM_SPIT:
-                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM))
-                                DoCast(target, SPELL_VENOM_SPIT);
+							if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM))
+							{
+								DoCast(target, SPELL_VENOM_SPIT);
+								BotBlockCastingMe();
+							}
                             events.ScheduleEvent(EVENT_VENOM_SPIT, urand(5000, 15000), 0, PHASE_TWO);
                             break;
                         case EVENT_POISON_CLOUD:
-                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM))
-                                DoCast(target, SPELL_POISON_CLOUD);
+							if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM))
+							{
+								DoCast(target, SPELL_POISON_CLOUD);
+								BotAllMovetoFarByDistance(target, 25, 30, 6);
+							}
                             events.ScheduleEvent(EVENT_POISON_CLOUD, urand(15000, 20000), 0, PHASE_TWO);
                             break;
                         case EVENT_PARASITIC_SERPENT:

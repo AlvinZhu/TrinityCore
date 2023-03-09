@@ -1682,6 +1682,7 @@ class TC_GAME_API Unit : public WorldObject
         CharmInfo* GetCharmInfo() { return m_charmInfo; }
         CharmInfo* InitCharmInfo();
         void DeleteCharmInfo();
+		bool IsPlayerBot();
         void UpdateCharmAI();
         Unit* GetMover() const;
         Player* GetPlayerMover() const;

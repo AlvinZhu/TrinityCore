@@ -119,6 +119,7 @@ class boss_skeram : public CreatureScript
 
                 creature->SetMaxHealth(me->GetMaxHealth() * ImageHealthPct);
                 creature->SetHealth(creature->GetMaxHealth() * (me->GetHealthPct() / 100.0f));
+				BotAllTargetMe(false);
             }
 
             void JustDied(Unit* /*killer*/) override
@@ -154,14 +155,25 @@ class boss_skeram : public CreatureScript
                     switch (eventId)
                     {
                         case EVENT_ARCANE_EXPLOSION:
-                            DoCastAOE(SPELL_ARCANE_EXPLOSION, true);
+       //                     DoCastAOE(SPELL_ARCANE_EXPLOSION, true);
+							//BotBlockCastingMe();
                             events.ScheduleEvent(EVENT_ARCANE_EXPLOSION, urand(8000, 18000));
                             break;
-                        case EVENT_FULLFILMENT:
-                            /// @todo For some weird reason boss does not cast this
-                            // Spell actually works, tested in duel
-                            DoCast(SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true), SPELL_TRUE_FULFILLMENT, true);
-                            events.ScheduleEvent(EVENT_FULLFILMENT, urand(20000, 30000));
+						case EVENT_FULLFILMENT:
+							/// @todo For some weird reason boss does not cast this
+							// Spell actually works, tested in duel
+						{
+							Unit* pUnit = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true);
+							if (pUnit && me->GetTarget() != pUnit->GetGUID())
+							{
+								Player* player = pUnit->ToPlayer();
+								if (player && player->IsPlayerBot())
+								{
+									DoCast(pUnit, SPELL_TRUE_FULFILLMENT, true);
+								}
+							}
+							events.ScheduleEvent(EVENT_FULLFILMENT, urand(20000, 30000));
+						}
                             break;
                         case EVENT_BLINK:
                             DoCast(me, BlinkSpells[urand(0, 2)]);

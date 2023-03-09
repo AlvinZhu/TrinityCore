@@ -397,9 +397,17 @@ public:
                         me->GetMotionMaster()->Clear();
                         DoTeleportTo(MIDDLE_X, MIDDLE_Y, MIDDLE_Z);
 
+
+
+
+
                         for (uint8 i = 0; i < 4; ++i)
                             if (Creature* creature = me->SummonCreature(SHIED_GENERATOR_CHANNEL, ShieldGeneratorChannelPos[i][0],  ShieldGeneratorChannelPos[i][1],  ShieldGeneratorChannelPos[i][2],  ShieldGeneratorChannelPos[i][3], TEMPSUMMON_CORPSE_DESPAWN, 0))
                                 ShieldGeneratorChannel[i] = creature->GetGUID();
+
+                   for (uint8 i = 0; i < 4; ++i)
+ me->SummonCreature(TAINTED_ELEMENTAL, ShieldGeneratorChannelPos[i][0],  ShieldGeneratorChannelPos[i][1],  ShieldGeneratorChannelPos[i][2],  ShieldGeneratorChannelPos[i][3], TEMPSUMMON_DEAD_DESPAWN, 0); 
+
 
                         Talk(SAY_PHASE2);
                     }

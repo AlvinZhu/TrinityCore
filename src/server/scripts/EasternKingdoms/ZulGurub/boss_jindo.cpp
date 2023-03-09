@@ -19,6 +19,7 @@
 #include "ScriptMgr.h"
 #include "ScriptedCreature.h"
 #include "zulgurub.h"
+#include "BotGroupAI.h"
 
 enum Say
 {
@@ -109,10 +110,10 @@ class boss_jindo : public CreatureScript
                 {
                     switch (eventId)
                     {
-                        case EVENT_BRAIN_WASH_TOTEM:
-                            DoCast(me, SPELL_BRAIN_WASH_TOTEM);
-                            events.ScheduleEvent(EVENT_BRAIN_WASH_TOTEM, urand(18000, 26000));
-                            break;
+                        //case EVENT_BRAIN_WASH_TOTEM:
+                        //    DoCast(me, SPELL_BRAIN_WASH_TOTEM);
+                        //    events.ScheduleEvent(EVENT_BRAIN_WASH_TOTEM, urand(18000, 26000));
+                        //    break;
                         case EVENT_POWERFULL_HEALING_WARD:
                             DoCast(me, SPELL_POWERFULL_HEALING_WARD);
                             events.ScheduleEvent(EVENT_POWERFULL_HEALING_WARD, urand(14000, 20000));
@@ -126,28 +127,41 @@ class boss_jindo : public CreatureScript
                             }
                             events.ScheduleEvent(EVENT_HEX, urand(12000, 20000));
                             break;
-                        case EVENT_DELUSIONS_OF_JINDO:
-                            // Casting the delusion curse with a shade so shade will attack the same target with the curse.
-                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
-                            {
-                                DoCast(target, SPELL_SHADE_OF_JINDO, true);
-                                DoCast(target, SPELL_DELUSIONS_OF_JINDO);
-                            }
-                            events.ScheduleEvent(EVENT_DELUSIONS_OF_JINDO, urand(4000, 12000));
-                            break;
+                        //case EVENT_DELUSIONS_OF_JINDO:
+                        //    // Casting the delusion curse with a shade so shade will attack the same target with the curse.
+                        //    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
+                        //    {
+                        //        DoCast(target, SPELL_SHADE_OF_JINDO, true);
+                        //        DoCast(target, SPELL_DELUSIONS_OF_JINDO);
+                        //    }
+                        //    events.ScheduleEvent(EVENT_DELUSIONS_OF_JINDO, urand(4000, 12000));
+                        //    break;
                         case EVENT_TELEPORT:
                             // Teleports a random player and spawns 9 Sacrificed Trolls to attack player
                             if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
                             {
-                                DoTeleportPlayer(target, TeleportLoc.GetPositionX(), TeleportLoc.GetPositionY(), TeleportLoc.GetPositionZ(), TeleportLoc.GetOrientation());
+								if (target->IsPlayerBot())
+								{
+									if (BotGroupAI* pGroupAI = dynamic_cast<BotGroupAI*>(target->GetAI()))
+										pGroupAI->SetTeleport((Position)TeleportLoc);
+								}
+								else
+									DoTeleportPlayer(target, TeleportLoc.GetPositionX(), TeleportLoc.GetPositionY(), TeleportLoc.GetPositionZ(), TeleportLoc.GetOrientation());
                                 if (DoGetThreat(me->GetVictim()))
                                     DoModifyThreatPercent(target, -100);
 
                                 // Summon a formation of trolls
-                                for (uint8 i = 0; i < 10; ++i)
-                                    if (Creature* SacrificedTroll = me->SummonCreature(NPC_SACRIFICED_TROLL, Formation[i].GetPositionX(), Formation[i].GetPositionY(), Formation[i].GetPositionZ(), Formation[i].GetOrientation(), TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 15000))
-                                        SacrificedTroll->AI()->AttackStart(target);
-                            }
+								std::vector<Creature*> summs;
+								for (uint8 i = 0; i < 10; ++i)
+								{
+									if (Creature* SacrificedTroll = me->SummonCreature(NPC_SACRIFICED_TROLL, Formation[i].GetPositionX(), Formation[i].GetPositionY(), Formation[i].GetPositionZ(), Formation[i].GetOrientation(), TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 15000))
+									{
+										SacrificedTroll->AI()->AttackStart(target);
+										summs.push_back(SacrificedTroll);
+									}
+								}
+								BotAllotCreatureTarget(summs, 120, 1);
+							}
                             events.ScheduleEvent(EVENT_TELEPORT, urand(15000, 23000));
                             break;
                         default:
@@ -202,6 +216,9 @@ class npc_healing_ward : public CreatureScript
                     if (Unit* jindo = ObjectAccessor::GetUnit(*me, instance->GetGuidData(DATA_JINDO)))
                         DoCast(jindo, SPELL_HEAL);
                     Heal_Timer = 3000;
+					std::vector<Creature*> summs;
+					summs.push_back(me);
+					BotAllotCreatureTarget(summs, 40, 8);
                 } else Heal_Timer -= diff;
 
                 DoMeleeAttackIfReady();

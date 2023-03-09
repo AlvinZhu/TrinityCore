@@ -34,6 +34,19 @@
 
 #define PET_XP_FACTOR 0.05f
 
+bool PetTalentEntry::operator < (const PetTalentEntry &tal) const
+{
+	if (!talentEntry || !tal.talentEntry)
+		return false;
+	if (talentEntry->Row == tal.talentEntry->Row)
+	{
+		return talentEntry->Col < tal.talentEntry->Col;
+	}
+	else
+		return talentEntry->Row < tal.talentEntry->Row;
+	return false;
+}
+
 Pet::Pet(Player* owner, PetType type) :
     Guardian(NULL, owner, true), m_usedTalentCount(0), m_removed(false),
     m_happinessTimer(7500), m_petType(type), m_duration(0), m_auraRaidUpdateMask(0), m_loading(false),
@@ -42,8 +55,10 @@ Pet::Pet(Player* owner, PetType type) :
     ASSERT(GetOwner());
 
     m_unitTypeMask |= UNIT_MASK_PET;
-    if (type == HUNTER_PET)
-        m_unitTypeMask |= UNIT_MASK_HUNTER_PET;
+	if (type == HUNTER_PET)
+	{
+		m_unitTypeMask |= UNIT_MASK_HUNTER_PET;
+	}
 
     if (!(m_unitTypeMask & UNIT_MASK_CONTROLABLE_GUARDIAN))
     {
@@ -53,6 +68,8 @@ Pet::Pet(Player* owner, PetType type) :
 
     m_name = "Pet";
     m_focusRegenTimer = PET_FOCUS_REGEN_INTERVAL;
+
+	GatherPetTalents();
 }
 
 Pet::~Pet()
@@ -161,7 +178,9 @@ bool Pet::LoadPetFromDB(Player* owner, uint32 petEntry, uint32 petnumber, bool c
     if (petType == HUNTER_PET)
     {
         CreatureTemplate const* creatureInfo = sObjectMgr->GetCreatureTemplate(petEntry);
-        if (!creatureInfo || !creatureInfo->IsTameable(owner->CanTameExoticPets()))
+//hxsd
+//        if (!creatureInfo || !creatureInfo->IsTameable(owner->CanTameExoticPets()))
+        if (!creatureInfo )
             return false;
     }
 
@@ -363,6 +382,17 @@ bool Pet::LoadPetFromDB(Player* owner, uint32 petEntry, uint32 petnumber, bool c
                 m_declinedname->name[i] = fields2[i].GetString();
             }
         }
+
+		if (owner->IsPlayerBot())
+		{
+			if (m_spells.empty())
+			{
+				InitPetCreateSpells();
+				resetTalents();
+			}
+			FlushTalentsByPoints();
+			SettingAllSpellAutocast(true);
+		}
     }
 
     //set last used pet number (for use in BG's)
@@ -861,8 +891,9 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
         }
         else
         {
-            TC_LOG_ERROR("entities.pet", "Unknown type pet %u is summoned by player class %u",
-                           GetEntry(), GetOwner()->getClass());
+            petType = SUMMON_PET;
+           // TC_LOG_ERROR("entities.pet", "Unknown type pet %u is summoned by player class %u",
+             //              GetEntry(), GetOwner()->getClass());
         }
     }
 
@@ -879,19 +910,19 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
     SetFloatValue(UNIT_MOD_CAST_SPEED, 1.0f);
 
     //scale
-    CreatureFamilyEntry const* cFamily = sCreatureFamilyStore.LookupEntry(cinfo->family);
-    if (cFamily && cFamily->minScale > 0.0f && petType == HUNTER_PET)
-    {
-        float scale;
-        if (getLevel() >= cFamily->maxScaleLevel)
-            scale = cFamily->maxScale;
-        else if (getLevel() <= cFamily->minScaleLevel)
-            scale = cFamily->minScale;
-        else
-            scale = cFamily->minScale + float(getLevel() - cFamily->minScaleLevel) / cFamily->maxScaleLevel * (cFamily->maxScale - cFamily->minScale);
+	CreatureFamilyEntry const* cFamily = sCreatureFamilyStore.LookupEntry(cinfo->family);
+	if (cFamily && cFamily->minScale > 0.0f && petType == HUNTER_PET)
+	{
+		float scale;
+		if (getLevel() >= cFamily->maxScaleLevel)
+			scale = cFamily->maxScale;
+		else if (getLevel() <= cFamily->minScaleLevel)
+			scale = cFamily->minScale;
+		else
+			scale = cFamily->minScale + float(getLevel() - cFamily->minScaleLevel) / cFamily->maxScaleLevel * (cFamily->maxScale - cFamily->minScale);
 
-        SetObjectScale(scale);
-    }
+		SetObjectScale(scale);
+	}
 
     // Resistance
     for (uint8 i = SPELL_SCHOOL_HOLY; i < MAX_SPELL_SCHOOL; ++i)
@@ -1075,7 +1106,7 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
 
     SetFullHealth();
     SetPower(POWER_MANA, GetMaxPower(POWER_MANA));
-    return true;
+	return true;
 }
 
 bool Pet::HaveInDiet(ItemTemplate const* item) const
@@ -1818,6 +1849,91 @@ void Pet::ToggleAutocast(SpellInfo const* spellInfo, bool apply)
             }
         }
     }
+}
+
+void Pet::GatherPetTalents()
+{
+	if (getPetType() != HUNTER_PET)
+		return;
+	CreatureTemplate const* ci = GetCreatureTemplate();
+	if (!ci)
+		return;
+	CreatureFamilyEntry const* pet_family = sCreatureFamilyStore.LookupEntry(ci->family);
+	if (!pet_family || pet_family->petTalentType < 0)
+		return;
+
+	m_TalentList.clear();
+	for (uint32 talentId = 0; talentId < sTalentStore.GetNumRows(); ++talentId)
+	{
+		TalentEntry const* talentInfo = sTalentStore.LookupEntry(talentId);
+		if (!talentInfo)
+			continue;
+		TalentTabEntry const* talentTabInfo = sTalentTabStore.LookupEntry(talentInfo->TalentTab);
+		if (!talentTabInfo)
+			continue;
+		if (!((1 << pet_family->petTalentType) & talentTabInfo->petTalentMask))
+			continue;
+		m_TalentList.push_back(PetTalentEntry(talentInfo));
+	}
+	m_TalentList.sort();
+}
+
+void Pet::FlushTalentsByPoints()
+{
+	if (getPetType() != HUNTER_PET)
+		return;
+	uint32 freeTalentPoints = GetFreeTalentPoints();
+	if (freeTalentPoints == 0)
+		return;
+	uint32 oriTalentPoints = freeTalentPoints;
+
+	SetPower(POWER_HAPPINESS, GetMaxPower(POWER_HAPPINESS));
+
+	for (PetTalentEntry& entryWarp : m_TalentList)
+	{
+		const TalentEntry* talentEntry = entryWarp.talentEntry;
+		if (!talentEntry)
+			continue;
+		for (uint8 rank = 0; rank < MAX_TALENT_RANK; rank++)
+		{
+			uint32 spellID = talentEntry->RankID[rank];
+			if (spellID == 0)
+				continue;
+			if (HasSpell(spellID))
+				continue;
+			learnSpell(spellID);
+			--freeTalentPoints;
+			if (freeTalentPoints == 0)
+			{
+				SetFreeTalentPoints(freeTalentPoints);
+				if (Player* owner = GetOwner())
+					owner->SendTalentsInfoData(true);
+				return;
+			}
+		}
+	}
+	if (oriTalentPoints != freeTalentPoints)
+	{
+		SetFreeTalentPoints(freeTalentPoints);
+		if (Player* owner = GetOwner())
+			owner->SendTalentsInfoData(true);
+	}
+}
+
+void Pet::SettingAllSpellAutocast(bool autocast, uint32 excludeSpell /* = 0 */)
+{
+	for (PetSpellMap::iterator itrSpell = m_spells.begin(); itrSpell != m_spells.end(); ++itrSpell)
+	{
+		uint32 petSpellID = itrSpell->first;
+		if (petSpellID == excludeSpell)
+			continue;
+		SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(petSpellID);
+		if (!spellInfo || spellInfo->IsPassive() || !spellInfo->IsAutocastable())
+			continue;
+		ToggleAutocast(spellInfo, (petSpellID == 1742) ? false : autocast);
+		if (CharmInfo* charmInfo = GetCharmInfo())
+			charmInfo->SetSpellAutocast(spellInfo, (petSpellID == 1742) ? false : autocast);
+	}
 }
 
 bool Pet::IsPermanentPetFor(Player* owner) const

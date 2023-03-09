@@ -19,6 +19,7 @@
 #include "ChannelMgr.h"
 #include "Player.h"
 #include "World.h"
+#include "PlayerBotTalkMgr.h"
 
 ChannelMgr::~ChannelMgr()
 {
@@ -44,6 +45,8 @@ ChannelMgr* ChannelMgr::forTeam(uint32 team)
 
 Channel* ChannelMgr::GetJoinChannel(std::string const& name, uint32 channelId)
 {
+	if (channelId == 0 && defaultChannel)
+		return defaultChannel;
     std::wstring wname;
     if (!Utf8toWStr(name, wname))
         return nullptr;
@@ -56,6 +59,11 @@ Channel* ChannelMgr::GetJoinChannel(std::string const& name, uint32 channelId)
     {
         Channel* nchan = new Channel(name, channelId, team);
         channels[wname] = nchan;
+		if (channelId == 0)
+		{
+			defaultChannel = nchan;
+			sPlayerBotTalkMgr->SetDefaultChannel(nchan);
+		}
         return nchan;
     }
 
@@ -101,6 +109,8 @@ void ChannelMgr::LeftChannel(std::string const& name)
         return;
 
     Channel* channel = i->second;
+	if (channel == defaultChannel)
+		return;
 
     if (!channel->GetNumPlayers() && !channel->IsConstant())
     {

@@ -146,6 +146,13 @@ void Totem::UnSummon(uint32 msTime)
     if (IsAlive())
         setDeathState(DEAD);
 
+    //: send SummonedCreatureDespawn()
+	if (GetCreatorGUID().IsCreature())
+		if (Unit* bot = ObjectAccessor::GetUnit(*this, GetCreatorGUID()))
+            if (bot->ToCreature()->GetIAmABot())
+                bot->ToCreature()->OnBotDespawn(this);
+    //end
+
     AddObjectToRemoveList();
 }
 

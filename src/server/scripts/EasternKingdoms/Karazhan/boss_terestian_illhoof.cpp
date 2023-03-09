@@ -27,6 +27,7 @@ EndScriptData */
 #include "ScriptedCreature.h"
 #include "karazhan.h"
 #include "PassiveAI.h"
+#include "BotGroupAI.h"
 
 enum TerestianIllhoof
 {
@@ -385,6 +386,10 @@ public:
                 {
                     DoCast(target, SPELL_SACRIFICE, true);
                     DoCast(target, SPELL_SUMMON_DEMONCHAINS, true);
+					if (BotGroupAI* pGroupAI = dynamic_cast<BotGroupAI*>(target->GetAI()))
+					{
+						pGroupAI->AddWaitSpecialAura(SPELL_SACRIFICE);
+					}
 
                     if (Creature* Chains = me->FindNearestCreature(NPC_DEMONCHAINS, 5000))
                     {
@@ -392,6 +397,7 @@ public:
                         Chains->CastSpell(Chains, SPELL_DEMON_CHAINS, true);
                         Talk(SAY_SACRIFICE);
                         SacrificeTimer = 30000;
+						BotAllTargetMe(false);
                     }
                 }
             } else SacrificeTimer -= diff;

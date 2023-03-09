@@ -45,7 +45,7 @@ void BuildPartyLockDungeonBlock(WorldPacket& data, lfg::LfgLockPartyMap const& l
 
 void WorldSession::HandleLfgJoinOpcode(WorldPacket& recvData)
 {
-    if (!sLFGMgr->isOptionEnabled(lfg::LFG_OPTION_ENABLE_DUNGEON_FINDER | lfg::LFG_OPTION_ENABLE_RAID_BROWSER) ||
+	if (!sLFGMgr->isOptionEnabled(lfg::LFG_OPTION_ENABLE_DUNGEON_FINDER | lfg::LFG_OPTION_ENABLE_RAID_BROWSER) ||
         (GetPlayer()->GetGroup() && GetPlayer()->GetGroup()->GetLeaderGUID() != GetPlayer()->GetGUID() &&
         (GetPlayer()->GetGroup()->GetMembersCount() == MAXGROUPSIZE || !GetPlayer()->GetGroup()->isLFGGroup())))
     {
@@ -241,6 +241,8 @@ void WorldSession::HandleLfgPartyLockInfoRequestOpcode(WorldPacket&  /*recvData*
     Group* group = GetPlayer()->GetGroup();
     if (!group)
         return;
+	if (group->isBGGroup() || group->isBFGroup())
+		return;
 
     // Get the locked dungeons of the other party members
     lfg::LfgLockPartyMap lockMap;

@@ -24,16 +24,33 @@
 #include "ulduar.h"
 #include "SpellInfo.h"
 #include "Player.h"
+#include <limits>
+enum Yells
+{
+    // Thorim
+    SAY_AGGRO_1     = 0,
+    SAY_AGGRO_2     = 1,
+    SAY_SPECIAL     = 2,
+    SAY_JUMPDOWN    = 3,
+    SAY_SLAY        = 4,
+    SAY_BERSERK     = 5,
+    SAY_WIPE        = 6,
+    SAY_DEATH       = 7,
+    SAY_END_NORMAL  = 8,
+    SAY_END_HARD    = 9,
 
+    // Runic Colossus
+    EMOTE_BARRIER   = 0,
+};
 enum Says
 {
     // Expedition Commander
     SAY_INTRO                                    = 0,
     SAY_GROUND_PHASE                             = 1,
-    SAY_AGGRO_2                                  = 2,
+    SAY_AGGRO_2a                                  = 2,
 
     // Expedition Engineer
-    SAY_AGGRO_1                                  = 0,
+    SAY_AGGRO_1a                                  = 0,
     SAY_AGGRO_3                                  = 1,
     SAY_TURRETS                                  = 2, // unused
 
@@ -47,6 +64,51 @@ enum Says
 
 enum Spells
 {
+	
+	    // Thorim Spells
+    SPELL_SHEAT_OF_LIGHTNING    = 62276,
+    SPELL_STORMHAMMER           = 62042,
+    SPELL_DEAFENING_THUNDER     = 62470,
+    SPELL_CHARGE_ORB            = 62016,
+    SPELL_SUMMON_LIGHTNING_ORB  = 62391,
+    SPELL_TOUCH_OF_DOMINION     = 62565,
+    SPELL_CHAIN_LIGHTNING       = 62131,
+    SPELL_LIGHTNING_CHARGE      = 62279,
+    SPELL_LIGHTNING_DESTRUCTION = 62393,
+    SPELL_LIGHTNING_RELEASE     = 62466,
+    SPELL_LIGHTNING_PILLAR      = 62976,
+    SPELL_UNBALANCING_STRIKE    = 62130,
+    SPELL_BERSERK_PHASE_1       = 62560,
+    SPELL_LIGHTING_BOLT_DUMMY   = 64098,
+    SPELL_BERSERK_PHASE_2       = 26662,
+    SPELL_SIF_TRANSFORM         = 64778,
+
+    SPELL_AURA_OF_CELERITY      = 62320,
+    SPELL_AURA_OF_CELERITY_VIS  = 62398,
+    SPELL_CHARGE                = 32323,
+
+    SPELL_THORIM_SIFFED_CREDIT  = 64980,
+    SPELL_THORIM_KILL_CREDIT    = 64985,
+
+    // Runic Colossus (Mini Boss) Spells
+    SPELL_SMASH                 = 62339,
+    SPELL_RUNIC_BARRIER         = 62338,
+    SPELL_RUNIC_CHARGE          = 62613,
+    SPELL_RUNIC_SMASH           = 62465,
+    SPELL_RUNIC_SMASH_LEFT      = 62057,
+    SPELL_RUNIC_SMASH_RIGHT     = 62058,
+
+    // Ancient Rune Giant (Mini Boss) Spells
+    SPELL_RUNIC_FORTIFICATION   = 62942,
+    SPELL_RUNE_DETONATION       = 62526,
+    SPELL_STOMP                 = 62411,
+
+    // Sif Spells
+    SPELL_FROSTBOLT_VOLLEY      = 62580,
+    SPELL_FROSTNOVA             = 62597,
+    SPELL_BLIZZARD              = 62576,
+    SPELL_FROSTBOLT             = 69274,
+	
     SPELL_FLAMEBUFFET                            = 64016,
     SPELL_FIREBALL                               = 62796,
     SPELL_FLAME_GROUND                           = 64734,
@@ -89,7 +151,7 @@ enum NPC
 enum DarkRuneSpells
 {
     // Dark Rune Watcher
-    SPELL_CHAIN_LIGHTNING                        = 64758,
+    SPELL_CHAIN_LIGHTNINGa                        = 64758,
     SPELL_LIGHTNING_BOLT                         = 63809,
     // Dark Rune Guardian
     SPELL_STORMSTRIKE                            = 64757,
@@ -106,10 +168,30 @@ enum Actions
     ACTION_HARPOON_BUILD                         = 3,
     ACTION_PLACE_BROKEN_HARPOON                  = 4,
     ACTION_COMMANDER_RESET                       = 7,
+    ACTION_EVENT_STARTB                      = 8,
+
+    ACTION_PREPHASE_ADDS_DIED       = 1,
+    ACTION_DOSCHEDULE_RUNIC_SMASH   = 2,
+    ACTION_BERSERK                  = 3,
+    ACTION_UPDATE_PHASE             = 4,
+    ACTION_ENCOUNTER_COMPLETE       = 5,
+
+    MAX_HARD_MODE_TIME              = 3*MINUTE*IN_MILLISECONDS
+
 };
 
 enum Phases
 {
+  // Thorim
+    PHASE_IDLE              = 0,
+    PHASE_PRE_ARENA_ADDS    = 1,
+    PHASE_ARENA_ADDS        = 2,
+    PHASE_ARENA             = 3,
+
+    // Runic Colossus
+    PHASE_COLOSSUS_IDLE     = 1,
+    PHASE_RUNIC_SMASH       = 2,
+    PHASE_MELEE             = 3,
     PHASE_PERMAGROUND                            = 1,
     PHASE_GROUND                                 = 2,
     PHASE_FLIGHT                                 = 3,
@@ -117,6 +199,43 @@ enum Phases
 
 enum Events
 {
+   // Thorim Events
+    EVENT_SAY_AGGRO_2               = 1,
+    EVENT_STORMHAMMER               = 2,
+    EVENT_CHARGE_ORB                = 3,
+    EVENT_SUMMON_WARBRINGER         = 4,
+    EVENT_SUMMON_EVOKER             = 5,
+    EVENT_SUMMON_COMMONER           = 6,
+    EVENT_BERSERK_PHASE_1           = 7,
+    EVENT_BERSERK_PHASE_2           = 8,
+    EVENT_UNBALANCING_STRIKE        = 9,
+    EVENT_CHAIN_LIGHTNING           = 10,
+    EVENT_TRANSFER_ENERGY           = 11,
+    EVENT_RELEASE_LIGHTNING_CHARGE  = 12,
+    EVENT_LIGHTING_BOLT_TRIGGER     = 13,
+
+    // Thorim controller Events
+    EVENT_CHECK_PLAYER_IN_RANGE     = 1,
+    EVENT_CHECK_WIPE                = 2,
+
+    // Sif Events
+    EVENT_FROSTBOLT                 = 1,
+    EVENT_FROSTBOLT_VOLLEY          = 2,
+    EVENT_BLIZZARD                  = 3,
+    EVENT_FROST_NOVA                = 4,
+    EVENT_TELEPORT                  = 5,
+
+    // Runic Colossus
+    EVENT_BARRIER                   = 1,
+    EVENT_SMASH                     = 2,
+    EVENT_SMASH_WAVE                = 3,
+    EVENT_COLOSSUS_CHARGE           = 4,
+    EVENT_RUNIC_SMASH               = 5,
+
+    // Ancient Rune Giant
+    EVENT_STOMP                     = 1,
+    EVENT_DETONATION                = 2,	
+	
     EVENT_BERSERK                                = 1,
     EVENT_BREATH                                 = 2,
     EVENT_BUFFET                                 = 3,
@@ -180,6 +299,90 @@ const Position RazorFlight = { 588.050f, -251.191f, 470.536f, 1.498f };
 const Position RazorGround = { 586.966f, -175.534f, GROUND_Z, 4.682f };
 const Position PosEngSpawn = { 591.951f, -95.9680f, GROUND_Z, 0.000f };
 
+enum ThorimData
+{
+    DATA_LOSE_ILLUSION                  = 1,
+    DATA_DO_NOT_STAND_IN_THE_LIGHTING   = 2,
+};
+
+
+const Position Pos[7] =
+{
+    {2095.53f, -279.48f, 419.84f, 0.504f},
+    {2092.93f, -252.96f, 419.84f, 6.024f},
+    {2097.86f, -240.97f, 419.84f, 5.643f},
+    {2113.14f, -225.94f, 419.84f, 5.259f},
+    {2156.87f, -226.12f, 419.84f, 4.202f},
+    {2172.42f, -242.70f, 419.84f, 3.583f},
+    {2171.92f, -284.59f, 419.84f, 2.691f}
+};
+
+const Position PosOrbs[7] =
+{
+    {2104.99f, -233.484f, 433.576f, 5.49779f},
+    {2092.64f, -262.594f, 433.576f, 6.26573f},
+    {2104.76f, -292.719f, 433.576f, 0.78539f},
+    {2164.97f, -293.375f, 433.576f, 2.35619f},
+    {2164.58f, -233.333f, 433.576f, 3.90954f},
+    {2145.81f, -222.196f, 433.576f, 4.45059f},
+    {2123.91f, -222.443f, 433.576f, 4.97419f}
+};
+
+const Position PosCharge[7] =
+{
+    {2108.95f, -289.241f, 420.149f, 5.49779f},
+    {2097.93f, -262.782f, 420.149f, 6.26573f},
+    {2108.66f, -237.102f, 420.149f, 0.78539f},
+    {2160.56f, -289.292f, 420.149f, 2.35619f},
+    {2161.02f, -237.258f, 420.149f, 3.90954f},
+    {2143.87f, -227.415f, 420.149f, 4.45059f},
+    {2125.84f, -227.439f, 420.149f, 4.97419f}
+};
+
+#define POS_X_ARENA  2181.19f
+#define POS_Y_ARENA  -299.12f
+
+struct SummonLocation
+{
+    Position pos;
+    uint32 entry;
+};
+
+
+class HealerCheck
+{
+    public:
+        HealerCheck(bool shouldBe): __shouldBe(shouldBe) {}
+        bool operator() (const Unit* unit)
+        {
+            return __shouldBe ? __IsHealer(unit) : !__IsHealer(unit);
+        }
+
+    private:
+        bool __shouldBe;
+        bool __IsHealer(const Unit* who)
+        {
+           
+        }
+};
+
+class ArenaAreaCheck
+{
+    public:
+        ArenaAreaCheck(bool shouldBeIn): __shouldBeIn(shouldBeIn) {}
+        bool operator() (const WorldObject* unit)
+        {
+            return __shouldBeIn ? __IsInArena(unit) : !__IsInArena(unit);
+        }
+
+    private:
+        bool __shouldBeIn;
+        bool __IsInArena(const WorldObject* who)
+        {
+            return (who->GetPositionX() < POS_X_ARENA && who->GetPositionY() > POS_Y_ARENA);    // TODO: Check if this is ok, end positions ?
+        }
+};
+
 class boss_razorscale_controller : public CreatureScript
 {
     public:
@@ -236,9 +439,11 @@ class boss_razorscale_controller : public CreatureScript
                 switch (action)
                 {
                     case ACTION_HARPOON_BUILD:
-                        events.ScheduleEvent(EVENT_BUILD_HARPOON_1, 50000);
+                        //events.ScheduleEvent(EVENT_BUILD_HARPOON_1, 20000);
+                        events.ScheduleEvent(EVENT_BUILD_HARPOON_1, 20000);
+                        //me->GetMotionMaster()->MoveTakeoff(0, RazorFlight);
                         if (me->GetMap()->GetSpawnMode() == RAID_DIFFICULTY_25MAN_NORMAL)
-                            events.ScheduleEvent(EVENT_BUILD_HARPOON_3, 90000);
+                            events.ScheduleEvent(EVENT_BUILD_HARPOON_3, 50000);
                         break;
                     case ACTION_PLACE_BROKEN_HARPOON:
                         for (uint8 n = 0; n < RAID_MODE(2, 4); n++)
@@ -258,10 +463,11 @@ class boss_razorscale_controller : public CreatureScript
                         case EVENT_BUILD_HARPOON_1:
                             Talk(EMOTE_HARPOON);
                             if (GameObject* Harpoon = me->SummonGameObject(GO_RAZOR_HARPOON_1, PosHarpoon[0].GetPositionX(), PosHarpoon[0].GetPositionY(), PosHarpoon[0].GetPositionZ(), 4.790f, G3D::Quat(), uint32(me->GetRespawnTime())))
-                            {
-                                if (GameObject* BrokenHarpoon = Harpoon->FindNearestGameObject(GO_RAZOR_BROKEN_HARPOON, 5.0f)) //only nearest broken harpoon
+                            {Harpoon->RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_NOT_SELECTABLE);
+								BotUseGOTarget(Harpoon);
+								if (GameObject* BrokenHarpoon = Harpoon->FindNearestGameObject(GO_RAZOR_BROKEN_HARPOON, 5.0f)) //only nearest broken harpoon
                                     BrokenHarpoon->RemoveFromWorld();
-                                events.ScheduleEvent(EVENT_BUILD_HARPOON_2, 20000);
+                                events.ScheduleEvent(EVENT_BUILD_HARPOON_2, 18000);
                                 events.CancelEvent(EVENT_BUILD_HARPOON_1);
                             }
                             return;
@@ -269,7 +475,9 @@ class boss_razorscale_controller : public CreatureScript
                             Talk(EMOTE_HARPOON);
                             if (GameObject* Harpoon = me->SummonGameObject(GO_RAZOR_HARPOON_2, PosHarpoon[1].GetPositionX(), PosHarpoon[1].GetPositionY(), PosHarpoon[1].GetPositionZ(), 4.659f, G3D::Quat(), uint32(me->GetRespawnTime())))
                             {
-                                if (GameObject* BrokenHarpoon = Harpoon->FindNearestGameObject(GO_RAZOR_BROKEN_HARPOON, 5.0f))
+                            	Harpoon->RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_LOCKED | GO_FLAG_NOT_SELECTABLE | GO_FLAG_NODESPAWN | GO_FLAG_INTERACT_COND);
+								BotUseGOTarget(Harpoon);
+								if (GameObject* BrokenHarpoon = Harpoon->FindNearestGameObject(GO_RAZOR_BROKEN_HARPOON, 5.0f))
                                     BrokenHarpoon->RemoveFromWorld();
                                 events.CancelEvent(EVENT_BUILD_HARPOON_2);
                             }
@@ -278,9 +486,11 @@ class boss_razorscale_controller : public CreatureScript
                             Talk(EMOTE_HARPOON);
                             if (GameObject* Harpoon = me->SummonGameObject(GO_RAZOR_HARPOON_3, PosHarpoon[2].GetPositionX(), PosHarpoon[2].GetPositionY(), PosHarpoon[2].GetPositionZ(), 5.382f, G3D::Quat(), uint32(me->GetRespawnTime())))
                             {
-                                if (GameObject* BrokenHarpoon = Harpoon->FindNearestGameObject(GO_RAZOR_BROKEN_HARPOON, 5.0f))
+                            	Harpoon->RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_LOCKED | GO_FLAG_NOT_SELECTABLE | GO_FLAG_NODESPAWN | GO_FLAG_INTERACT_COND);
+								BotUseGOTarget(Harpoon);
+								if (GameObject* BrokenHarpoon = Harpoon->FindNearestGameObject(GO_RAZOR_BROKEN_HARPOON, 5.0f))
                                     BrokenHarpoon->RemoveFromWorld();
-                                events.ScheduleEvent(EVENT_BUILD_HARPOON_4, 20000);
+                                events.ScheduleEvent(EVENT_BUILD_HARPOON_4, 18000);
                                 events.CancelEvent(EVENT_BUILD_HARPOON_3);
                             }
                             return;
@@ -288,8 +498,18 @@ class boss_razorscale_controller : public CreatureScript
                             Talk(EMOTE_HARPOON);
                             if (GameObject* Harpoon = me->SummonGameObject(GO_RAZOR_HARPOON_4, PosHarpoon[3].GetPositionX(), PosHarpoon[3].GetPositionY(), PosHarpoon[3].GetPositionZ(), 4.266f, G3D::Quat(), uint32(me->GetRespawnTime())))
                             {
-                                if (GameObject* BrokenHarpoon = Harpoon->FindNearestGameObject(GO_RAZOR_BROKEN_HARPOON, 5.0f))
+                            	Harpoon->RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_LOCKED | GO_FLAG_NOT_SELECTABLE | GO_FLAG_NODESPAWN | GO_FLAG_INTERACT_COND);
+								BotUseGOTarget(Harpoon);
+								if (GameObject* BrokenHarpoon = Harpoon->FindNearestGameObject(GO_RAZOR_BROKEN_HARPOON, 5.0f))
                                     BrokenHarpoon->RemoveFromWorld();
+
+
+                            if (Creature* Razorscale = ObjectAccessor::GetCreature(*me, instance->GetGuidData(BOSS_RAZORSCALE)))
+                            {
+                                Razorscale->AI()->DoAction(ACTION_EVENT_START);
+                            }
+
+                               
                                 events.CancelEvent(EVENT_BUILD_HARPOON_4);
                             }
                             return;
@@ -304,6 +524,7 @@ class boss_razorscale_controller : public CreatureScript
         }
 };
 
+
 class go_razorscale_harpoon : public GameObjectScript
 {
     public:
@@ -311,10 +532,11 @@ class go_razorscale_harpoon : public GameObjectScript
 
         bool OnGossipHello(Player* /*player*/, GameObject* go) override
         {
-            InstanceScript* instance = go->GetInstanceScript();
+           /* InstanceScript* instance = go->GetInstanceScript();
             if (ObjectAccessor::GetCreature(*go, instance->GetGuidData(BOSS_RAZORSCALE)))
                 go->SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_NOT_SELECTABLE);
-            return false;
+                                   go->RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_NOT_SELECTABLE);*/
+            return true;
         }
 };
 
@@ -354,7 +576,7 @@ class boss_razorscale : public CreatureScript
             {
                 _Reset();
                 me->SetCanFly(true);
-                me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+                //me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
                 me->SetReactState(REACT_PASSIVE);
                 Initialize();
                 if (Creature* commander = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_EXPEDITION_COMMANDER)))
@@ -415,7 +637,7 @@ class boss_razorscale : public CreatureScript
 
                 events.Update(Diff);
 
-                if (HealthBelowPct(50) && !PermaGround)
+                if (HealthBelowPct(70) && !PermaGround)
                     EnterPermaGround();
 
                 if (EnrageTimer <= Diff && !Enraged)
@@ -442,7 +664,7 @@ class boss_razorscale : public CreatureScript
                                 phase = PHASE_FLIGHT;
                                 events.SetPhase(PHASE_FLIGHT);
                                 me->SetCanFly(true);
-                                me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+                                //me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
                                 me->SetReactState(REACT_PASSIVE);
                                 me->AttackStop();
                                 me->GetMotionMaster()->MoveTakeoff(0, RazorFlight);
@@ -454,7 +676,7 @@ class boss_razorscale : public CreatureScript
                             case EVENT_LAND:
                                 me->SetCanFly(false);
                                 me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
-                                me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_STUNNED | UNIT_FLAG_PACIFIED);
+                                //me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_STUNNED | UNIT_FLAG_PACIFIED);
                                 if (Creature* commander = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_EXPEDITION_COMMANDER)))
                                     commander->AI()->DoAction(ACTION_GROUND_PHASE);
                                 events.ScheduleEvent(EVENT_BREATH, 30000, 0, PHASE_GROUND);
@@ -585,6 +807,16 @@ class boss_razorscale : public CreatureScript
                         me->SetReactState(REACT_AGGRESSIVE);
                         DoZoneInCombat(me, 150.0f);
                         break;
+
+                    case ACTION_EVENT_STARTB:
+                        
+                        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE);
+                        me->SetReactState(REACT_AGGRESSIVE);
+                        DoZoneInCombat(me, 150.0f);
+                        break;
+
+
+
                 }
             }
         };
@@ -708,7 +940,7 @@ class npc_expedition_commander : public CreatureScript
                             for (uint8 n = 0; n < 4; ++n)
                                 if (Creature* summonedDefender = ObjectAccessor::GetCreature(*me, Defender[n]))
                                     summonedDefender->SetUInt32Value(UNIT_NPC_EMOTESTATE, EMOTE_STATE_READY2H);
-                            Talk(SAY_AGGRO_2);
+                            Talk(SAY_AGGRO_2a);
                             AttackStartTimer = 16000;
                             Phase = 5;
                             break;
@@ -719,7 +951,7 @@ class npc_expedition_commander : public CreatureScript
                                 me->SetInCombatWith(Razorscale);
                             }
                             if (Creature* firstEngineer = ObjectAccessor::GetCreature(*me, Engineer[0]))
-                                firstEngineer->AI()->Talk(SAY_AGGRO_1);
+                                firstEngineer->AI()->Talk(SAY_AGGRO_1a);
                             Phase = 6;
                             break;
                     }
@@ -775,7 +1007,7 @@ class npc_mole_machine_trigger : public CreatureScript
             {
                 Initialize();
                 SetCombatMovement(false);
-                me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_PACIFIED);
+                //me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_PACIFIED);
             }
 
             void Initialize()
@@ -860,7 +1092,7 @@ class npc_devouring_flame : public CreatureScript
             npc_devouring_flameAI(Creature* creature) : ScriptedAI(creature)
             {
                 SetCombatMovement(false);
-                me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_PACIFIED);
+                //me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_PACIFIED);
             }
 
             void Reset() override
@@ -908,7 +1140,7 @@ class npc_darkrune_watcher : public CreatureScript
 
                 if (ChainTimer <= Diff)
                 {
-                    DoCastVictim(SPELL_CHAIN_LIGHTNING);
+                    DoCastVictim(SPELL_CHAIN_LIGHTNINGa);
                     ChainTimer = urand(10000, 15000);
                 }
                 else
@@ -1155,6 +1387,331 @@ class achievement_quick_shave : public AchievementCriteriaScript
         }
 };
 
+class boss_thorim1 : public CreatureScript
+{
+    public:
+        boss_thorim1() : CreatureScript("boss_thorim1") { }
+
+        struct boss_thorimAI : public BossAI
+        {
+            boss_thorimAI(Creature* creature) : BossAI(creature, BOSS_THORIM)
+            {
+                gotAddsWiped = false;
+                gotEncounterFinished = false;
+                homePosition = creature->GetHomePosition();
+            }
+
+            void Reset()
+            {
+                _Reset();
+
+                if (gotAddsWiped)
+                    Talk(SAY_WIPE);
+
+                me->SetReactState(REACT_PASSIVE);
+                me->RemoveAurasDueToSpell(SPELL_BERSERK_PHASE_1);
+
+//                me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NON_ATTACKABLE);
+
+                phase = PHASE_IDLE;
+                gotAddsWiped = false;
+                HardMode = false;
+                gotBerserkedAndOrbSummoned = false;
+                summonChampion = false;
+                doNotStandInTheLighting = true;
+                checkTargetTimer = 7*IN_MILLISECONDS;
+
+            }
+
+            void KilledUnit(Unit* who)
+            {
+                if (who->GetTypeId() == TYPEID_PLAYER)
+                    Talk(SAY_SLAY);
+            }
+
+            void EncounterPostProgress()
+            {
+                gotEncounterFinished = true;
+                Talk(SAY_DEATH);
+                me->setFaction(35);
+                me->DespawnOrUnsummon(12 * IN_MILLISECONDS);
+                me->RemoveAllAuras();
+                me->RemoveAllAttackers();
+                me->AttackStop();
+                me->CombatStop(true);
+
+
+                // Kill credit
+                instance->DoUpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, SPELL_THORIM_KILL_CREDIT);
+
+                if (HardMode)
+                {
+                    Talk(SAY_END_HARD);
+                    me->SummonGameObject(RAID_MODE(GO_CACHE_OF_STORMS_HARDMODE_10, GO_CACHE_OF_STORMS_HARDMODE_25), 2134.58f, -286.908f, 419.495f, 1.55988f,   G3D::Quat(), WEEK);
+                }
+                else
+                {
+                    if (GameObject* go = me->SummonGameObject(RAID_MODE(GO_CACHE_OF_STORMS_10, GO_CACHE_OF_STORMS_25), 2134.58f, -286.908f, 419.495f, 1.55988f,   G3D::Quat(), WEEK))
+                        go->RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_NOT_SELECTABLE);
+                }
+
+
+                _JustDied();
+            }
+
+            void EnterCombat(Unit* who)
+            {
+                //_EnterCombat();
+                Talk(SAY_AGGRO_1);
+
+                // Spawn Thunder Orbs
+
+                EncounterTime = 0;
+                phase = PHASE_ARENA_ADDS;
+                events.SetPhase(phase);
+                DoCast(me, SPELL_SHEAT_OF_LIGHTNING);
+                events.ScheduleEvent(EVENT_STORMHAMMER, 40*IN_MILLISECONDS, 0, phase);
+                events.ScheduleEvent(EVENT_CHARGE_ORB, 30*IN_MILLISECONDS, 0, phase);
+                events.ScheduleEvent(EVENT_SUMMON_WARBRINGER, 25*IN_MILLISECONDS, 0, phase);
+                events.ScheduleEvent(EVENT_SUMMON_EVOKER, 30*IN_MILLISECONDS, 0, phase);
+                events.ScheduleEvent(EVENT_SUMMON_COMMONER, 35*IN_MILLISECONDS, 0, phase);
+                events.ScheduleEvent(EVENT_BERSERK_PHASE_1, 5*MINUTE*IN_MILLISECONDS, 0, phase);
+                events.ScheduleEvent(EVENT_SAY_AGGRO_2, 10*IN_MILLISECONDS, 0, phase);
+
+ 
+                me->SetFacingToObject(who);
+
+
+                    
+
+                        Talk(SAY_JUMPDOWN);
+                        phase = PHASE_ARENA;
+                        events.SetPhase(PHASE_ARENA);
+                        me->RemoveAurasDueToSpell(SPELL_SHEAT_OF_LIGHTNING);
+                        me->SetReactState(REACT_AGGRESSIVE);
+                        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_REMOVE_CLIENT_CONTROL);
+                        me->GetMotionMaster()->MoveJump(2134.79f, -263.03f, 419.84f, 20.0f, 0);
+
+                        events.ScheduleEvent(EVENT_UNBALANCING_STRIKE, 15*IN_MILLISECONDS, 0, PHASE_ARENA);
+                        events.ScheduleEvent(EVENT_CHAIN_LIGHTNING, 20*IN_MILLISECONDS, 0, PHASE_ARENA);
+                        events.ScheduleEvent(EVENT_TRANSFER_ENERGY, 20*IN_MILLISECONDS, 0, PHASE_ARENA);
+                        events.ScheduleEvent(EVENT_BERSERK_PHASE_2, 5*MINUTE*IN_MILLISECONDS, 0, PHASE_ARENA);
+                        // Check for Hard Mode
+                        if (EncounterTime <= MAX_HARD_MODE_TIME)
+                        {
+                            HardMode = true;
+                            // Achievement
+                            instance->DoUpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, SPELL_THORIM_SIFFED_CREDIT);
+                            // Summon Sif
+                            
+                        }
+                        else
+                            me->AddAura(SPELL_TOUCH_OF_DOMINION, me);
+
+                DoZoneInCombat();
+            }
+
+          /*  void EnterEvadeMode()
+            {
+                if (!_EnterEvadeMode())
+                    return;
+
+                me->SetHomePosition(homePosition);
+                me->GetMotionMaster()->MoveTargetedHome();
+                Reset();
+            }*/
+
+            void SpellHitTarget(Unit* target, SpellInfo const* spell)
+            {
+                if (spell->Id == 62466)
+                    if (target->GetTypeId() == TYPEID_PLAYER)
+                        doNotStandInTheLighting = false;
+            }
+
+			void UpdateAI(uint32 diff)
+            {
+                if (!UpdateVictim())
+                    return;
+
+                if (checkTargetTimer < diff)
+                {
+                    if (!SelectTarget(SELECT_TARGET_RANDOM, 0, 200.0f, true))
+                    {
+                        EnterEvadeMode();
+                        return;
+                    }
+                    checkTargetTimer = 7*IN_MILLISECONDS;
+                }
+                else
+                    checkTargetTimer -= diff;
+
+                // Thorim should be inside the arena during phase 3
+                /*if (phase == PHASE_ARENA && ArenaAreaCheck(false)(me))
+                {
+                    EnterEvadeMode();
+                    return;
+                }*/
+
+                EncounterTime += diff;
+
+                events.Update(diff);
+
+                if (me->HasUnitState(UNIT_STATE_CASTING))
+                    return;
+
+                while (uint32 eventId = events.ExecuteEvent())
+                {
+                    switch (eventId)
+                    {
+                        case EVENT_SAY_AGGRO_2:
+                            Talk(SAY_AGGRO_2);
+                            break;
+                        case EVENT_STORMHAMMER:
+                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 150.0f, true))
+                                DoCast(target, SPELL_STORMHAMMER, true);
+                            events.ScheduleEvent(EVENT_STORMHAMMER, urand(15*IN_MILLISECONDS, 20*IN_MILLISECONDS), 0, PHASE_ARENA_ADDS);
+                            break;
+                        case EVENT_CHARGE_ORB:
+                            DoCastAOE(SPELL_CHARGE_ORB);
+                            events.ScheduleEvent(EVENT_CHARGE_ORB, urand(15*IN_MILLISECONDS, 20*IN_MILLISECONDS), 0, PHASE_ARENA_ADDS);
+                            break;
+                        case EVENT_SUMMON_WARBRINGER:
+                            events.ScheduleEvent(EVENT_SUMMON_WARBRINGER, 20*IN_MILLISECONDS, 0, PHASE_ARENA_ADDS);
+                            break;
+                        case EVENT_SUMMON_EVOKER:
+                            
+                            events.ScheduleEvent(EVENT_SUMMON_EVOKER, urand(23*IN_MILLISECONDS, 27*IN_MILLISECONDS), 0, PHASE_ARENA_ADDS);
+                            break;
+                        case EVENT_SUMMON_COMMONER:
+                            events.ScheduleEvent(EVENT_SUMMON_COMMONER, 30*IN_MILLISECONDS, 0, PHASE_ARENA_ADDS);
+                            break;
+                        case EVENT_BERSERK_PHASE_1:
+                            DoCast(me, SPELL_BERSERK_PHASE_1);
+                            //DoCast(me, SPELL_SUMMON_LIGHTNING_ORB, true);
+                            Talk(SAY_BERSERK);
+                            break;
+                        // Phase 3 stuff
+                        case EVENT_UNBALANCING_STRIKE:
+                            DoCastVictim(SPELL_UNBALANCING_STRIKE);
+                            events.ScheduleEvent(EVENT_UNBALANCING_STRIKE, 26*IN_MILLISECONDS, 0, PHASE_ARENA);
+                            break;
+                        case EVENT_CHAIN_LIGHTNING:
+                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
+                                DoCast(target, SPELL_CHAIN_LIGHTNING);
+                            events.ScheduleEvent(EVENT_CHAIN_LIGHTNING, urand(7*IN_MILLISECONDS, 15*IN_MILLISECONDS), 0, PHASE_ARENA);
+                            break;
+                        case EVENT_TRANSFER_ENERGY:
+                            events.ScheduleEvent(EVENT_RELEASE_LIGHTNING_CHARGE, 8*IN_MILLISECONDS, 0, PHASE_ARENA);
+                            break;
+                        case EVENT_RELEASE_LIGHTNING_CHARGE:
+
+                            DoCast(me, SPELL_LIGHTNING_CHARGE, true);
+                            events.ScheduleEvent(EVENT_TRANSFER_ENERGY, 8*IN_MILLISECONDS, 0, PHASE_ARENA);
+                            break;
+                        case EVENT_BERSERK_PHASE_2:
+                            DoCast(me, SPELL_BERSERK_PHASE_2);
+                            Talk(SAY_BERSERK);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+
+                DoMeleeAttackIfReady();
+                // EnterEvadeIfOutOfCombatArea(diff);
+            }
+
+
+
+            void DoAction(int32  action)
+            {
+                switch (action)
+                {
+                    case ACTION_BERSERK:
+                        if (!gotBerserkedAndOrbSummoned)
+                        {
+                            if (phase == PHASE_ARENA)
+                                return;
+
+                            DoCast(me, SPELL_BERSERK_PHASE_1);
+                            
+                            Talk(SAY_BERSERK);
+                            gotBerserkedAndOrbSummoned = true;
+                        }
+                        break;
+                    case ACTION_UPDATE_PHASE:
+                        phase = PHASE_PRE_ARENA_ADDS;
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+
+
+
+            void DamageTaken(Unit* attacker, uint32 &damage)
+            {
+                if (damage >= me->GetHealth())
+                {
+                    damage = 0;
+                    EncounterPostProgress();
+                }
+
+                if (phase == PHASE_ARENA_ADDS && attacker && instance)
+                {
+                    if ( me->IsWithinDistInMap(attacker, 50.0f) && attacker->ToPlayer())
+                    {
+                        Talk(SAY_JUMPDOWN);
+                        phase = PHASE_ARENA;
+                        events.SetPhase(PHASE_ARENA);
+                        me->RemoveAurasDueToSpell(SPELL_SHEAT_OF_LIGHTNING);
+                        me->SetReactState(REACT_AGGRESSIVE);
+                        me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_REMOVE_CLIENT_CONTROL);
+                        me->GetMotionMaster()->MoveJump(2134.79f, -263.03f, 419.84f, 20.0f, 0);
+                        
+                        events.ScheduleEvent(EVENT_UNBALANCING_STRIKE, 15*IN_MILLISECONDS, 0, PHASE_ARENA);
+                        events.ScheduleEvent(EVENT_CHAIN_LIGHTNING, 20*IN_MILLISECONDS, 0, PHASE_ARENA);
+                        events.ScheduleEvent(EVENT_TRANSFER_ENERGY, 20*IN_MILLISECONDS, 0, PHASE_ARENA);
+                        events.ScheduleEvent(EVENT_BERSERK_PHASE_2, 5*MINUTE*IN_MILLISECONDS, 0, PHASE_ARENA);
+                        // Check for Hard Mode
+                        if (EncounterTime <= MAX_HARD_MODE_TIME)
+                        {
+                            HardMode = true;
+                            // Achievement
+                            instance->DoUpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, SPELL_THORIM_SIFFED_CREDIT);
+                            // Summon Sif
+                            
+                        }
+                        else
+                            me->AddAura(SPELL_TOUCH_OF_DOMINION, me);
+                    }
+                }
+            }
+
+            private:
+                Phases phase;
+                uint8 PreAddsCount;
+                uint32 EncounterTime;
+                uint32 checkTargetTimer;
+                bool gotAddsWiped;
+                bool HardMode;
+                bool gotBerserkedAndOrbSummoned;
+                bool gotEncounterFinished;
+                bool summonChampion;
+                bool doNotStandInTheLighting;
+                Position homePosition;
+        };
+
+        CreatureAI* GetAI(Creature* creature) const
+        {
+            return GetUlduarAI<boss_thorimAI>(creature);
+        }
+};
+
+
+
+
 void AddSC_boss_razorscale()
 {
     new boss_razorscale_controller();
@@ -1170,4 +1727,5 @@ void AddSC_boss_razorscale()
     new spell_razorscale_flame_breath();
     new achievement_iron_dwarf_medium_rare();
     new achievement_quick_shave();
+new boss_thorim1();
 }

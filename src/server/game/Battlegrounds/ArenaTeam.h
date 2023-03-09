@@ -113,6 +113,8 @@ struct ArenaTeamStats
 
 #define MAX_ARENA_SLOT 3                                    // 0..2 slots
 
+class BattlegroundQueue;
+
 class TC_GAME_API ArenaTeam
 {
     public:
@@ -125,7 +127,7 @@ class TC_GAME_API ArenaTeam
 
         typedef std::list<ArenaTeamMember> MemberList;
 
-        uint32 GetId() const              { return TeamId; }
+        uint32 GetId() const              { return ArenaID; }
         uint32 GetType() const            { return Type; }
         uint8  GetSlot() const            { return GetSlotByType(GetType()); }
         static uint8 GetSlotByType(uint32 type);
@@ -135,6 +137,7 @@ class TC_GAME_API ArenaTeam
 
         uint32 GetRating() const          { return Stats.Rating; }
         uint32 GetAverageMMR(Group* group) const;
+		uint32 GetMMR(ObjectGuid PlayerGuid) const;
 
         void SetCaptain(ObjectGuid guid);
         bool SetName(std::string const& name);
@@ -183,9 +186,17 @@ class TC_GAME_API ArenaTeam
         void FinishWeek();
         void FinishGame(int32 mod);
 
+		std::string GetArenaTeamColorName();
+		std::string GetCustomTalkMenuName();
+		TeamId GetArenaTeamCmap();
+		void SetPurityPlayerBotTeam() { IsPurityBotTeam = 1; }
+		bool IsPurityPlayerBotTeam();
+		bool CanJoinArenaByBot();
+		BattlegroundQueue* GetMatchBattlegroundQueue();
+
     protected:
 
-        uint32      TeamId;
+        uint32      ArenaID;
         uint8       Type;
         std::string TeamName;
         ObjectGuid  CaptainGuid;
@@ -198,6 +209,9 @@ class TC_GAME_API ArenaTeam
 
         MemberList     Members;
         ArenaTeamStats Stats;
+
+		TeamId ArenaCamp;
+		int32 IsPurityBotTeam;
 };
 #endif
 

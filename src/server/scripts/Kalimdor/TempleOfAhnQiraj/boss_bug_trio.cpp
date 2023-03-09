@@ -62,7 +62,7 @@ public:
         void Initialize()
         {
             Cleave_Timer = urand(4000, 8000);
-            ToxicVolley_Timer = urand(6000, 12000);
+            ToxicVolley_Timer = urand(20000, 30000);
             Check_Timer = 2000;
 
             VemDead = false;
@@ -85,7 +85,18 @@ public:
 
         void EnterCombat(Unit* /*who*/) override
         {
-        }
+			ObjectGuid meTarget = me->GetTarget();
+			if (meTarget == ObjectGuid::Empty || !meTarget.IsPlayer())
+				return;
+			if (Creature* vem = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_VEM)))
+			{
+				if (!vem->IsInCombat() && vem->GetTarget() == ObjectGuid::Empty)
+				{
+					vem->CombatStart(ObjectAccessor::FindPlayer(meTarget));
+					vem->SetTarget(meTarget);
+				}
+			}
+		}
 
         void JustDied(Unit* /*killer*/) override
         {
@@ -111,13 +122,15 @@ public:
             if (ToxicVolley_Timer <= diff)
             {
                 DoCastVictim(SPELL_TOXIC_VOLLEY);
-                ToxicVolley_Timer = urand(10000, 15000);
+				BotAllFullDispelByDecPoison();
+                ToxicVolley_Timer = urand(20000, 30000);
             } else ToxicVolley_Timer -= diff;
 
             if (!HealthAbovePct(5) && !Death)
             {
                 DoCastVictim(SPELL_POISON_CLOUD);
                 Death = true;
+				BotCruxFleeByRange(25.0f);
             }
 
             if (!VemDead)
@@ -190,7 +203,18 @@ public:
 
         void EnterCombat(Unit* /*who*/) override
         {
-        }
+			ObjectGuid meTarget = me->GetTarget();
+			if (meTarget == ObjectGuid::Empty || !meTarget.IsPlayer())
+				return;
+			if (Creature* kri = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_KRI)))
+			{
+				if (!kri->IsInCombat() && kri->GetTarget() == ObjectGuid::Empty)
+				{
+					kri->CombatStart(ObjectAccessor::FindPlayer(meTarget));
+					kri->SetTarget(meTarget);
+				}
+			}
+		}
 
         void UpdateAI(uint32 diff) override
         {
@@ -256,7 +280,7 @@ public:
         void Initialize()
         {
             Heal_Timer = urand(25000, 40000);
-            Fear_Timer = urand(12000, 24000);
+            Fear_Timer = urand(40000, 60000);
             Check_Timer = 2000;
 
             VemDead = false;
@@ -293,7 +317,27 @@ public:
 
         void EnterCombat(Unit* /*who*/) override
         {
-        }
+			BotAllTargetMe(false);
+			ObjectGuid meTarget = me->GetTarget();
+			if (meTarget == ObjectGuid::Empty || !meTarget.IsPlayer())
+				return;
+			if (Creature* kri = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_KRI)))
+			{
+				if (!kri->IsInCombat() && kri->GetTarget() == ObjectGuid::Empty)
+				{
+					kri->CombatStart(ObjectAccessor::FindPlayer(meTarget));
+					kri->SetTarget(meTarget);
+				}
+			}
+			if (Creature* vem = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_VEM)))
+			{
+				if (!vem->IsInCombat() && vem->GetTarget() == ObjectGuid::Empty)
+				{
+					vem->CombatStart(ObjectAccessor::FindPlayer(meTarget));
+					vem->SetTarget(meTarget);
+				}
+			}
+		}
 
         void UpdateAI(uint32 diff) override
         {
@@ -306,7 +350,7 @@ public:
             {
                 DoCastVictim(SPELL_FEAR);
                 DoResetThreat();
-                Fear_Timer = 20000;
+                Fear_Timer = 60000;
             } else Fear_Timer -= diff;
 
             //Casting Heal to other twins or herself.
@@ -315,19 +359,26 @@ public:
                 switch (urand(0, 2))
                 {
                     case 0:
-                        if (Creature* kri = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_KRI)))
-                            DoCast(kri, SPELL_HEAL);
+						if (Creature* kri = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_KRI)))
+						{
+							DoCast(kri, SPELL_HEAL);
+							BotBlockCastingMe();
+						}
                         break;
                     case 1:
-                        if (Creature* vem = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_VEM)))
-                            DoCast(vem, SPELL_HEAL);
+						if (Creature* vem = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_VEM)))
+						{
+							DoCast(vem, SPELL_HEAL);
+							BotBlockCastingMe();
+						}
                         break;
                     case 2:
                         DoCast(me, SPELL_HEAL);
-                        break;
+						BotBlockCastingMe();
+						break;
                 }
-
-                Heal_Timer = 15000 + rand32() % 15000;
+				BotAllTargetMe(false);
+				Heal_Timer = 15000 + rand32() % 15000;
             } else Heal_Timer -= diff;
 
             //Checking if Vem is dead. If yes we will enrage.

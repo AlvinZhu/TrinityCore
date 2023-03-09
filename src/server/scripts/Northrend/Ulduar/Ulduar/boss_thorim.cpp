@@ -47,11 +47,13 @@ class boss_thorim : public CreatureScript
         {
             boss_thorimAI(Creature* creature) : BossAI(creature, BOSS_THORIM)
             {
-            }
+				me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+			}
 
             void Reset() override
             {
                 _Reset();
+				//me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
             }
 
             void EnterEvadeMode(EvadeReason why) override
@@ -66,17 +68,30 @@ class boss_thorim : public CreatureScript
                     Talk(SAY_SLAY);
             }
 
+			//void MovementInform(uint32 type, uint32 id) override
+			//{
+			//	me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
+			//}
+
             void JustDied(Unit* /*killer*/) override
             {
                 Talk(SAY_DEATH);
                 _JustDied();
+				//if (InstanceScript* inst = me->GetInstanceScript())
+				//{
+				//	inst->SetBossState(BOSS_THORIM, DONE);
+				//}
             }
 
             void EnterCombat(Unit* /*who*/) override
             {
                 Talk(SAY_AGGRO);
                 _EnterCombat();
-            }
+				//if (InstanceScript* inst = me->GetInstanceScript())
+				//{
+				//	inst->SetBossState(BOSS_THORIM, IN_PROGRESS);
+				//}
+			}
 
             void UpdateAI(uint32 /*diff*/) override
             {
@@ -97,5 +112,5 @@ class boss_thorim : public CreatureScript
 
 void AddSC_boss_thorim()
 {
-    new boss_thorim();
+//    new boss_thorim();
 }

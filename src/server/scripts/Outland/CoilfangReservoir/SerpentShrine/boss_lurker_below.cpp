@@ -436,7 +436,7 @@ class go_strange_pool : public GameObjectScript
         {
             // 25%
             if (InstanceScript* instanceScript = go->GetInstanceScript())
-                if (!urand(0, 3))
+                if (!urand(0, 2))
                 {
                     if (instanceScript->GetData(DATA_STRANGE_POOL) == NOT_STARTED)
                     {

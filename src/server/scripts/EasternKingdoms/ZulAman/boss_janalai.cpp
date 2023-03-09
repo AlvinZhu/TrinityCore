@@ -173,7 +173,7 @@ class boss_janalai : public CreatureScript
             void JustDied(Unit* /*killer*/) override
             {
                 Talk(SAY_DEATH);
-
+me->SummonCreature(24001, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ()+0.1);
                 instance->SetData(DATA_JANALAIEVENT, DONE);
             }
 

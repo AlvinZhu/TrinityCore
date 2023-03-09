@@ -265,23 +265,23 @@ class boss_sindragosa : public CreatureScript
             {
                 if (!instance->CheckRequiredBosses(DATA_SINDRAGOSA, victim->ToPlayer()))
                 {
-                    EnterEvadeMode(EVADE_REASON_SEQUENCE_BREAK);
-                    instance->DoCastSpellOnPlayers(LIGHT_S_HAMMER_TELEPORT);
-                    return;
+//                    EnterEvadeMode(EVADE_REASON_SEQUENCE_BREAK);
+//                    instance->DoCastSpellOnPlayers(LIGHT_S_HAMMER_TELEPORT);
+//                    return;
                 }
 
-                BossAI::EnterCombat(victim);
+                //BossAI::EnterCombat(victim);
                 DoCast(me, SPELL_FROST_AURA);
                 DoCast(me, SPELL_PERMAEATING_CHILL);
                 Talk(SAY_AGGRO);
             }
 
-            void EnterEvadeMode(EvadeReason why) override
+/*            void EnterEvadeMode(EvadeReason why) override
             {
                 if (_isInAirPhase && why == EVADE_REASON_BOUNDARY)
                     return;
                 BossAI::EnterEvadeMode(why);
-            }
+            }*/
 
             void JustReachedHome() override
             {
@@ -978,7 +978,7 @@ class npc_sindragosa_trash : public CreatureScript
                 Initialize();
             }
 
-            void JustRespawned() override
+             void JustRespawned() override
             {
                 ScriptedAI::JustRespawned();
 
@@ -1313,6 +1313,7 @@ class spell_sindragosa_ice_tomb : public SpellScriptLoader
                             summon->AI()->SetGUID(GetTarget()->GetGUID(), DATA_TRAPPED_PLAYER);
                             GetTarget()->CastSpell(GetTarget(), SPELL_ICE_TOMB_UNTARGETABLE);
                             if (GameObject* go = summon->SummonGameObject(GO_ICE_BLOCK, pos, G3D::Quat(), 0))
+                            //if (GameObject* go = summon->SummonGameObject(GO_ICE_BLOCK, pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), pos.GetOrientation(), 0.0f, 0.0f, 0.0f, 0.0f, 0))
                             {
                                 go->SetSpellId(SPELL_ICE_TOMB_DAMAGE);
                                 summon->AddGameObject(go);

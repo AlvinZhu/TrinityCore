@@ -34,6 +34,8 @@
 #include "Opcodes.h"
 #include "DisableMgr.h"
 #include "Group.h"
+#include "PlayerBotMgr.h"
+#include "FieldBotMgr.h"
 
 void WorldSession::HandleBattlemasterHelloOpcode(WorldPacket& recvData)
 {
@@ -83,6 +85,13 @@ void WorldSession::HandleBattlemasterJoinOpcode(WorldPacket& recvData)
     recvData >> bgTypeId_;                                 // battleground type id (DBC id)
     recvData >> instanceId;                                // instance id, 0 if First Available selected
     recvData >> joinAsGroup;                               // join as group
+
+
+	if (bgTypeId_ >= 32 || bgTypeId_ == 9)
+	{
+		ChatHandler(this).PSendSysMessage(LANG_BG_DISABLED);
+		return;
+	}
 
     if (!sBattlemasterListStore.LookupEntry(bgTypeId_))
     {
@@ -182,6 +191,14 @@ void WorldSession::HandleBattlemasterJoinOpcode(WorldPacket& recvData)
         if (_player->HasAura(9454))
             return;
 
+		if (sFieldBotMgr->ExistWarfare())
+		{
+			std::string outString;
+			consoleToUtf8(std::string("战争爆发中，战场已经关闭！"), outString);
+			sWorld->SendGlobalText(outString.c_str(), NULL);
+			return;
+		}
+
         BattlegroundQueue& bgQueue = sBattlegroundMgr->GetBattlegroundQueue(bgQueueTypeId);
 
         GroupQueueInfo* ginfo = bgQueue.AddGroup(_player, NULL, bgTypeId, bracketEntry, 0, false, isPremade, 0, 0);
@@ -204,6 +221,13 @@ void WorldSession::HandleBattlemasterJoinOpcode(WorldPacket& recvData)
             return;
         if (grp->GetLeaderGUID() != _player->GetGUID())
             return;
+		if (sFieldBotMgr->ExistWarfare() || grp->GroupExistPlayerBot())
+		{
+			std::string outString;
+			consoleToUtf8(std::string("当前状态无法小队加入！"), outString);
+			_player->Whisper(outString, Language::LANG_COMMON, _player);
+			return;
+		}
         err = grp->CanJoinBattlegroundQueue(bg, bgQueueTypeId, 0, bg->GetMaxPlayersPerTeam(), false, 0);
         isPremade = (grp->GetMembersCount() >= bg->GetMinPlayersPerTeam());
 
@@ -247,6 +271,8 @@ void WorldSession::HandleBattlemasterJoinOpcode(WorldPacket& recvData)
         TC_LOG_DEBUG("bg.battleground", "Battleground: group end");
     }
     sBattlegroundMgr->ScheduleQueueUpdate(0, 0, bgQueueTypeId, bgTypeId, bracketEntry->GetBracketId());
+	if (!IsBotSession())
+		sPlayerBotMgr->OnRealPlayerJoinBattlegroundQueue(bgTypeId_, _player->getLevel());
 }
 
 void WorldSession::HandleBattlegroundPlayerPositionsOpcode(WorldPacket& /*recvData*/)
@@ -481,7 +507,10 @@ void WorldSession::HandleBattleFieldPortOpcode(WorldPacket &recvData)
         // add only in HandleMoveWorldPortAck()
         // bg->AddPlayer(_player, team);
         TC_LOG_DEBUG("bg.battleground", "Battleground: player %s (%u) joined battle for bg %u, bgtype %u, queue type %u.", _player->GetName().c_str(), _player->GetGUID().GetCounter(), bg->GetInstanceID(), bg->GetTypeID(), bgQueueTypeId);
-    }
+
+		if (!IsBotSession())
+			sPlayerBotMgr->OnRealPlayerEnterBattleground(bgTypeId_, _player->getLevel());
+	}
     else // leave queue
     {
         if (bg->isArena() && bg->GetStatus() > STATUS_WAIT_QUEUE)
@@ -516,6 +545,14 @@ void WorldSession::HandleBattleFieldPortOpcode(WorldPacket &recvData)
             stmt->setUInt8(1, BG_DESERTION_TYPE_LEAVE_QUEUE);
             CharacterDatabase.Execute(stmt);
         }
+
+		if (!IsBotSession())
+		{
+			if (bgTypeId_ != BattlegroundTypeId::BATTLEGROUND_AA)
+				sPlayerBotMgr->OnRealPlayerLeaveBattlegroundQueue(bgTypeId_, _player->getLevel());
+			else
+				sPlayerBotMgr->OnRealPlayerLeaveArenaQueue(bgTypeId_, _player->getLevel(), type);
+		}
     }
 }
 
@@ -534,7 +571,9 @@ void WorldSession::HandleBattlefieldLeaveOpcode(WorldPacket& recvData)
             if (bg->GetStatus() != STATUS_WAIT_LEAVE)
                 return;
 
-    _player->LeaveBattleground();
+	if (!_player->IsPlayerBot())
+		sPlayerBotMgr->OnRealPlayerLeaveBattleground(_player);
+	_player->LeaveBattleground();
 }
 
 void WorldSession::HandleBattlefieldStatusOpcode(WorldPacket & /*recvData*/)
@@ -617,12 +656,15 @@ void WorldSession::HandleBattlemasterJoinArena(WorldPacket& recvData)
     if (_player->InBattleground())
         return;
 
-    Creature* unit = GetPlayer()->GetMap()->GetCreature(guid);
-    if (!unit)
-        return;
+	if (_player->GetGUID() != guid)
+	{
+		Creature* unit = GetPlayer()->GetMap()->GetCreature(guid);
+		if (!unit)
+			return;
 
-    if (!unit->IsBattleMaster())                             // it's not battle master
-        return;
+		if (!unit->IsBattleMaster())                             // it's not battle master
+			return;
+	}
 
     uint8 arenatype = 0;
     uint32 arenaRating = 0;
@@ -701,7 +743,7 @@ void WorldSession::HandleBattlemasterJoinArena(WorldPacket& recvData)
         }
         // get the team rating for queueing
         arenaRating = at->GetRating();
-        matchmakerRating = at->GetAverageMMR(grp);
+		matchmakerRating = grp ? at->GetAverageMMR(grp) : at->GetMMR(_player->GetGUID());
         // the arenateam id must match for everyone in the group
 
         if (arenaRating <= 0)
@@ -711,7 +753,14 @@ void WorldSession::HandleBattlemasterJoinArena(WorldPacket& recvData)
     BattlegroundQueue &bgQueue = sBattlegroundMgr->GetBattlegroundQueue(bgQueueTypeId);
     if (asGroup)
     {
-        uint32 avgTime = 0;
+		if (sFieldBotMgr->ExistWarfare())
+		{
+			std::string outString;
+			consoleToUtf8(std::string("当前状态无法小队加入！"), outString);
+			_player->Whisper(outString, Language::LANG_COMMON, _player);
+			return;
+		}
+		uint32 avgTime = 0;
 
         if (err > 0)
         {
@@ -756,7 +805,15 @@ void WorldSession::HandleBattlemasterJoinArena(WorldPacket& recvData)
     }
     else
     {
-        GroupQueueInfo* ginfo = bgQueue.AddGroup(_player, NULL, bgTypeId, bracketEntry, arenatype, isRated != 0, false, arenaRating, matchmakerRating, ateamId);
+		if (sFieldBotMgr->ExistWarfare())
+		{
+			std::string outString;
+			consoleToUtf8(std::string("战争爆发中，竞技场已经关闭！"), outString);
+			sWorld->SendGlobalText(outString.c_str(), NULL);
+			return;
+		}
+		
+		GroupQueueInfo* ginfo = bgQueue.AddGroup(_player, NULL, bgTypeId, bracketEntry, arenatype, isRated != 0, false, arenaRating, matchmakerRating, ateamId);
         uint32 avgTime = bgQueue.GetAverageQueueWaitTime(ginfo, bracketEntry->GetBracketId());
         uint32 queueSlot = _player->AddBattlegroundQueueId(bgQueueTypeId);
 

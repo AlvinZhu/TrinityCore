@@ -247,6 +247,7 @@ bool CreatureAI::UpdateVictim()
     }
     else if (me->getThreatManager().isThreatListEmpty())
     {
+//TC_LOG_ERROR("misc", "evade isThreatListEmpty ");
         EnterEvadeMode(EVADE_REASON_NO_HOSTILES);
         return false;
     }
@@ -370,6 +371,7 @@ bool CreatureAI::CheckInRoom()
         return true;
     else
     {
+        //TC_LOG_ERROR("misc", "evade CheckInRoom ");
         EnterEvadeMode(EVADE_REASON_BOUNDARY);
         return false;
     }

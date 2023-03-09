@@ -38,6 +38,7 @@
 #include "Util.h"
 #include "ScriptMgr.h"
 #include "AccountMgr.h"
+#include "PluginCommand.h"
 
 void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
 {
@@ -129,32 +130,33 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
             lang = LANG_UNIVERSAL;
         else
         {
-            Unit::AuraEffectList const& ModLangAuras = sender->GetAuraEffectsByType(SPELL_AURA_MOD_LANGUAGE);
-            if (!ModLangAuras.empty())
-                lang = ModLangAuras.front()->GetMiscValue();
-            else if (HasPermission(rbac::RBAC_PERM_TWO_SIDE_INTERACTION_CHAT))
-                lang = LANG_UNIVERSAL;
-            else
-            {
-                switch (type)
-                {
-                    case CHAT_MSG_PARTY:
-                    case CHAT_MSG_PARTY_LEADER:
-                    case CHAT_MSG_RAID:
-                    case CHAT_MSG_RAID_LEADER:
-                    case CHAT_MSG_RAID_WARNING:
-                        // allow two side chat at group channel if two side group allowed
-                        if (sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_INTERACTION_GROUP))
-                            lang = LANG_UNIVERSAL;
-                        break;
-                    case CHAT_MSG_GUILD:
-                    case CHAT_MSG_OFFICER:
-                        // allow two side chat at guild channel if two side guild allowed
-                        if (sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_INTERACTION_GUILD))
-                            lang = LANG_UNIVERSAL;
-                        break;
-                }
-            }
+            //Unit::AuraEffectList const& ModLangAuras = sender->GetAuraEffectsByType(SPELL_AURA_MOD_LANGUAGE);
+            //if (!ModLangAuras.empty())
+            //    lang = ModLangAuras.front()->GetMiscValue();
+            //else if (HasPermission(rbac::RBAC_PERM_TWO_SIDE_INTERACTION_CHAT))
+            //    lang = LANG_UNIVERSAL;
+            //else
+            //{
+            //    switch (type)
+            //    {
+            //        case CHAT_MSG_PARTY:
+            //        case CHAT_MSG_PARTY_LEADER:
+            //        case CHAT_MSG_RAID:
+            //        case CHAT_MSG_RAID_LEADER:
+            //        case CHAT_MSG_RAID_WARNING:
+            //            // allow two side chat at group channel if two side group allowed
+            //            if (sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_INTERACTION_GROUP))
+            //                lang = LANG_UNIVERSAL;
+            //            break;
+            //        case CHAT_MSG_GUILD:
+            //        case CHAT_MSG_OFFICER:
+            //            // allow two side chat at guild channel if two side guild allowed
+            //            if (sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_INTERACTION_GUILD))
+            //                lang = LANG_UNIVERSAL;
+            //            break;
+            //    }
+            //}
+			lang = LANG_UNIVERSAL;
         }
 
         if (!sender->CanSpeak())
@@ -239,6 +241,8 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
     switch (type)
     {
         case CHAT_MSG_SAY:
+        case CHAT_MSG_EMOTE:
+        case CHAT_MSG_YELL:
         {
             // Prevent cheating
             if (!sender->IsAlive())
@@ -250,41 +254,21 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 return;
             }
 
-            sender->Say(msg, Language(lang));
-            break;
-        }
-        case CHAT_MSG_EMOTE:
-        {
-            // Prevent cheating
-            if (!sender->IsAlive())
-                return;
-
-            if (sender->getLevel() < sWorld->getIntConfig(CONFIG_CHAT_EMOTE_LEVEL_REQ))
-            {
-                SendNotification(GetTrinityString(LANG_SAY_REQ), sWorld->getIntConfig(CONFIG_CHAT_EMOTE_LEVEL_REQ));
-                return;
-            }
-
-            sender->TextEmote(msg);
-            break;
-        }
-        case CHAT_MSG_YELL:
-        {
-            // Prevent cheating
-            if (!sender->IsAlive())
-                return;
-
-            if (sender->getLevel() < sWorld->getIntConfig(CONFIG_CHAT_YELL_LEVEL_REQ))
-            {
-                SendNotification(GetTrinityString(LANG_SAY_REQ), sWorld->getIntConfig(CONFIG_CHAT_YELL_LEVEL_REQ));
-                return;
-            }
-
-            sender->Yell(msg, Language(lang));
-            break;
-        }
+			if (type == CHAT_MSG_SAY)
+			{
+				if (!sPluginCommand->ProcessCommand(sender, msg))
+					sender->Say(msg, Language(lang));
+			}
+            else if (type == CHAT_MSG_EMOTE)
+                sender->TextEmote(msg);
+            else if (type == CHAT_MSG_YELL)
+                sender->Yell(msg, Language(lang));
+        } break;
         case CHAT_MSG_WHISPER:
         {
+        	
+	
+        	
             if (!normalizePlayerName(to))
             {
                 SendPlayerNotFoundNotice(to);
@@ -292,7 +276,12 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
             }
 
             Player* receiver = ObjectAccessor::FindConnectedPlayerByName(to);
-            if (!receiver || (lang != LANG_ADDON && !receiver->isAcceptWhispers() && receiver->GetSession()->HasPermission(rbac::RBAC_PERM_CAN_FILTER_WHISPERS) && !receiver->IsInWhisperWhiteList(sender->GetGUID())))
+			if (!receiver)
+			{
+				SendPlayerNotFoundNotice(to);
+				return;
+			}
+			if (!receiver->IsPlayerBot() && (lang != LANG_ADDON && !receiver->isAcceptWhispers() && receiver->GetSession()->HasPermission(rbac::RBAC_PERM_CAN_FILTER_WHISPERS) && !receiver->IsInWhisperWhiteList(sender->GetGUID())))
             {
                 SendPlayerNotFoundNotice(to);
                 return;
@@ -321,9 +310,36 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 (HasPermission(rbac::RBAC_PERM_CAN_FILTER_WHISPERS) && !sender->isAcceptWhispers() && !sender->IsInWhisperWhiteList(receiver->GetGUID())))
                 sender->AddWhisperWhiteList(receiver->GetGUID());
 
-            GetPlayer()->Whisper(msg, Language(lang), receiver);
-            break;
-        }
+			GetPlayer()->Whisper(msg, Language(lang), receiver);
+			UnitAI* pUnitAi = receiver->GetAI();
+			if (BotGroupAI* pGroupAI = dynamic_cast<BotGroupAI*>(pUnitAi))
+				pGroupAI->ProcessBotCommand(GetPlayer(), msg);
+			else if (BotBGAI* pBGAI = dynamic_cast<BotBGAI*>(pUnitAi))
+				pBGAI->ProcessBotCommand(GetPlayer(), msg);
+
+else if (receiver->IsPlayerBot())
+{
+		QueryResult result = WorldDatabase.PQuery("SELECT `reply` FROM `aitalk` where instr('%s',cname)>0 order by rand() limit 1", msg.c_str());
+		if (result)
+		{
+		Field* fields = result->Fetch();
+        std::string rpmsg = fields[0].GetString();
+		receiver->Whisper(rpmsg, Language::LANG_COMMON,GetPlayer() );
+        /*
+        if (receiver->GetVictim())
+{
+    receiver->CastSpell(receiver->GetVictim(), 40827, true);
+}
+else
+{
+    receiver->CastSpell(receiver, 40504, true);
+}*/
+
+
+		}
+}
+
+		} break;
         case CHAT_MSG_PARTY:
         case CHAT_MSG_PARTY_LEADER:
         {
@@ -344,8 +360,9 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
             WorldPacket data;
             ChatHandler::BuildChatPacket(data, ChatMsg(type), Language(lang), sender, NULL, msg);
             group->BroadcastPacket(&data, false, group->GetMemberGroup(GetPlayer()->GetGUID()));
-            break;
-        }
+			if (type == CHAT_MSG_PARTY_LEADER)
+				group->ProcessGroupBotCommand(GetPlayer(), msg);
+        } break;
         case CHAT_MSG_GUILD:
         {
             if (GetPlayer()->GetGuildId())

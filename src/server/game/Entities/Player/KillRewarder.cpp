@@ -154,6 +154,18 @@ inline void KillRewarder::_RewardXP(Player* player, float rate)
         for (auto const& aura : player->GetAuraEffectsByType(SPELL_AURA_MOD_XP_PCT))
             AddPct(xp, aura->GetAmount());
 
+		// 4.2.2.1. Apply NpcBot XP reduction
+		if (player->HaveBot() && player->GetNpcBotsCount() > 1)
+		{
+			if (uint8 xp_rate = player->GetNpcBotXpReduction())
+			{
+				int32 ratePct = 100 - (player->GetNpcBotsCount() - 1) * xp_rate;
+				ratePct = std::max<int32>(ratePct, 10); // minimum
+				//ratePct = std::min<int32>(ratePct, 100); // maximum // dead code
+				xp = xp * ratePct / 100;
+			}
+		}
+
         // 4.2.3. Give XP to player.
         player->GiveXP(xp, _victim, _groupRate);
         if (Pet* pet = player->GetPet())

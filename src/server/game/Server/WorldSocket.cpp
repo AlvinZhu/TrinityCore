@@ -470,13 +470,22 @@ void WorldSocket::HandleAuthSessionCallback(std::shared_ptr<AuthSession> authSes
     _authCrypt.Init(&account.SessionKey);
 
     // First reject the connection if packet contains invalid data or realm state doesn't allow logging in
-    if (sWorld->IsClosed())
+	if (sWorld->IsClosed())
     {
         SendAuthResponseError(AUTH_REJECT);
         TC_LOG_ERROR("network", "WorldSocket::HandleAuthSession: World closed, denying client (%s).", GetRemoteIpAddress().to_string().c_str());
         DelayedCloseSocket();
         return;
     }
+	WorldSession* pExistSession = sWorld->FindSession(account.Id);
+	if (pExistSession && pExistSession->IsBotSession())
+	{
+		//hxsd
+		//SendAuthResponseError(AUTH_ALREADY_ONLINE);
+		//TC_LOG_ERROR("network", "WorldSocket::HandleAuthSession: Is bot session, denying client (%s).", GetRemoteIpAddress().to_string().c_str());
+		//DelayedCloseSocket();
+		//return;
+	}
 
     if (authSession->RealmID != realm.Id.Realm)
     {
@@ -575,9 +584,9 @@ void WorldSocket::HandleAuthSessionCallback(std::shared_ptr<AuthSession> authSes
         return;
     }
 
-    TC_LOG_DEBUG("network", "WorldSocket::HandleAuthSession: Client '%s' authenticated successfully from %s.", authSession->Account.c_str(), address.c_str());
+	TC_LOG_DEBUG("network", "WorldSocket::HandleAuthSession: Client '%s' authenticated successfully from %s.", authSession->Account.c_str(), address.c_str());
 
-    // Update the last_ip in the database as it was successful for login
+	// Update the last_ip in the database as it was successful for login
     stmt = LoginDatabase.GetPreparedStatement(LOGIN_UPD_LAST_IP);
 
     stmt->setString(0, address);
@@ -597,8 +606,8 @@ void WorldSocket::HandleAuthSessionCallback(std::shared_ptr<AuthSession> authSes
     if (wardenActive)
         _worldSession->InitWarden(&account.SessionKey, account.OS);
 
-    _queryCallback = std::bind(&WorldSocket::LoadSessionPermissionsCallback, this, std::placeholders::_1);
-    _queryFuture = _worldSession->LoadPermissionsAsync();
+	_queryCallback = std::bind(&WorldSocket::LoadSessionPermissionsCallback, this, std::placeholders::_1);
+	_queryFuture = _worldSession->LoadPermissionsAsync();
     AsyncRead();
 }
 

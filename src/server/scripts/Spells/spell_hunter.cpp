@@ -1010,9 +1010,10 @@ class spell_hun_tame_beast : public SpellScriptLoader
                     if (target->getLevel() > caster->getLevel())
                         return SPELL_FAILED_HIGHLEVEL;
 
+                    //hxsd
                     // use SMSG_PET_TAME_FAILURE?
-                    if (!target->GetCreatureTemplate()->IsTameable(caster->ToPlayer()->CanTameExoticPets()))
-                        return SPELL_FAILED_BAD_TARGETS;
+                    //if (!target->GetCreatureTemplate()->IsTameable(caster->ToPlayer()->CanTameExoticPets()))
+                    //    return SPELL_FAILED_BAD_TARGETS;
 
                     if (caster->GetPetGUID())
                         return SPELL_FAILED_ALREADY_HAVE_SUMMON;

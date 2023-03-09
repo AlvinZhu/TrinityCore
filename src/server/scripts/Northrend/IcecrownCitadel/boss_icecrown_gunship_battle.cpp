@@ -663,14 +663,47 @@ class npc_gunship : public CreatureScript
     public:
         npc_gunship() : CreatureScript("npc_gunship") { }
 
-        struct npc_gunshipAI : public NullCreatureAI
+		struct npc_gunshipAI : public ScriptedAI//NullCreatureAI
         {
-            npc_gunshipAI(Creature* creature) : NullCreatureAI(creature),
+			npc_gunshipAI(Creature* creature) : ScriptedAI(creature),//NullCreatureAI(creature),
                 _teamInInstance(creature->GetInstanceScript()->GetData(DATA_TEAM_IN_INSTANCE)),
                 _summonedFirstMage(false), _died(false)
             {
+				botAttackTick = 0;
                 me->setRegeneratingHealth(false);
+				if (me->GetTransport()->GetEntry() == GO_THE_SKYBREAKER_H || me->GetTransport()->GetEntry() == GO_ORGRIMS_HAMMER_A)
+				{
+					uint32 maxHeal = me->GetMaxHealth() / 15;
+					me->SetHealth(maxHeal);
+					me->SetMaxHealth(maxHeal);
+				}
+				//else
+				//{
+				//	uint32 maxHeal = me->GetMaxHealth() * 2;
+				//	me->SetHealth(maxHeal);
+				//	me->SetMaxHealth(maxHeal);
+				//}
             }
+
+			void UpdateAI(uint32 diff) override
+			{
+				if (botAttackTick < 2000)
+				{
+					botAttackTick += diff;
+					return;
+				}
+				botAttackTick = 0;
+				if (me->GetTransport()->GetEntry() == GO_THE_SKYBREAKER_H || me->GetTransport()->GetEntry() == GO_ORGRIMS_HAMMER_A)
+					return;
+
+				InstanceScript* inst = me->GetInstanceScript();
+				if (!inst)
+					return;
+				BotAttackCreature* pBotAttack = inst->GetBotAttacksCreature(me);
+				if (!pBotAttack)
+					return;
+				pBotAttack->UpdateNeedAttackCreatures(diff, this, true);
+			}
 
             void DamageTaken(Unit* /*source*/, uint32& damage) override
             {
@@ -827,7 +860,8 @@ class npc_gunship : public CreatureScript
             std::map<ObjectGuid, uint32> _shipVisits;
             bool _summonedFirstMage;
             bool _died;
-        };
+			uint32 botAttackTick;
+	 };
 
         CreatureAI* GetAI(Creature* creature) const override
         {
@@ -855,7 +889,11 @@ class npc_high_overlord_saurfang_igb : public CreatureScript
                 _firstMageCooldown = time(NULL) + 60;
                 _axethrowersYellCooldown = time_t(0);
                 _rocketeersYellCooldown = time_t(0);
-            }
+
+				uint32 maxHeal = me->GetMaxHealth() / 8;
+				me->SetHealth(maxHeal);
+				me->SetMaxHealth(maxHeal);
+			}
 
             void InitializeAI() override
             {
@@ -1123,7 +1161,11 @@ class npc_muradin_bronzebeard_igb : public CreatureScript
                 _firstMageCooldown = time(NULL) + 60;
                 _riflemanYellCooldown = time_t(0);
                 _mortarYellCooldown = time_t(0);
-            }
+
+				uint32 maxHeal = me->GetMaxHealth() / 8;
+				me->SetHealth(maxHeal);
+				me->SetMaxHealth(maxHeal);
+			}
 
             void InitializeAI() override
             {
@@ -1418,7 +1460,11 @@ struct npc_gunship_boarding_addAI : public gunship_npc_AI
     {
         me->m_CombatDistance = 80.0f;
         _usedDesperateResolve = false;
-    }
+
+		uint32 maxHeal = me->GetMaxHealth() / 8;
+		me->SetHealth(maxHeal);
+		me->SetMaxHealth(maxHeal);
+	}
 
     void SetData(uint32 type, uint32 data) override
     {
@@ -1558,7 +1604,11 @@ class npc_gunship_boarding_leader : public CreatureScript
         {
             npc_gunship_boarding_leaderAI(Creature* creature) : npc_gunship_boarding_addAI(creature)
             {
-            }
+
+				uint32 maxHeal = me->GetMaxHealth() / 8;
+				me->SetHealth(maxHeal);
+				me->SetMaxHealth(maxHeal);
+			}
 
             void EnterCombat(Unit* target) override
             {
@@ -1616,7 +1666,9 @@ class npc_gunship_boarding_leader : public CreatureScript
 class npc_gunship_boarding_add : public CreatureScript
 {
     public:
-        npc_gunship_boarding_add() : CreatureScript("npc_gunship_boarding_add") { }
+        npc_gunship_boarding_add() : CreatureScript("npc_gunship_boarding_add")
+		{
+		}
 
 
         CreatureAI* GetAI(Creature* creature) const override
@@ -1635,7 +1687,11 @@ class npc_gunship_gunner : public CreatureScript
             npc_gunship_gunnerAI(Creature* creature) : gunship_npc_AI(creature)
             {
                 creature->m_CombatDistance = 200.0f;
-            }
+
+				uint32 maxHeal = me->GetMaxHealth() / 8;
+				me->SetHealth(maxHeal);
+				me->SetMaxHealth(maxHeal);
+			}
 
             void AttackStart(Unit* target) override
             {
@@ -1677,7 +1733,11 @@ class npc_gunship_rocketeer : public CreatureScript
             npc_gunship_rocketeerAI(Creature* creature) : gunship_npc_AI(creature)
             {
                 creature->m_CombatDistance = 200.0f;
-            }
+
+				uint32 maxHeal = me->GetMaxHealth() / 8;
+				me->SetHealth(maxHeal);
+				me->SetMaxHealth(maxHeal);
+			}
 
             void MovementInform(uint32 type, uint32 pointId) override
             {
@@ -1719,7 +1779,11 @@ class npc_gunship_mage : public CreatureScript
             npc_gunship_mageAI(Creature* creature) : gunship_npc_AI(creature)
             {
                 me->SetReactState(REACT_PASSIVE);
-            }
+
+				uint32 maxHeal = me->GetMaxHealth() / 8;
+				me->SetHealth(maxHeal);
+				me->SetMaxHealth(maxHeal);
+			}
 
             void EnterEvadeMode(EvadeReason why) override
             {

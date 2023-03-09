@@ -25,8 +25,45 @@
 #include "Util.h"
 #include "SHA1.h"
 #include "WorldSession.h"
+#include "PlayerBotMgr.h"
+#include "OnlineMgr.h"
 
-AccountMgr::AccountMgr() { }
+AccountMgr::AccountMgr()
+{
+	permissionTypeLink.clear();
+	permissionTypeLink[AccountTypes::SEC_PLAYER][199] = 0;		// 0
+	permissionTypeLink[AccountTypes::SEC_PLAYER][198] = 0;
+	permissionTypeLink[AccountTypes::SEC_PLAYER][197] = 0;
+
+	permissionTypeLink[AccountTypes::SEC_MODERATOR][199] = 0;		// 1
+	permissionTypeLink[AccountTypes::SEC_MODERATOR][198] = 0;
+	permissionTypeLink[AccountTypes::SEC_MODERATOR][197] = 0;
+
+	permissionTypeLink[AccountTypes::SEC_GAMEMASTER][199] = 0;		// 2
+	permissionTypeLink[AccountTypes::SEC_GAMEMASTER][198] = 0;
+	permissionTypeLink[AccountTypes::SEC_GAMEMASTER][197] = 0;
+	permissionTypeLink[AccountTypes::SEC_GAMEMASTER][196] = 0;
+	permissionTypeLink[AccountTypes::SEC_GAMEMASTER][195] = 0;
+	permissionTypeLink[AccountTypes::SEC_GAMEMASTER][194] = 0;
+	permissionTypeLink[AccountTypes::SEC_GAMEMASTER][193] = 0;
+
+	permissionTypeLink[AccountTypes::SEC_ADMINISTRATOR][199] = 0;	// 3
+	permissionTypeLink[AccountTypes::SEC_ADMINISTRATOR][198] = 0;
+	permissionTypeLink[AccountTypes::SEC_ADMINISTRATOR][197] = 0;
+	permissionTypeLink[AccountTypes::SEC_ADMINISTRATOR][196] = 0;
+	permissionTypeLink[AccountTypes::SEC_ADMINISTRATOR][195] = 0;
+	permissionTypeLink[AccountTypes::SEC_ADMINISTRATOR][194] = 0;
+	permissionTypeLink[AccountTypes::SEC_ADMINISTRATOR][193] = 0;
+
+	permissionTypeLink[AccountTypes::SEC_CONSOLE][199] = 0;		// 4
+	permissionTypeLink[AccountTypes::SEC_CONSOLE][198] = 0;
+	permissionTypeLink[AccountTypes::SEC_CONSOLE][197] = 0;
+	permissionTypeLink[AccountTypes::SEC_CONSOLE][196] = 0;
+	permissionTypeLink[AccountTypes::SEC_CONSOLE][195] = 0;
+	permissionTypeLink[AccountTypes::SEC_CONSOLE][194] = 0;
+	permissionTypeLink[AccountTypes::SEC_CONSOLE][193] = 0;
+	permissionTypeLink[AccountTypes::SEC_CONSOLE][192] = 0;
+}
 
 AccountMgr::~AccountMgr()
 {
@@ -41,7 +78,8 @@ AccountMgr* AccountMgr::instance()
 
 AccountOpResult AccountMgr::CreateAccount(std::string username, std::string password, std::string email /*= ""*/)
 {
-    if (utf8length(username) > MAX_ACCOUNT_STR)
+	//std::unique_lock<std::mutex> sessionGuard(PlayerBotMgr::g_uniqueLock);
+	if (utf8length(username) > MAX_ACCOUNT_STR)
         return AccountOpResult::AOR_NAME_TOO_LONG;                           // username's too long
 
     Utf8ToUpperOnlyLatin(username);
@@ -63,6 +101,17 @@ AccountOpResult AccountMgr::CreateAccount(std::string username, std::string pass
     stmt = LoginDatabase.GetPreparedStatement(LOGIN_INS_REALM_CHARACTERS_INIT);
     LoginDatabase.Execute(stmt);
 
+	std::string querySql = "SELECT id FROM account WHERE username='" + username + "'";
+	QueryResult result = LoginDatabase.Query(querySql.c_str());
+	if (result)
+	{
+		Field* fields = result->Fetch();
+		if (fields)
+		{
+			uint32 id = fields[0].GetUInt32();
+			sOnlineMgr->AddNewAccount(id, username);
+		}
+	}
     return AccountOpResult::AOR_OK;                                          // everything's fine
 }
 
@@ -441,19 +490,20 @@ void AccountMgr::LoadRBAC()
     {
         Field* field = result->Fetch();
         uint32 newId = field[0].GetUInt32();
-        if (permissionId != newId)
-        {
-            permissionId = newId;
-            permission = _permissions[newId];
-        }
+		uint32 linkedPermissionId = field[1].GetUInt32();
+		_permissions[linkedPermissionId]->AddLinkedPermission(newId);
+   //     if (permissionId != newId)
+   //     {
+   //         permissionId = newId;
+			//permission = _permissions[newId];
+   //     }
 
-        uint32 linkedPermissionId = field[1].GetUInt32();
-        if (linkedPermissionId == permissionId)
-        {
-            TC_LOG_ERROR("sql.sql", "RBAC Permission %u has itself as linked permission. Ignored", permissionId);
-            continue;
-        }
-        permission->AddLinkedPermission(linkedPermissionId);
+        //if (linkedPermissionId == permissionId)
+        //{
+        //    TC_LOG_ERROR("sql.sql", "RBAC Permission %u has itself as linked permission. Ignored", permissionId);
+        //    continue;
+        //}
+		//permission->AddLinkedPermission(newId);
         ++count2;
     }
     while (result->NextRow());
@@ -491,20 +541,19 @@ void AccountMgr::UpdateAccountAccess(rbac::RBACData* rbac, uint32 accountId, uin
     if (rbac && securityLevel == rbac->GetSecurityLevel())
         rbac->SetSecurityLevel(securityLevel);
 
-    SQLTransaction trans = LoginDatabase.BeginTransaction();
     // Delete old security level from DB
     if (realmId == -1)
     {
         PreparedStatement* stmt = LoginDatabase.GetPreparedStatement(LOGIN_DEL_ACCOUNT_ACCESS);
         stmt->setUInt32(0, accountId);
-        trans->Append(stmt);
+        LoginDatabase.Execute(stmt);
     }
     else
     {
         PreparedStatement* stmt = LoginDatabase.GetPreparedStatement(LOGIN_DEL_ACCOUNT_ACCESS_BY_REALM);
         stmt->setUInt32(0, accountId);
         stmt->setUInt32(1, realmId);
-        trans->Append(stmt);
+        LoginDatabase.Execute(stmt);
     }
 
     // Add new security level
@@ -514,10 +563,8 @@ void AccountMgr::UpdateAccountAccess(rbac::RBACData* rbac, uint32 accountId, uin
         stmt->setUInt32(0, accountId);
         stmt->setUInt8(1, securityLevel);
         stmt->setInt32(2, realmId);
-        trans->Append(stmt);
+        LoginDatabase.Execute(stmt);
     }
-
-    LoginDatabase.CommitTransaction(trans);
 }
 
 rbac::RBACPermission const* AccountMgr::GetRBACPermission(uint32 permissionId) const
@@ -530,21 +577,43 @@ rbac::RBACPermission const* AccountMgr::GetRBACPermission(uint32 permissionId) c
     return NULL;
 }
 
-bool AccountMgr::HasPermission(uint32 accountId, uint32 permissionId, uint32 realmId)
+//bool AccountMgr::HasPermission(uint32 accountId, uint32 permissionId, uint32 realmId)
+//{
+//    if (!accountId)
+//    {
+//        TC_LOG_ERROR("rbac", "AccountMgr::HasPermission: Wrong accountId 0");
+//        return false;
+//    }
+//
+//    rbac::RBACData rbac(accountId, "", realmId, GetSecurity(accountId));
+//    rbac.LoadFromDB();
+//    bool hasPermission = rbac.HasPermission(permissionId);
+//
+//    TC_LOG_DEBUG("rbac", "AccountMgr::HasPermission [AccountId: %u, PermissionId: %u, realmId: %d]: %u",
+//                   accountId, permissionId, realmId, hasPermission);
+//    return hasPermission;
+//}
+
+bool AccountMgr::HasPermission(uint32 accountId, uint32 permission, AccountTypes accType)
 {
-    if (!accountId)
-    {
-        TC_LOG_ERROR("rbac", "AccountMgr::HasPermission: Wrong accountId 0");
-        return false;
-    }
+	if (accType == AccountTypes::SEC_CONSOLE)
+		return true;
+	if (!accountId || permissionTypeLink.find(accType) == permissionTypeLink.end())
+	{
+		TC_LOG_ERROR("rbac", "AccountMgr::HasPermission: Wrong accountId 0");
+		return false;
+	}
 
-    rbac::RBACData rbac(accountId, "", realmId, GetSecurity(accountId));
-    rbac.LoadFromDB();
-    bool hasPermission = rbac.HasPermission(permissionId);
-
-    TC_LOG_DEBUG("rbac", "AccountMgr::HasPermission [AccountId: %u, PermissionId: %u, realmId: %d]: %u",
-                   accountId, permissionId, realmId, hasPermission);
-    return hasPermission;
+	std::map<uint16, uint16>& per = permissionTypeLink[accType];
+	rbac::RBACPermission const* rbac = GetRBACPermission(permission);
+	if (rbac == nullptr) return false;
+	const std::set<uint32>& perCont = rbac->GetLinkedPermissions();
+	for (std::set<uint32>::const_iterator itPer = perCont.begin(); itPer != perCont.end(); itPer++)
+	{
+		if (per.find(*itPer) != per.end())
+			return true;
+	}
+	return false;
 }
 
 void AccountMgr::ClearRBAC()

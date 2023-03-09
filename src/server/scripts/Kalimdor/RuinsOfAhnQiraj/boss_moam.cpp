@@ -146,20 +146,20 @@ class boss_moam : public CreatureScript
                             break;
                         case EVENT_DRAIN_MANA:
                         {
-                            std::list<Unit*> targetList;
-                            {
-                                const std::list<HostileReference*>& threatlist = me->getThreatManager().getThreatList();
-                                for (std::list<HostileReference*>::const_iterator itr = threatlist.begin(); itr != threatlist.end(); ++itr)
-                                    if ((*itr)->getTarget()->GetTypeId() == TYPEID_PLAYER && (*itr)->getTarget()->getPowerType() == POWER_MANA)
-                                        targetList.push_back((*itr)->getTarget());
-                            }
+                            //std::list<Unit*> targetList;
+                            //{
+                            //    const std::list<HostileReference*>& threatlist = me->getThreatManager().getThreatList();
+                            //    for (std::list<HostileReference*>::const_iterator itr = threatlist.begin(); itr != threatlist.end(); ++itr)
+                            //        if ((*itr)->getTarget()->GetTypeId() == TYPEID_PLAYER && (*itr)->getTarget()->getPowerType() == POWER_MANA)
+                            //            targetList.push_back((*itr)->getTarget());
+                            //}
 
-                            Trinity::Containers::RandomResizeList(targetList, 5);
+                            //Trinity::Containers::RandomResizeList(targetList, 5);
 
-                            for (std::list<Unit*>::iterator itr = targetList.begin(); itr != targetList.end(); ++itr)
-                                DoCast(*itr, SPELL_DRAIN_MANA);
+                            //for (std::list<Unit*>::iterator itr = targetList.begin(); itr != targetList.end(); ++itr)
+                            //    DoCast(*itr, SPELL_DRAIN_MANA);
 
-                            events.ScheduleEvent(EVENT_DRAIN_MANA, urand(5000, 15000));
+                            //events.ScheduleEvent(EVENT_DRAIN_MANA, urand(30000, 40000));
                             break;
                         }/*
                         case EVENT_WIDE_SLASH:

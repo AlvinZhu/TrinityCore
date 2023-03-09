@@ -184,7 +184,7 @@ void WorldSession::HandleAutoEquipItemOpcode(WorldPacket& recvData)
 
     uint16 src = pSrcItem->GetPos();
     if (dest == src)                                           // prevent equip in same slot, only at cheat
-        return;
+		return;
 
     Item* pDstItem = _player->GetItemByPos(dest);
     if (!pDstItem)                                         // empty slot, simple case
@@ -202,8 +202,8 @@ void WorldSession::HandleAutoEquipItemOpcode(WorldPacket& recvData)
         if (msg != EQUIP_ERR_OK)
         {
             _player->SendEquipError(msg, pDstItem, NULL);
-            return;
-        }
+			return;
+		}
 
         // check dest->src move possibility
         ItemPosCountVec sSrc;
@@ -234,8 +234,8 @@ void WorldSession::HandleAutoEquipItemOpcode(WorldPacket& recvData)
         if (msg != EQUIP_ERR_OK)
         {
             _player->SendEquipError(msg, pDstItem, pSrcItem);
-            return;
-        }
+			return;
+		}
 
         // now do moves, remove...
         _player->RemoveItem(dstbag, dstslot, false);

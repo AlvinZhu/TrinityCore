@@ -483,7 +483,7 @@ class boss_stormcaller_brundir : public CreatureScript
                 _EnterCombat();
                 Talk(SAY_BRUNDIR_AGGRO);
                 events.SetPhase(++phase);
-                events.ScheduleEvent(EVENT_MOVE_POSITION, 1000);
+                //events.ScheduleEvent(EVENT_MOVE_POSITION, 1000);
                 events.ScheduleEvent(EVENT_BERSERK, 900000);
                 events.ScheduleEvent(EVENT_CHAIN_LIGHTNING, 4000);
                 events.ScheduleEvent(EVENT_OVERLOAD, urand(60000, 120000));
@@ -622,17 +622,17 @@ class boss_stormcaller_brundir : public CreatureScript
                             me->getThreatManager().resetAllAggro();
                             break;
                         case EVENT_MOVE_POSITION:
-                            if (me->IsWithinMeleeRange(me->GetVictim()))
-                            {
-                                float x = float(irand(-25, 25));
-                                float y = float(irand(-25, 25));
-                                me->GetMotionMaster()->MovePoint(0, me->GetPositionX() + x, me->GetPositionY() + y, FLOOR_Z);
-                                // Prevention to go outside the room or into the walls
-                                if (Creature* trigger = me->FindNearestCreature(NPC_WORLD_TRIGGER, 100.0f, true))
-                                    if (me->GetDistance(trigger) >= 50.0f)
-                                        me->GetMotionMaster()->MovePoint(0, trigger->GetPositionX(), trigger->GetPositionY(), FLOOR_Z);
-                            }
-                            events.ScheduleEvent(EVENT_MOVE_POSITION, urand(7500, 10000));
+                            //if (me->IsWithinMeleeRange(me->GetVictim()))
+                            //{
+                            //    float x = float(irand(-25, 25));
+                            //    float y = float(irand(-25, 25));
+                            //    me->GetMotionMaster()->MovePoint(0, me->GetPositionX() + x, me->GetPositionY() + y, FLOOR_Z);
+                            //    // Prevention to go outside the room or into the walls
+                            //    if (Creature* trigger = me->FindNearestCreature(NPC_WORLD_TRIGGER, 100.0f, true))
+                            //        if (me->GetDistance(trigger) >= 50.0f)
+                            //            me->GetMotionMaster()->MovePoint(0, trigger->GetPositionX(), trigger->GetPositionY(), FLOOR_Z);
+                            //}
+                            //events.ScheduleEvent(EVENT_MOVE_POSITION, urand(7500, 10000));
                             break;
                         default:
                             break;

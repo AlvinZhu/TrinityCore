@@ -440,7 +440,8 @@ class TC_SHARED_API ByteBuffer
             if (!src)
                 throw ByteBufferSourceException(_wpos, size(), cnt);
 
-            ASSERT(size() < 10000000);
+          //hxsd
+          //  ASSERT(size() < 10000000);
 
             if (_storage.size() < _wpos + cnt)
                 _storage.resize(_wpos + cnt);

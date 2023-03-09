@@ -24,6 +24,7 @@
 #include "SpellAuras.h"
 #include "SpellAuraEffects.h"
 #include "World.h"
+#include "WorldSession.h"
 
 inline bool _ModifyUInt32(bool apply, uint32& baseValue, int32& amount)
 {
@@ -216,6 +217,9 @@ bool Player::UpdateAllStats()
     RecalculateRating(CR_ARMOR_PENETRATION);
     UpdateAllResistances();
 
+	for (uint8 i = 0; i != GetMaxNpcBots(); ++i)
+		if (Creature* bot = GetBotMap(i)->_Cre())
+			bot->SetBotShouldUpdateStats();
     return true;
 }
 
@@ -587,7 +591,7 @@ void Player::UpdateBlockPercentage()
         // Base value
         value = 5.0f;
         // Modify value from defense skill
-        value += (int32(GetDefenseSkillValue()) - int32(GetMaxSkillValueForLevel())) * 0.04f;
+		value += GetDefenseSkillPercent() * 0.04f;
         // Increase from SPELL_AURA_MOD_BLOCK_PERCENT aura
         value += GetTotalAuraModifier(SPELL_AURA_MOD_BLOCK_PERCENT);
         // Increase from rating
@@ -629,7 +633,7 @@ void Player::UpdateCritPercentage(WeaponAttackType attType)
 
     float value = GetTotalPercentageModValue(modGroup) + GetRatingBonusValue(cr);
     // Modify crit from weapon skill and maximized defense skill of same level victim difference
-    value += (int32(GetWeaponSkillValue(attType)) - int32(GetMaxSkillValueForLevel())) * 0.04f;
+	value += GetWeaponSkillPercent(attType) * 0.04f;
 
     if (sWorld->getBoolConfig(CONFIG_STATS_LIMITS_ENABLE))
          value = value > sWorld->getFloatConfig(CONFIG_STATS_LIMITS_CRIT) ? sWorld->getFloatConfig(CONFIG_STATS_LIMITS_CRIT) : value;
@@ -685,8 +689,8 @@ float Player::GetMissPercentageFromDefence() const
 
     float diminishing = 0.0f, nondiminishing = 0.0f;
     // Modify value from defense skill (only bonus from defense rating diminishes)
-    nondiminishing += (GetSkillValue(SKILL_DEFENSE) - GetMaxSkillValueForLevel()) * 0.04f;
-    diminishing += (int32(GetRatingBonusValue(CR_DEFENSE_SKILL))) * 0.04f;
+	nondiminishing += GetSkillPercentByType(SKILL_DEFENSE) * 0.04f;
+    diminishing += float(int32(GetRatingBonusValue(CR_DEFENSE_SKILL))) * 0.04f;
 
     // apply diminishing formula to diminishing miss chance
     uint32 pclass = getClass()-1;
@@ -719,8 +723,8 @@ void Player::UpdateParryPercentage()
         // Parry from rating
         float diminishing = GetRatingBonusValue(CR_PARRY);
         // Modify value from defense skill (only bonus from defense rating diminishes)
-        nondiminishing += (GetSkillValue(SKILL_DEFENSE) - GetMaxSkillValueForLevel()) * 0.04f;
-        diminishing += (int32(GetRatingBonusValue(CR_DEFENSE_SKILL))) * 0.04f;
+		nondiminishing += GetSkillPercentByType(SKILL_DEFENSE) * 0.04f;
+        diminishing += float(int32(GetRatingBonusValue(CR_DEFENSE_SKILL))) * 0.04f;
         // Parry from SPELL_AURA_MOD_PARRY_PERCENT aura
         nondiminishing += GetTotalAuraModifier(SPELL_AURA_MOD_PARRY_PERCENT);
         // apply diminishing formula to diminishing parry chance
@@ -754,8 +758,8 @@ void Player::UpdateDodgePercentage()
     float diminishing = 0.0f, nondiminishing = 0.0f;
     GetDodgeFromAgility(diminishing, nondiminishing);
     // Modify value from defense skill (only bonus from defense rating diminishes)
-    nondiminishing += (GetSkillValue(SKILL_DEFENSE) - GetMaxSkillValueForLevel()) * 0.04f;
-    diminishing += (int32(GetRatingBonusValue(CR_DEFENSE_SKILL))) * 0.04f;
+	nondiminishing += GetSkillPercentByType(SKILL_DEFENSE) * 0.04f;
+    diminishing += float(int32(GetRatingBonusValue(CR_DEFENSE_SKILL))) * 0.04f;
     // Dodge from SPELL_AURA_MOD_DODGE_PERCENT aura
     nondiminishing += GetTotalAuraModifier(SPELL_AURA_MOD_DODGE_PERCENT);
     // Dodge from rating

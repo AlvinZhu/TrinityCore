@@ -1251,7 +1251,7 @@ bool WorldObject::IsWithinLOS(float ox, float oy, float oz) const
         else
             GetHitSpherePointFor({ ox, oy, oz }, x, y, z);
 
-        return GetMap()->isInLineOfSight(x, y, z + 2.0f, ox, oy, oz + 2.0f, GetPhaseMask());
+        return GetMap()->isInLineOfSight(x, y, z + 2.0f, ox, oy, oz + 2.0f, GetPhaseMask(), VMAP::ModelIgnoreFlags::Nothing);
     }
 
     return true;
@@ -1913,6 +1913,11 @@ TempSummon* Map::SummonCreature(uint32 entry, Position const& pos, SummonPropert
             summon = new Puppet(properties, summoner);
             break;
         case UNIT_MASK_TOTEM:
+			//: totem emul step 1
+			if (summoner && summoner->GetTypeId() == TYPEID_UNIT && summoner->ToCreature()->GetIAmABot())
+				summon = new Totem(properties, summoner->ToCreature()->GetBotOwner());
+			else
+				//end
             summon = new Totem(properties, summoner);
             break;
         case UNIT_MASK_MINION:
@@ -1937,6 +1942,12 @@ TempSummon* Map::SummonCreature(uint32 entry, Position const& pos, SummonPropert
     // call MoveInLineOfSight for nearby creatures
     Trinity::AIRelocationNotifier notifier(*summon);
     summon->VisitNearbyObject(GetVisibilityRange(), notifier);
+
+	//: totem emul step 2
+	if (mask == UNIT_MASK_TOTEM)
+		if (summoner && summoner->GetTypeId() == TYPEID_UNIT && summoner->ToCreature()->GetIAmABot())
+			summoner->ToCreature()->OnBotSummon(summon);
+	//end
 
     return summon;
 }
@@ -2320,8 +2331,8 @@ void WorldObject::MovePosition(Position &pos, float dist, float angle)
     // Prevent invalid coordinates here, position is unchanged
     if (!Trinity::IsValidMapCoord(destx, desty, pos.m_positionZ))
     {
-        TC_LOG_FATAL("misc", "WorldObject::MovePosition: Object (TypeId: %u Entry: %u GUID: %u) has invalid coordinates X: %f and Y: %f were passed!",
-            GetTypeId(), GetEntry(), GetGUID().GetCounter(), destx, desty);
+//        TC_LOG_FATAL("misc", "WorldObject::MovePosition: Object (TypeId: %u Entry: %u GUID: %u) has invalid coordinates X: %f and Y: %f were passed!",
+  //          GetTypeId(), GetEntry(), GetGUID().GetCounter(), destx, desty);
         return;
     }
 
@@ -2392,7 +2403,7 @@ void WorldObject::MovePositionToFirstCollision(Position &pos, float dist, float 
     // Prevent invalid coordinates here, position is unchanged
     if (!Trinity::IsValidMapCoord(destx, desty))
     {
-        TC_LOG_FATAL("misc", "WorldObject::MovePositionToFirstCollision invalid coordinates X: %f and Y: %f were passed!", destx, desty);
+//        TC_LOG_FATAL("misc", "WorldObject::MovePositionToFirstCollision invalid coordinates X: %f and Y: %f were passed!", destx, desty);
         return;
     }
 

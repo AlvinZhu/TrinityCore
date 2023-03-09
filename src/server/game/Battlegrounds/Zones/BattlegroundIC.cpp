@@ -26,6 +26,7 @@
 #include "Vehicle.h"
 #include "Transport.h"
 #include "ScriptedCreature.h"
+#include "BotAITool.h"
 
 BattlegroundIC::BattlegroundIC()
 {
@@ -37,8 +38,10 @@ BattlegroundIC::BattlegroundIC()
     StartMessageIds[BG_STARTING_EVENT_THIRD]  = LANG_BG_IC_START_HALF_MINUTE;
     StartMessageIds[BG_STARTING_EVENT_FOURTH] = LANG_BG_IC_HAS_BEGUN;
 
-    for (uint8 i = 0; i < 2; ++i)
-        factionReinforcements[i] = MAX_REINFORCEMENTS;
+	float scoreFinal = MAX_REINFORCEMENTS * BotUtility::BattlegroundScoreRate;
+	if (scoreFinal < 40) scoreFinal = 40;
+	for (uint8 i = 0; i < 2; ++i)
+		factionReinforcements[i] = scoreFinal;
 
     for (uint8 i = 0; i < BG_IC_MAXDOOR; ++i)
         GateStatus[i] = BG_IC_GATE_OK;
@@ -373,6 +376,14 @@ bool BattlegroundIC::SetupBattleground()
         GetBGObject(i)->SetRespawnTime(10);
 
     return true;
+}
+
+void BattlegroundIC::ResetBGSubclass()
+{
+	float scoreFinal = MAX_REINFORCEMENTS * BotUtility::BattlegroundScoreRate;
+	if (scoreFinal < 40) scoreFinal = 40;
+	for (uint8 i = 0; i < 2; ++i)
+		factionReinforcements[i] = scoreFinal;
 }
 
 void BattlegroundIC::HandleKillUnit(Creature* unit, Player* killer)
@@ -882,6 +893,80 @@ WorldSafeLocsEntry const* BattlegroundIC::GetClosestGraveYard(Player* player)
         good_entry = sWorldSafeLocsStore.LookupEntry(BG_IC_GraveyardIds[teamIndex+MAX_NODE_TYPES]);
 
     return good_entry;
+}
+
+Creature const* BattlegroundIC::GetClosestGraveCreature(const Player* player)
+{
+	TeamId teamIndex = GetTeamIndexByTeamId(player->GetTeam());
+	std::vector<uint8> nodes;
+	for (uint8 i = 0; i < MAX_NODE_TYPES; ++i)
+	{
+		if (nodePoint[i].faction == player->GetTeamId())
+			nodes.push_back(i);
+	}
+	int32 creatureIndex = BG_IC_NPC_SPIRIT_GUIDE_1 + ((player->GetTeamId() == TEAM_ALLIANCE) ? ICNodePointType::NODE_TYPE_GRAVEYARD_A : ICNodePointType::NODE_TYPE_GRAVEYARD_H) - 2;
+	if (!nodes.empty())
+	{
+		float player_x = player->GetPositionX();
+		float player_y = player->GetPositionY();
+
+		float mindist = 999999.0f;
+		for (uint8 i = 0; i < nodes.size(); ++i)
+		{
+			WorldSafeLocsEntry const*entry = sWorldSafeLocsStore.LookupEntry(BG_IC_GraveyardIds[nodes[i]]);
+			if (!entry)
+				continue;
+			uint32 index = BG_IC_NPC_SPIRIT_GUIDE_1 + nodePoint[nodes[i]].nodeType - 2;
+			float dist = (entry->x - player_x)*(entry->x - player_x) + (entry->y - player_y)*(entry->y - player_y);
+			if (mindist > dist && !(BgCreatures[index].IsEmpty()))
+			{
+				mindist = dist;
+				creatureIndex = index;
+			}
+		}
+		nodes.clear();
+	}
+	if (BgCreatures[creatureIndex].IsEmpty())
+		return NULL;
+	return GetBGCreature(creatureIndex);
+}
+
+GameObject const* BattlegroundIC::GetClosestEnemyFlagByRange(Player* player, float range)
+{
+	GameObject const* pTargetObject = NULL;
+	float mindist = 999999.0f;
+	for (uint8 i = 0; i < MAX_NODE_TYPES; ++i)
+	{
+		ICNodePoint& node = nodePoint[i];
+		if (node.faction == player->GetTeamId())
+			continue;
+		GameObject const* pObject = GetBGObject(node.gameobject_type);
+		if (!pObject)
+			continue;
+		float distance = pObject->GetDistance(player->GetPosition());
+		if (distance < range && distance < mindist)
+		{
+			mindist = distance;
+			pTargetObject = pObject;
+		}
+	}
+	return pTargetObject;
+}
+
+uint32 BattlegroundIC::GetNodeObjectType(uint32 type)
+{
+	if (type >= MAX_NODE_TYPES)
+		return 0;
+	ICNodePoint& node = nodePoint[type];
+	return node.gameobject_type;
+}
+
+bool BattlegroundIC::NodeIsOccupied(uint32 type, TeamId team)
+{
+	if (type >= MAX_NODE_TYPES)
+		return false;
+	ICNodePoint& node = nodePoint[type];
+	return node.faction == team;
 }
 
 bool BattlegroundIC::IsAllNodesControlledByTeam(uint32 team) const

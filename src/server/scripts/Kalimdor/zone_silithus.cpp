@@ -40,7 +40,122 @@ EndContentData */
 #include "ScriptedGossip.h"
 #include "Group.h"
 #include "Player.h"
+/*###
+## npcs_rutgar_and_frankal
+###*/
 
+//gossip item text best guess
+#define GOSSIP_ITEM1 "I seek information about Natalia"
+
+#define GOSSIP_ITEM2 "That sounds dangerous!"
+#define GOSSIP_ITEM3 "What did you do?"
+#define GOSSIP_ITEM4 "Who?"
+#define GOSSIP_ITEM5 "Women do that. What did she demand?"
+#define GOSSIP_ITEM6 "What do you mean?"
+#define GOSSIP_ITEM7 "What happened next?"
+
+#define GOSSIP_ITEM11 "Yes, please continue"
+#define GOSSIP_ITEM12 "What language?"
+#define GOSSIP_ITEM13 "The Priestess attacked you?!"
+#define GOSSIP_ITEM14 "I should ask the monkey about this"
+#define GOSSIP_ITEM15 "Then what..."
+
+enum RutgarAndFrankal //trigger creatures to kill
+{
+    TRIGGER_FRANKAL     = 15221,
+    TRIGGER_RUTGAR      = 15222
+};
+
+class npcs_rutgar_and_frankal : public CreatureScript
+{
+public:
+    npcs_rutgar_and_frankal() : CreatureScript("npcs_rutgar_and_frankal") { }
+
+    bool OnGossipSelect(Player* player, Creature* creature, uint32 /*sender*/, uint32 action) override
+    {
+        player->PlayerTalkClass->ClearMenus();
+        switch (action)
+        {
+            case GOSSIP_ACTION_INFO_DEF:
+                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_ITEM2, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
+                player->SEND_GOSSIP_MENU(7755, creature->GetGUID());
+                break;
+            case GOSSIP_ACTION_INFO_DEF + 1:
+                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_ITEM3, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 2);
+                player->SEND_GOSSIP_MENU(7756, creature->GetGUID());
+                break;
+            case GOSSIP_ACTION_INFO_DEF + 2:
+                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_ITEM4, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 3);
+                player->SEND_GOSSIP_MENU(7757, creature->GetGUID());
+                break;
+            case GOSSIP_ACTION_INFO_DEF + 3:
+                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_ITEM5, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 4);
+                player->SEND_GOSSIP_MENU(7758, creature->GetGUID());
+                break;
+            case GOSSIP_ACTION_INFO_DEF + 4:
+                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_ITEM6, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 5);
+                player->SEND_GOSSIP_MENU(7759, creature->GetGUID());
+                break;
+            case GOSSIP_ACTION_INFO_DEF + 5:
+                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_ITEM7, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 6);
+                player->SEND_GOSSIP_MENU(7760, creature->GetGUID());
+                break;
+            case GOSSIP_ACTION_INFO_DEF + 6:
+                player->SEND_GOSSIP_MENU(7761, creature->GetGUID());
+                                                                //'kill' our trigger to update quest status
+                player->KilledMonsterCredit(TRIGGER_RUTGAR);
+                break;
+
+            case GOSSIP_ACTION_INFO_DEF + 9:
+                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_ITEM11, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 11);
+                player->SEND_GOSSIP_MENU(7762, creature->GetGUID());
+                break;
+            case GOSSIP_ACTION_INFO_DEF + 10:
+                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_ITEM12, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 11);
+                player->SEND_GOSSIP_MENU(7763, creature->GetGUID());
+                break;
+            case GOSSIP_ACTION_INFO_DEF + 11:
+                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_ITEM13, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 12);
+                player->SEND_GOSSIP_MENU(7764, creature->GetGUID());
+                break;
+            case GOSSIP_ACTION_INFO_DEF + 12:
+                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_ITEM14, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 13);
+                player->SEND_GOSSIP_MENU(7765, creature->GetGUID());
+                break;
+            case GOSSIP_ACTION_INFO_DEF + 13:
+                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_ITEM15, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 14);
+                player->SEND_GOSSIP_MENU(7766, creature->GetGUID());
+                break;
+            case GOSSIP_ACTION_INFO_DEF + 14:
+                player->SEND_GOSSIP_MENU(7767, creature->GetGUID());
+                                                                //'kill' our trigger to update quest status
+                player->KilledMonsterCredit(TRIGGER_FRANKAL);
+                break;
+        }
+        return true;
+    }
+
+    bool OnGossipHello(Player* player, Creature* creature) override
+    {
+        if (creature->IsQuestGiver())
+            player->PrepareQuestMenu(creature->GetGUID());
+
+        if (player->GetQuestStatus(8304) == QUEST_STATUS_INCOMPLETE &&
+            creature->GetEntry() == 15170 &&
+            !player->GetReqKillOrCastCurrentCount(8304, TRIGGER_RUTGAR))
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_ITEM1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF);
+
+        if (player->GetQuestStatus(8304) == QUEST_STATUS_INCOMPLETE &&
+            creature->GetEntry() == 15171 &&
+            player->GetReqKillOrCastCurrentCount(8304, TRIGGER_RUTGAR))
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_ITEM1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+9);
+
+        player->SEND_GOSSIP_MENU(7754, creature->GetGUID());
+
+        return true;
+    }
+
+};
 /*#####
 # Quest: A Pawn on the Eternal Board
 #####*/
@@ -1373,4 +1488,5 @@ void AddSC_silithus()
     new npc_anachronos_the_ancient();
     new npc_qiraj_war_spawn();
     new go_wind_stone();
+new npcs_rutgar_and_frankal();
 }

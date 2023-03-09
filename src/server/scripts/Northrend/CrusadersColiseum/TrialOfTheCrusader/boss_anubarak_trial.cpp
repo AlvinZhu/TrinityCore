@@ -324,9 +324,9 @@ class boss_anubarak_trial : public CreatureScript
                         case EVENT_SUBMERGE:
                             if (!_reachedPhase3 && !me->HasAura(SPELL_BERSERK))
                             {
-                                DoCast(me, SPELL_SUBMERGE_ANUBARAK);
-                                DoCast(me, SPELL_CLEAR_ALL_DEBUFFS);
-                                me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE);
+                                //DoCast(me, SPELL_SUBMERGE_ANUBARAK);
+                                //DoCast(me, SPELL_CLEAR_ALL_DEBUFFS);
+                                //me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE);
                                 Talk(EMOTE_BURROWER);
                                 events.SetPhase(PHASE_SUBMERGED);
                                 events.ScheduleEvent(EVENT_PURSUING_SPIKE, 2*IN_MILLISECONDS, 0, PHASE_SUBMERGED);
@@ -335,7 +335,7 @@ class boss_anubarak_trial : public CreatureScript
                             }
                             break;
                         case EVENT_PURSUING_SPIKE:
-                            DoCast(SPELL_SPIKE_CALL);
+                           // DoCast(SPELL_SPIKE_CALL);
                             break;
                         case EVENT_SUMMON_SCARAB:
                         {
@@ -360,7 +360,7 @@ class boss_anubarak_trial : public CreatureScript
                         }
                         case EVENT_EMERGE:
                             events.ScheduleEvent(EVENT_SUBMERGE, 80*IN_MILLISECONDS, 0, PHASE_MELEE);
-                            DoCast(SPELL_SPIKE_TELE);
+                            //DoCast(SPELL_SPIKE_TELE);
                             summons.DespawnEntry(NPC_SPIKE);
                             me->RemoveAurasDueToSpell(SPELL_SUBMERGE_ANUBARAK);
                             me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE);
@@ -731,8 +731,8 @@ class npc_anubarak_spike : public CreatureScript
                         switch (_phase)
                         {
                             case PHASE_NO_MOVEMENT:
-                                DoCast(me, SPELL_SPIKE_SPEED1);
-                                DoCast(me, SPELL_SPIKE_TRAIL);
+                                //DoCast(me, SPELL_SPIKE_SPEED1);
+                                //DoCast(me, SPELL_SPIKE_TRAIL);
                                 _phase = PHASE_IMPALE_NORMAL;
                                 if (Unit* target2 = SelectTarget(SELECT_TARGET_RANDOM, 0, 0.0f, true))
                                 {
@@ -742,12 +742,12 @@ class npc_anubarak_spike : public CreatureScript
                                 _phaseSwitchTimer = 7*IN_MILLISECONDS;
                                 return;
                             case PHASE_IMPALE_NORMAL:
-                                DoCast(me, SPELL_SPIKE_SPEED2);
+                                //DoCast(me, SPELL_SPIKE_SPEED2);
                                 _phase = PHASE_IMPALE_MIDDLE;
                                 _phaseSwitchTimer = 7*IN_MILLISECONDS;
                                 return;
                             case PHASE_IMPALE_MIDDLE:
-                                DoCast(me, SPELL_SPIKE_SPEED3);
+                                //DoCast(me, SPELL_SPIKE_SPEED3);
                                 _phase = PHASE_IMPALE_FAST;
                                 _phaseSwitchTimer = 0;
                                 return;

@@ -210,16 +210,16 @@ class boss_warchief_kargath_bladefist : public CreatureScript
                 if (!UpdateVictim())
                     return;
 
-                if (Assassins_Timer)
-                {
-                    if (Assassins_Timer <= diff)
-                    {
-                        SpawnAssassin();
-                        Assassins_Timer = 0;
-                    }
-                    else
-                        Assassins_Timer -= diff;
-                }
+                //if (Assassins_Timer)
+                //{
+                //    if (Assassins_Timer <= diff)
+                //    {
+                //        SpawnAssassin();
+                //        Assassins_Timer = 0;
+                //    }
+                //    else
+                //        Assassins_Timer -= diff;
+                //}
 
                 if (InBlade)
                 {
@@ -282,29 +282,29 @@ class boss_warchief_kargath_bladefist : public CreatureScript
                             Charge_timer -= diff;
                     }
 
-                    if (Summon_Assistant_Timer <= diff)
-                    {
-                        for (uint8 i = 0; i < summoned; ++i)
-                        {
-                            switch (urand(0, 2))
-                            {
-                                case 0:
-                                    me->SummonCreature(NPC_HEARTHEN_GUARD, AddsEntrance[0], AddsEntrance[1], AddsEntrance[2], 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 30000);
-                                    break;
-                                case 1:
-                                    me->SummonCreature(NPC_SHARPSHOOTER_GUARD, AddsEntrance[0], AddsEntrance[1], AddsEntrance[2], 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 30000);
-                                    break;
-                                case 2:
-                                    me->SummonCreature(NPC_REAVER_GUARD, AddsEntrance[0], AddsEntrance[1], AddsEntrance[2], 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 30000);
-                                    break;
-                            }
-                        }
-                        if (urand(0, 9) < 2)
-                            ++summoned;
-                        Summon_Assistant_Timer = urand(25000, 35000);
-                    }
-                    else
-                        Summon_Assistant_Timer -= diff;
+                    //if (Summon_Assistant_Timer <= diff)
+                    //{
+                    //    for (uint8 i = 0; i < summoned; ++i)
+                    //    {
+                    //        switch (urand(0, 2))
+                    //        {
+                    //            case 0:
+                    //                me->SummonCreature(NPC_HEARTHEN_GUARD, AddsEntrance[0], AddsEntrance[1], AddsEntrance[2], 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 30000);
+                    //                break;
+                    //            case 1:
+                    //                me->SummonCreature(NPC_SHARPSHOOTER_GUARD, AddsEntrance[0], AddsEntrance[1], AddsEntrance[2], 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 30000);
+                    //                break;
+                    //            case 2:
+                    //                me->SummonCreature(NPC_REAVER_GUARD, AddsEntrance[0], AddsEntrance[1], AddsEntrance[2], 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 30000);
+                    //                break;
+                    //        }
+                    //    }
+                    //    if (urand(0, 9) < 2)
+                    //        ++summoned;
+                    //    Summon_Assistant_Timer = urand(25000, 35000);
+                    //}
+                    //else
+                    //    Summon_Assistant_Timer -= diff;
 
                     DoMeleeAttackIfReady();
                 }

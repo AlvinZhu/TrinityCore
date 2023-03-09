@@ -38,11 +38,15 @@ enum ArenaWorldStates
 
 class TC_GAME_API Arena : public Battleground
 {
-    protected:
+	typedef	std::list<Player*>	PLAYERS;
+	public:
+		void Update(uint32 diff) override;
+
+	protected:
         Arena();
 
         void AddPlayer(Player* player) override;
-        void RemovePlayer(Player* /*player*/, ObjectGuid /*guid*/, uint32 /*team*/) override;
+        void RemovePlayer(Player* player, ObjectGuid /*guid*/, uint32 /*team*/) override;
 
         void FillInitialWorldStates(WorldPacket& data) override;
         void UpdateArenaWorldState();
@@ -50,9 +54,47 @@ class TC_GAME_API Arena : public Battleground
         void HandleKillPlayer(Player* player, Player* killer) override;
 
     private:
-        void RemovePlayerAtLeave(ObjectGuid guid, bool transport, bool sendPacket) override;
+		void CommandCombat(TeamId commandTeam, PLAYERS& alliances, PLAYERS& hordes);
+		bool NeedHarassHealer(PLAYERS& selfPlayer, PLAYERS& enemyPlayer);
+		bool HasFullSuppressSpell(PLAYERS& selfPlayer);
+		bool CanFullSuppressPlayer(PLAYERS& enemyPlayers);
+		bool SuppressRealPlayer(PLAYERS& selfPlayer, PLAYERS& enemyPlayer);
+		bool SuppressHealerPlayer(PLAYERS& selfPlayer, PLAYERS& enemyPlayer);
+		bool SuppressMightinessPlayer(PLAYERS& selfPlayer, PLAYERS& enemyPlayer);
+		void FollowEnemyHealer(PLAYERS& selfPlayer, PLAYERS& enemyPlayer);
+		PLAYERS::iterator GetListHealer(PLAYERS& players);
+		PLAYERS::iterator GetListMeleer(PLAYERS& players);
+		PLAYERS::iterator GetListRanger(PLAYERS& players);
+		bool HasAuraMechanic(Unit* pTarget, Mechanics mask);
+		bool CanSelectTarget(Player* pTarget);
+		bool MeleeTargetIsSuppress(Player* pTarget);
+		bool TargetIsOverSuppress(Player* pTarget);
+		bool IsHealerBot(Player* pTarget);
+		bool IsMeleeBot(Player* pTarget);
+		bool IsAllMeleeBot(Player* pTarget);
+		bool IsRangeBot(Player* pTarget);
+		bool IsMightiness(Player* pTarget);
+		bool CanFullHealerEnemy(PLAYERS& players);
+		bool CanFullHealerEnemy2(PLAYERS& players);
+		bool ExistCtrlSpellCasting(PLAYERS& players);
+		bool ExistRealPlayerByRange(PLAYERS& players);
+		bool ExistControler(PLAYERS& players);
+		bool ExistMightinessClasses(PLAYERS& players);
+		bool ExistMightinessHealer(PLAYERS& players);
+		Player* FindPriorAttackTarget(PLAYERS& players);
+		void NormalTactics(PLAYERS& comLists, PLAYERS& canSelectEnemys);
+
+		void RemovePlayerAtLeave(ObjectGuid guid, bool transport, bool sendPacket) override;
         void CheckWinConditions() override;
         void EndBattleground(uint32 winner) override;
+		void InsureArenaAllPlayerFlag();
+		void InsureArenaFlag(Player* player, bool init = false);
+		bool AssignTactics(PLAYERS& comLists, PLAYERS& enemyLists);
+
+	private:
+		uint32 m_UpdateTick;
+		bool m_StartTryMount;
+		TeamId m_LastCommandTeam;
 };
 
 #endif // TRINITY_ARENA_H

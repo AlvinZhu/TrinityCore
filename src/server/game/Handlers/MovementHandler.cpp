@@ -30,6 +30,7 @@
 #include "InstanceSaveMgr.h"
 #include "ObjectMgr.h"
 #include "Vehicle.h"
+#include "BotAITool.h"
 
 #define MOVEMENT_PACKET_TIME_DELAY 0
 
@@ -246,6 +247,7 @@ void WorldSession::HandleMoveTeleportAck(WorldPacket& recvData)
 
     //lets process all delayed operations on successful teleport
     GetPlayer()->ProcessDelayedOperations();
+	BotUtility::TryTeleportPlayerPet(GetPlayer(), true);
 }
 
 void WorldSession::HandleMovementOpcodes(WorldPacket& recvData)

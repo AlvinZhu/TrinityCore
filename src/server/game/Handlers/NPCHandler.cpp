@@ -36,6 +36,9 @@
 #include "CreatureAI.h"
 #include "SpellInfo.h"
 
+//Bot
+#include "bothelper.h"
+
 enum StableResultCode
 {
     STABLE_ERR_MONEY        = 0x01,                         // "you don't have enough money"
@@ -303,6 +306,34 @@ void WorldSession::HandleGossipHelloOpcode(WorldPacket& recvData)
 
     ObjectGuid guid;
     recvData >> guid;
+
+	//Bot
+	if (guid == _player->GetGUID())
+	{
+		if (!_player->GetBotHelper())
+		{
+			TC_LOG_ERROR("network", "WORLD: HandleGossipSelectOptionOpcode - Player (GUID: %u) do not have a helper on gossip hello.", guid.GetCounter());
+			return;
+		}
+		_player->GetBotHelper()->OnGossipHello(_player);
+		return;
+	}
+	else if (guid.IsCreature())
+	{
+		if (Creature* qBot = ObjectAccessor::GetCreatureOrPetOrVehicle(*_player, guid))
+		{
+			if (qBot->IsQuestBot() && _player->IsAlive() &&	qBot->IsAlive() )
+			{
+				if (!sScriptMgr->OnGossipHello(_player, qBot))
+				{
+					TC_LOG_ERROR("network", "WORLD: HandleGossipHelloOpcode - qBot %s (Entry: %u) returned false on gossip hello.",
+						qBot->GetName().c_str(), qBot->GetEntry());
+				}
+				return;
+			}
+		}
+	}
+	//end Bot
 
     Creature* unit = GetPlayer()->GetNPCIfCanInteractWith(guid, UNIT_NPC_FLAG_GOSSIP);
     if (!unit)
@@ -658,7 +689,9 @@ void WorldSession::HandleUnstablePetCallback(PreparedQueryResult result, uint32 
     }
 
     CreatureTemplate const* creatureInfo = sObjectMgr->GetCreatureTemplate(petEntry);
-    if (!creatureInfo || !creatureInfo->IsTameable(_player->CanTameExoticPets()))
+//    if (!creatureInfo || !creatureInfo->IsTameable(_player->CanTameExoticPets()))
+    //hxsd
+    if (!creatureInfo )
     {
         // if problem in exotic pet
         if (creatureInfo && creatureInfo->IsTameable(true))
@@ -789,7 +822,9 @@ void WorldSession::HandleStableSwapPetCallback(PreparedQueryResult result, uint3
     }
 
     CreatureTemplate const* creatureInfo = sObjectMgr->GetCreatureTemplate(petEntry);
-    if (!creatureInfo || !creatureInfo->IsTameable(_player->CanTameExoticPets()))
+    //hxsd
+    if (!creatureInfo)
+    //if (!creatureInfo || !creatureInfo->IsTameable(_player->CanTameExoticPets()))
     {
         // if problem in exotic pet
         if (creatureInfo && creatureInfo->IsTameable(true))

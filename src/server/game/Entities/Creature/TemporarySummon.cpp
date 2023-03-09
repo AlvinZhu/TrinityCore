@@ -45,7 +45,52 @@ Creature* TempSummon::GetSummonerCreatureBase() const
 
 void TempSummon::Update(uint32 diff)
 {
+	if (_isnan(diff))
+ 		return;
+	
     Creature::Update(diff);
+
+
+//hxsd
+if (GetOwner())
+{
+	if (Unit* owner = GetOwner())
+	{
+		if (owner->GetTypeId() == TYPEID_PLAYER && GetEntry()>=170001 && GetEntry()<= 170500)
+		{
+
+				if (GetEntry()>=170001 && GetEntry()<= 170500 && owner->ToPlayer()->IsInWorld() && IsInWorld() && IsAlive() && GetMapId() == owner->GetMapId() && GetDistance(owner) < 10 && ((GetPositionZ()-owner->GetPositionZ()) >2 || (GetPositionZ()-owner->GetPositionZ()) <-2))
+				{
+					
+					  GetMotionMaster()->MovePoint(owner->GetMapId(), owner->GetPositionX(), owner->GetPositionY(), (owner->GetPositionZ()+0.1));
+					GetMotionMaster()->MoveFollow(owner, irand(1,8), GetFollowAngle());
+				}
+
+
+			if (!IsInCombat() && owner->ToPlayer()->IsInWorld() && IsInWorld() && IsAlive() )
+{
+			if (GetEntry()>=170001 && GetEntry()<= 170500 && owner->ToPlayer()->IsInWorld())
+			{
+				if (GetMapId() == owner->GetMapId() && GetDistance(owner) > 80)
+				{
+					NearTeleportTo(owner->GetPositionX(), owner->GetPositionY(), owner->GetPositionZ() + 0.1, owner->GetOrientation());
+					GetMotionMaster()->MoveFollow(owner, irand(1,8), GetFollowAngle());
+					CombatStop();
+				}
+			}
+			else
+			{
+	if (GetEntry()>=170001 && GetEntry()<= 170500)
+	{
+				UnSummon();
+				return;
+}
+			}
+}			
+		}
+		
+	}
+}
 
     if (m_deathState == DEAD)
     {
@@ -258,6 +303,14 @@ void TempSummon::UnSummon(uint32 msTime)
     Unit* owner = GetSummoner();
     if (owner && owner->GetTypeId() == TYPEID_UNIT && owner->ToCreature()->IsAIEnabled)
         owner->ToCreature()->AI()->SummonedCreatureDespawn(this);
+
+    //
+    if (GetIAmABot() || GetIAmABotsPet())
+    {
+        //TC_LOG_ERROR("TempSummon::UnSummon(): Trying to unsummon Bot %s(owner: %s). Aborted", GetName(), GetBotOwner()->GetName());
+        return;
+    }
+    //end npcbots
 
     AddObjectToRemoveList();
 }

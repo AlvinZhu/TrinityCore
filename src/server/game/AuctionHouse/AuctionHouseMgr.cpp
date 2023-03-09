@@ -67,6 +67,19 @@ AuctionHouseObject* AuctionHouseMgr::GetAuctionsMap(uint32 factionTemplateId)
         return &mNeutralAuctions;
 }
 
+AuctionHouseObject* AuctionHouseMgr::GetAuctionsMap(TeamId team)
+{
+	if (sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_INTERACTION_AUCTION))
+		return &mNeutralAuctions;
+	if (team == TEAM_NEUTRAL)
+		return &mNeutralAuctions;
+	else if (team == TEAM_ALLIANCE)
+		return &mAllianceAuctions;
+	else if (team == TEAM_HORDE)
+		return &mHordeAuctions;
+	return &mNeutralAuctions;
+}
+
 AuctionHouseObject* AuctionHouseMgr::GetAuctionsMapByHouseId(uint8 auctionHouseId)
 {
     if (sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_INTERACTION_AUCTION))
@@ -136,7 +149,7 @@ void AuctionHouseMgr::SendAuctionWonMail(AuctionEntry* auction, SQLTransaction& 
     else
     {
         bidderAccId = sObjectMgr->GetPlayerAccountIdByGUID(bidderGuid);
-        logGmTrade = AccountMgr::HasPermission(bidderAccId, rbac::RBAC_PERM_LOG_GM_TRADE, realm.Id.Realm);
+		logGmTrade = false;// AccountMgr::HasPermission(bidderAccId, rbac::RBAC_PERM_LOG_GM_TRADE, realm.Id.Realm);
 
         if (logGmTrade && !sObjectMgr->GetPlayerNameByGUID(bidderGuid, bidderName))
             bidderName = sObjectMgr->GetTrinityStringForDBCLocale(LANG_UNKNOWN);
@@ -546,6 +559,25 @@ AuctionHouseEntry const* AuctionHouseMgr::GetAuctionHouseEntry(uint32 factionTem
     return sAuctionHouseStore.LookupEntry(houseid);
 }
 
+AuctionHouseEntry const* AuctionHouseMgr::GetAuctionHouseEntry(TeamId team)
+{
+	uint32 houseid = AUCTIONHOUSE_NEUTRAL; // goblin auction house
+
+	if (!sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_INTERACTION_AUCTION))
+	{
+		if (team == TEAM_NEUTRAL)
+			houseid = AUCTIONHOUSE_NEUTRAL; // goblin auction house
+		else if (team == TEAM_ALLIANCE)
+			houseid = AUCTIONHOUSE_ALLIANCE; // human auction house
+		else if (team == TEAM_HORDE)
+			houseid = AUCTIONHOUSE_HORDE; // orc auction house
+		else
+			houseid = AUCTIONHOUSE_NEUTRAL; // goblin auction house
+	}
+
+	return sAuctionHouseStore.LookupEntry(houseid);
+}
+
 AuctionHouseEntry const* AuctionHouseMgr::GetAuctionHouseEntryFromHouse(uint8 houseId)
 {
     return (sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_INTERACTION_AUCTION)) ? sAuctionHouseStore.LookupEntry(AUCTIONHOUSE_NEUTRAL) : sAuctionHouseStore.LookupEntry(houseId);
@@ -588,6 +620,7 @@ void AuctionHouseObject::Update()
             ++itr;
     }
 
+	//int32 onceMaxProcess = 10;
     SQLTransaction trans = CharacterDatabase.BeginTransaction();
 
     for (AuctionEntryMap::iterator it = AuctionsMap.begin(); it != AuctionsMap.end();)
@@ -604,8 +637,9 @@ void AuctionHouseObject::Update()
         ///- Either cancel the auction if there was no bidder
         if (auction->bidder == 0 && auction->bid == 0)
         {
-            sAuctionMgr->SendAuctionExpiredMail(auction, trans);
-            sScriptMgr->OnAuctionExpire(this, auction);
+			continue;// Transaction timeout, no delete
+            //sAuctionMgr->SendAuctionExpiredMail(auction, trans);
+            //sScriptMgr->OnAuctionExpire(this, auction);
         }
         ///- Or perform the transaction
         else
@@ -623,6 +657,10 @@ void AuctionHouseObject::Update()
 
         sAuctionMgr->RemoveAItem(auction->itemGUIDLow);
         RemoveAuction(auction);
+
+		//--onceMaxProcess;
+		//if (onceMaxProcess <= 0)
+		//	break;
     }
 
     // Run DB changes
@@ -678,7 +716,7 @@ void AuctionHouseObject::BuildListAuctionItems(WorldPacket& data, Player* player
         {
             AuctionEntry* Aentry = itr->second;
             // Skip expired auctions
-            if (Aentry->expire_time < curTime)
+			if (Aentry->expire_time < curTime && (Aentry->bidder != 0 || Aentry->bid != 0))
                 continue;
 
             Item* item = sAuctionMgr->GetAItem(Aentry->itemGUIDLow);
@@ -700,8 +738,8 @@ void AuctionHouseObject::BuildListAuctionItems(WorldPacket& data, Player* player
     {
         AuctionEntry* Aentry = itr->second;
         // Skip expired auctions
-        if (Aentry->expire_time < curTime)
-            continue;
+		if (Aentry->expire_time < curTime && (Aentry->bidder != 0 || Aentry->bid != 0))
+			continue;
 
         Item* item = sAuctionMgr->GetAItem(Aentry->itemGUIDLow);
         if (!item)
@@ -820,7 +858,7 @@ bool AuctionEntry::BuildAuctionInfo(WorldPacket& data, Item* sourceItem) const
     data << uint32(bid ? GetAuctionOutBid() : 0);
     // Minimal outbid
     data << uint32(buyout);                                         // Auction->buyout
-    data << uint32((expire_time - time(NULL)) * IN_MILLISECONDS);   // time left
+    data << uint32(0);   // time left
     data << uint64(bidder);                                         // auction->bidder current
     data << uint32(bid);                                            // current bid
     return true;

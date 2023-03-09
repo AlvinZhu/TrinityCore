@@ -37,9 +37,14 @@ class Player;
 class SpellInfo;
 class WorldSession;
 
+// npcbot
+class bot_ai;
+class bot_minion_ai;
+class bot_pet_ai;
+
 enum CreatureFlagsExtra
 {
-    CREATURE_FLAG_EXTRA_INSTANCE_BIND        = 0x00000001,       // creature kill bind instance with killer and killer's group
+    CREATURE_FLAG_EXTRA_INSTANCE_BIND       = 0x00000001,       // creature kill bind instance with killer and killer's group
     CREATURE_FLAG_EXTRA_CIVILIAN             = 0x00000002,       // not aggro (ignore faction/reputation hostility)
     CREATURE_FLAG_EXTRA_NO_PARRY             = 0x00000004,       // creature can't parry
     CREATURE_FLAG_EXTRA_NO_PARRY_HASTEN      = 0x00000008,       // creature can't counter-attack at parry
@@ -119,6 +124,11 @@ struct TC_GAME_API CreatureTemplate
     uint32  SkinLootId;
     int32   resistance[MAX_SPELL_SCHOOL];
     uint32  spells[MAX_CREATURE_SPELLS];
+    uint32  spells2[12];
+    uint32  timea;
+    uint32  timeb;
+    uint32  timec;
+    uint32  timed;
     uint32  PetSpellDataId;
     uint32  VehicleId;
     uint32  mingold;
@@ -274,6 +284,9 @@ struct CreatureData
     uint32 npcflag;
     uint32 unit_flags;                                      // enum UnitFlags mask values
     uint32 dynamicflags;
+//hxsd
+    uint32  nname;
+    uint32 lvl;
     bool dbData;
 };
 
@@ -572,6 +585,7 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         SpellInfo const* reachWithSpellCure(Unit* victim);
 
         uint32 m_spells[MAX_CREATURE_SPELLS];
+        uint32 m_spells2[12];
 
         bool CanStartAttack(Unit const* u, bool force) const;
         float GetAttackDistance(Unit const* player) const;
@@ -697,6 +711,46 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         void SetTextRepeatId(uint8 textGroup, uint8 id);
         void ClearTextRepeatGroup(uint8 textGroup);
 
+        //Bot commands
+        Player* GetBotOwner() const { return m_bot_owner; }
+        void SetBotOwner(Player* newowner) { m_bot_owner = newowner; }
+        Creature* GetCreatureOwner() const { return m_creature_owner; }
+        void SetCreatureOwner(Creature* newCreOwner) { m_creature_owner = newCreOwner; }
+        Creature* GetBotsPet() const { return m_bots_pet; }
+        void SetBotsPetDied();
+        void SetBotsPet(Creature* newpet) { /*ASSERT (!m_bots_pet);*/ m_bots_pet = newpet; }
+        void SetIAmABot(bool bot = true);
+        bool GetIAmABot() const;
+        bool GetIAmABotsPet() const;
+        void SetBotClass(uint8 myclass) { m_bot_class = myclass; }
+        uint8 GetBotClass() const;
+        uint8 GetBotRoles() const;
+        bot_ai* GetBotAI() const { return bot_AI; }
+        bot_minion_ai* GetBotMinionAI() const;
+        bot_pet_ai* GetBotPetAI() const;
+        void InitBotAI(bool asPet = false);
+        void SetBotCommandState(CommandStates st, bool force = false);
+        CommandStates GetBotCommandState() const;
+        void ApplyBotDamageMultiplierMelee(uint32& damage, CalcDamageInfo& damageinfo) const;
+        void ApplyBotDamageMultiplierMelee(int32& damage, SpellNonMeleeDamage& damageinfo, SpellInfo const* spellInfo, WeaponAttackType attackType, bool& crit) const;
+        void ApplyBotDamageMultiplierSpell(int32& damage, SpellNonMeleeDamage& damageinfo, SpellInfo const* spellInfo, WeaponAttackType attackType, bool& crit) const;
+        void ApplyBotDamageMultiplierEffect(SpellInfo const* spellInfo, uint8 effect_index, float &value) const;
+        void SetBotShouldUpdateStats();
+        void OnBotSummon(Creature* summon);
+        void OnBotDespawn(Creature* summon);
+        void SetCanUpdate(bool can) { m_canUpdate = can; }
+        void RemoveBotItemBonuses(uint8 slot);
+        void ApplyBotItemBonuses(uint8 slot);
+        bool CanUseOffHand() const;
+        bool CanUseRanged() const;
+        bool CanEquip(ItemTemplate const* item, uint8 slot) const;
+        bool Unequip(uint8 slot) const;
+        bool Equip(uint32 itemId, uint8 slot) const;
+        bool ResetEquipment(uint8 slot) const;
+        //advanced
+        bool IsQuestBot() const;
+        //End Bot commands
+
     protected:
         bool CreateFromProto(ObjectGuid::LowType guidlow, uint32 entry, CreatureData const* data = nullptr, uint32 vehId = 0);
         bool InitEntry(uint32 entry, CreatureData const* data = nullptr);
@@ -754,6 +808,15 @@ class TC_GAME_API Creature : public Unit, public GridObject<Creature>, public Ma
         bool CanAlwaysSee(WorldObject const* obj) const override;
 
     private:
+        //bot system
+        Player* m_bot_owner;
+        Creature* m_creature_owner;
+        Creature* m_bots_pet;
+        bot_ai* bot_AI;
+        uint8 m_bot_class;
+        bool m_canUpdate;
+        //end bot system
+
         void ForcedDespawn(uint32 timeMSToDespawn = 0);
         bool CheckNoGrayAggroConfig(uint32 playerLevel, uint32 creatureLevel) const; // No aggro from gray creatures
 

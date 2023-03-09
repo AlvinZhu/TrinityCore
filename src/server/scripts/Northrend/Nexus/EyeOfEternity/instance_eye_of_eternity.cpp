@@ -43,9 +43,35 @@ public:
             SetHeaders(DataHeader);
             SetBossNumber(MAX_ENCOUNTER);
             LoadBossBoundaries(boundaries);
-        }
+			//BotAttacksForBoss = NULL;
+		}
 
-        void OnPlayerEnter(Player* player) override
+		//BotAttackCreature* BotAttacksForBoss;
+
+		//BotAttackCreature* GetBotAttacksCreature(Creature* boss) override
+		//{
+		//	if (boss == NULL)
+		//		return BotAttacksForBoss;
+		//	if (!BotAttacksForBoss)
+		//	{
+		//		BotAttacksForBoss = new BotAttackCreature(boss, 1000);
+		//		return BotAttacksForBoss;
+		//	}
+		//	else
+		//	{
+		//		if (BotAttacksForBoss->MatchMainCreature(boss))
+		//			return BotAttacksForBoss;
+		//		else
+		//		{
+		//			delete BotAttacksForBoss;
+		//			BotAttacksForBoss = new BotAttackCreature(boss, 1000);
+		//			return BotAttacksForBoss;
+		//		}
+		//	}
+		//	return NULL;
+		//}
+		
+		void OnPlayerEnter(Player* player) override
         {
             if (GetBossState(DATA_MALYGOS_EVENT) == DONE)
                 player->CastSpell(player, SPELL_SUMMOM_RED_DRAGON_BUDDY, true);
@@ -168,8 +194,8 @@ public:
                 if (Creature* malygos = instance->GetCreature(malygosGUID))
                     malygos->AI()->DoAction(0); // ACTION_LAND_ENCOUNTER_START
 
-                if (GameObject* exitPortal = instance->GetGameObject(exitPortalGUID))
-                    exitPortal->Delete();
+                //if (GameObject* exitPortal = instance->GetGameObject(exitPortalGUID))
+                   // exitPortal->Delete();
             }
         }
 

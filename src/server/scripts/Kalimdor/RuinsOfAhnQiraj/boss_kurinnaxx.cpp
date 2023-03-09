@@ -106,10 +106,17 @@ class boss_kurinnaxx : public CreatureScript
                             events.ScheduleEvent(EVENT_MORTAL_WOUND, 8000);
                             break;
                         case EVENT_SANDTRAP:
-                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100, true))
-                                target->CastSpell(target, SPELL_SANDTRAP, true);
-                            else if (Unit* victim = me->GetVictim())
-                                victim->CastSpell(victim, SPELL_SANDTRAP, true);
+							if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100, true))
+							{
+								target->CastSpell(target, SPELL_SANDTRAP, true);
+								if (target == me->GetVictim())
+									BotSwitchPullTarget(me);
+							}
+							else if (Unit* victim = me->GetVictim())
+							{
+								victim->CastSpell(victim, SPELL_SANDTRAP, true);
+								BotSwitchPullTarget(me);
+							}
                             events.ScheduleEvent(EVENT_SANDTRAP, urand(5000, 15000));
                             break;
                         case EVENT_WIDE_SLASH:

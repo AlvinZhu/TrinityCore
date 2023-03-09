@@ -30,6 +30,19 @@
 PlayerSocial::PlayerSocial(): m_playerGUID()
 { }
 
+std::vector<ObjectGuid> PlayerSocial::GetAllFriends()
+{
+	std::vector<ObjectGuid> friends;
+	for (PlayerSocialMap::iterator itr = m_playerSocialMap.begin(); itr != m_playerSocialMap.end(); ++itr)
+	{
+		ObjectGuid& guid = ObjectGuid(HighGuid::Player, itr->first);
+		Player* target = ObjectAccessor::FindPlayer(guid);
+		if (!target)
+			friends.push_back(guid);
+	}
+	return friends;
+}
+
 uint32 PlayerSocial::GetNumberOfSocialsWithFlag(SocialFlag flag)
 {
     uint32 counter = 0;

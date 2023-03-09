@@ -32,7 +32,6 @@ enum Say
 
 enum Spells
 {
-    // @todo orb uses the wrong spell, this needs sniffs
     SPELL_MINDCONTROL       = 42013,
     SPELL_CHANNEL           = 45537,
     SPELL_EGG_DESTROY       = 19873,
@@ -87,6 +86,9 @@ public:
             instance->SetData(DATA_EGG_EVENT, NOT_STARTED);
         }
 
+
+
+
         void JustDied(Unit* /*killer*/) override
         {
             _JustDied();
@@ -104,7 +106,7 @@ public:
 
             secondPhase = true;
             me->RemoveAllAuras();
-            me->SetFullHealth();
+            me->SetHealth(me->GetMaxHealth());
         }
 
         void DoAction(int32 action) override
@@ -112,12 +114,14 @@ public:
             if (action == ACTION_PHASE_TWO)
                 DoChangePhase();
         }
-
+            void EnterCombat(Unit* /*who*/) override
+            {
+DoChangePhase();
+            }
         void DamageTaken(Unit* /*who*/, uint32& damage) override
         {
-            // @todo this is wrong - razorgore should still take damage, he should just nuke the whole room and respawn if he dies during P1
-            if (!secondPhase)
-                damage = 0;
+         //   if (!secondPhase)
+         //       damage = 0;
         }
 
         void UpdateAI(uint32 diff) override
@@ -148,7 +152,6 @@ public:
                         break;
                     case EVENT_CONFLAGRATION:
                         DoCastVictim(SPELL_CONFLAGRATION);
-                        // @todo is this even necessary? pretty sure AI ignores targets with disorient by default
                         if (me->GetVictim() && me->EnsureVictim()->HasAura(SPELL_CONFLAGRATION))
                             if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1, 100, true))
                                 me->TauntApply(target);
@@ -178,10 +181,10 @@ public:
     {
         if (InstanceScript* instance = go->GetInstanceScript())
             if (instance->GetData(DATA_EGG_EVENT) != DONE)
-                if (Creature* razorgore = instance->GetCreature(DATA_RAZORGORE_THE_UNTAMED))
+                if (Creature* razor = instance->GetCreature(DATA_RAZORGORE_THE_UNTAMED))
                 {
-                    razorgore->Attack(player, true);
-                    player->CastSpell(razorgore, SPELL_MINDCONTROL);
+                    razor->Attack(player, true);
+                    player->CastSpell(razor, SPELL_MINDCONTROL);
                 }
         return true;
     }

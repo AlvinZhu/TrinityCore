@@ -119,9 +119,9 @@ class boss_rotface : public CreatureScript
             {
                 if (!instance->CheckRequiredBosses(DATA_ROTFACE, who->ToPlayer()))
                 {
-                    EnterEvadeMode(EVADE_REASON_OTHER);
-                    instance->DoCastSpellOnPlayers(LIGHT_S_HAMMER_TELEPORT);
-                    return;
+//                    EnterEvadeMode(EVADE_REASON_OTHER);
+  //                  instance->DoCastSpellOnPlayers(LIGHT_S_HAMMER_TELEPORT);
+    //                return;
                 }
 
                 me->setActive(true);

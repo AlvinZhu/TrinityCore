@@ -1,4 +1,4 @@
-/*
+ /*
  * Copyright (C) 2008-2016 TrinityCore <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -353,10 +353,10 @@ public:
                         DoStartArgentChampionEncounter();
                 }
 
-               if ((instance->GetData(BOSS_GRAND_CHAMPIONS) == DONE &&
+ /*              if ((instance->GetData(BOSS_GRAND_CHAMPIONS) == DONE &&
                    instance->GetData(BOSS_ARGENT_CHALLENGE_E) == DONE) ||
                    instance->GetData(BOSS_ARGENT_CHALLENGE_P) == DONE)
-                    me->SummonCreature(VEHICLE_BLACK_KNIGHT, 769.834f, 651.915f, 447.035f, 0);
+                    me->SummonCreature(VEHICLE_BLACK_KNIGHT, 769.834f, 651.915f, 447.035f, 0);*/
             }
         }
 

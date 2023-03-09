@@ -189,7 +189,7 @@ class boss_arlokk : public CreatureScript
                     {
                         case EVENT_SHADOW_WORD_PAIN:
                             DoCastVictim(SPELL_SHADOW_WORD_PAIN, true);
-                            events.ScheduleEvent(EVENT_SHADOW_WORD_PAIN, urand(5000, 7000), 0, PHASE_ONE);
+                            events.ScheduleEvent(EVENT_SHADOW_WORD_PAIN, urand(10000, 13000), 0, PHASE_ONE);
                             break;
                         case EVENT_GOUGE:
                             DoCastVictim(SPELL_GOUGE, true);
@@ -243,6 +243,7 @@ class boss_arlokk : public CreatureScript
                             me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE|UNIT_FLAG_NOT_SELECTABLE);
                             DoCast(me, SPELL_VANISH_VISUAL);
                             DoCast(me, SPELL_VANISH);
+							ClearBotMeTarget(true);
                             events.ScheduleEvent(EVENT_VANISH, 1000, 0, PHASE_ONE);
                             break;
                         }
@@ -255,7 +256,9 @@ class boss_arlokk : public CreatureScript
                         case EVENT_VANISH_2:
                             DoCast(me, SPELL_VANISH);
                             DoCast(me, SPELL_SUPER_INVIS);
-                            events.ScheduleEvent(EVENT_VISIBLE, urand(7000, 10000), 0, PHASE_ONE);
+							ClearBotMeTarget(true);
+							me->SetVisible(false);
+							events.ScheduleEvent(EVENT_VISIBLE, urand(7000, 10000), 0, PHASE_ONE);
                             break;
                         case EVENT_VISIBLE:
                             me->SetReactState(REACT_AGGRESSIVE);
@@ -264,7 +267,8 @@ class boss_arlokk : public CreatureScript
                                 AttackStart(target);
                             me->RemoveAura(SPELL_SUPER_INVIS);
                             me->RemoveAura(SPELL_VANISH);
-                            events.ScheduleEvent(EVENT_RAVAGE, urand(10000, 14000), 0, PHASE_TWO);
+							me->SetVisible(true);
+							events.ScheduleEvent(EVENT_RAVAGE, urand(10000, 14000), 0, PHASE_TWO);
                             events.ScheduleEvent(EVENT_TRANSFORM_BACK, urand(15000, 18000), 0, PHASE_TWO);
                             events.SetPhase(PHASE_TWO);
                             me->HandleStatModifier(UNIT_MOD_DAMAGE_MAINHAND, TOTAL_PCT, 35.0f, true); // hack

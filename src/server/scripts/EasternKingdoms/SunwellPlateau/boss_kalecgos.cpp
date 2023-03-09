@@ -162,8 +162,8 @@ public:
             if (!bJustReset) //first reset at create
             {
                 me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE + UNIT_FLAG_NOT_SELECTABLE);
-                me->SetDisableGravity(false);
-                me->SetVisible(true);
+                //me->SetDisableGravity(false);
+                //me->SetVisible(true);
                 me->SetStandState(UNIT_STAND_STATE_SLEEP);
             }
             me->SetFullHealth(); //dunno why it does not resets health at evade..
@@ -172,8 +172,8 @@ public:
         void EnterEvadeMode(EvadeReason why) override
         {
             bJustReset = true;
-            me->SetVisible(false);
-            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE + UNIT_FLAG_NOT_SELECTABLE);
+           // me->SetVisible(false);
+            //me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE + UNIT_FLAG_NOT_SELECTABLE);
             ScriptedAI::EnterEvadeMode(why);
         }
 
@@ -198,7 +198,7 @@ public:
             {
                 if (!TalkSequence)
                 {
-                    me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE + UNIT_FLAG_NOT_SELECTABLE);
+                   // me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE + UNIT_FLAG_NOT_SELECTABLE);
                     me->InterruptNonMeleeSpells(true);
                     me->RemoveAllAuras();
                     me->DeleteThreatList();
@@ -221,9 +221,9 @@ public:
                     if (ResetTimer <= diff)
                     {
                         me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE|UNIT_FLAG_NOT_SELECTABLE);
-                        me->SetDisableGravity(false);
-                        me->SetVisible(true);
-                        me->SetStandState(UNIT_STAND_STATE_SLEEP);
+                        //me->SetDisableGravity(false);
+                       // me->SetVisible(true);
+                       //me->SetStandState(UNIT_STAND_STATE_SLEEP);
                         ResetTimer = 10000;
                         bJustReset = false;
                     } else ResetTimer -= diff;
@@ -237,8 +237,8 @@ public:
                 {
                     if (me->GetDistance(CENTER_X, CENTER_Y, DRAGON_REALM_Z) >= 75)
                     {
-                        EnterEvadeMode(EVADE_REASON_BOUNDARY);
-                        return;
+                    //    EnterEvadeMode(EVADE_REASON_BOUNDARY);
+                        //return;
                     }
                     if (HealthBelowPct(10) && !isEnraged)
                     {
@@ -248,6 +248,17 @@ public:
                     }
                     if (!isBanished && HealthBelowPct(1))
                     {
+                    	DoAction(DO_BANISH);
+if (Creature* Sath = ObjectAccessor::GetCreature(*me, SathGUID))
+Sath->NearTeleportTo(me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), me->GetOrientation());
+
+                ENSURE_AI(boss_kalecgos::boss_kalecgosAI, me->AI())->TalkTimer = 1;
+                ENSURE_AI(boss_kalecgos::boss_kalecgosAI, me->AI())->isFriendly = true;
+            instance->SetBossState(DATA_KALECGOS, DONE);
+                    	
+                    	GoodEnding();
+                 	
+                       /*
                         if (Creature* Sath = ObjectAccessor::GetCreature(*me, SathGUID))
                         {
                             if (Sath->HasAura(SPELL_BANISH))
@@ -263,7 +274,7 @@ public:
                             TC_LOG_ERROR("scripts", "Didn't find Shathrowar. Kalecgos event reseted.");
                             EnterEvadeMode(EVADE_REASON_OTHER);
                             return;
-                        }
+                        }*/
                     }
                     CheckTimer = 1000;
                 } else CheckTimer -= diff;
@@ -342,8 +353,8 @@ public:
 
         void DamageTaken(Unit* done_by, uint32 &damage) override
         {
-            if (damage >= me->GetHealth() && done_by != me)
-                damage = 0;
+            //if (damage >= me->GetHealth() && done_by != me)
+             //   damage = 0;
         }
 
         void EnterCombat(Unit* /*who*/) override
@@ -360,11 +371,25 @@ public:
             Talk(SAY_EVIL_SLAY);
         }
 
+        void JustDied(Unit* /*killer*/) override
+        {
+        	        ObjectGuid KalecgosGUID;
+KalecgosGUID = instance->GetGuidData(DATA_KALECGOS_DRAGON);
+
+            if (Creature* Kalecgos = ObjectAccessor::GetCreature(*me, KalecgosGUID))
+            {
+                ENSURE_AI(boss_kalecgos::boss_kalecgosAI, Kalecgos->AI())->TalkTimer = 1;
+                ENSURE_AI(boss_kalecgos::boss_kalecgosAI, Kalecgos->AI())->isFriendly = true;
+            }
+
+            instance->SetBossState(DATA_KALECGOS, DONE);
+        }
+
         void MovementInform(uint32 type, uint32 /*id*/) override
         {
             if (type != POINT_MOTION_TYPE)
                 return;
-            me->SetVisible(false);
+            //me->SetVisible(false);
             if (isFriendly)
             {
                 me->setDeathState(JUST_DIED);
@@ -400,8 +425,9 @@ public:
                     TalkTimer = 10000;
                     break;
                 case 3:
-                    me->SetDisableGravity(true);
+                    //me->SetDisableGravity(true);
                     me->GetMotionMaster()->MovePoint(0, FLY_X, FLY_Y, FLY_Z);
+                    me->DespawnOrUnsummon(6000);   
                     TalkTimer = 600000;
                     break;
                 default:
@@ -623,35 +649,35 @@ public:
             me->setActive(true);
             KalecgosGUID = instance->GetGuidData(DATA_KALECGOS_DRAGON);
             instance->SetBossState(DATA_KALECGOS, NOT_STARTED);
-            if (KalecGUID)
+           /* if (KalecGUID)
             {
                 if (Creature* Kalec = ObjectAccessor::GetCreature(*me, KalecGUID))
                     Kalec->setDeathState(JUST_DIED);
                 KalecGUID.Clear();
-            }
+            }*/
 
             Initialize();
 
-            me->CastSpell(me, AURA_DEMONIC_VISUAL, true);
-            TeleportAllPlayersBack();
+           // me->CastSpell(me, AURA_DEMONIC_VISUAL, true);
+           // TeleportAllPlayersBack();
         }
 
         void EnterCombat(Unit* /*who*/) override
         {
-            if (Creature* Kalec = me->SummonCreature(NPC_KALEC, me->GetPositionX() + 10, me->GetPositionY() + 5, me->GetPositionZ(), 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 0))
+           /* if (Creature* Kalec = me->SummonCreature(NPC_KALEC, me->GetPositionX() + 10, me->GetPositionY() + 5, me->GetPositionZ(), 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 0))
             {
                 KalecGUID = Kalec->GetGUID();
                 me->CombatStart(Kalec);
                 me->AddThreat(Kalec, 100.0f);
                 Kalec->setActive(true);
-            }
+            }*/
             Talk(SAY_SATH_AGGRO);
         }
 
         void DamageTaken(Unit* done_by, uint32 &damage) override
         {
-            if (damage >= me->GetHealth() && done_by != me)
-                damage = 0;
+           // if (damage >= me->GetHealth() && done_by != me)
+           //     damage = 0;
         }
 
         void KilledUnit(Unit* target) override
@@ -674,14 +700,17 @@ public:
         {
             Talk(SAY_SATH_DEATH);
             me->SetPosition(me->GetPositionX(), me->GetPositionY(), DRAGON_REALM_Z, me->GetOrientation());
+
+                        me->NearTeleportTo(me->GetPositionX(), me->GetPositionY(), DRAGON_REALM_Z + 5.1f, me->GetOrientation());
+
             TeleportAllPlayersBack();
-            if (Creature* Kalecgos = ObjectAccessor::GetCreature(*me, KalecgosGUID))
+            /*if (Creature* Kalecgos = ObjectAccessor::GetCreature(*me, KalecgosGUID))
             {
                 ENSURE_AI(boss_kalecgos::boss_kalecgosAI, Kalecgos->AI())->TalkTimer = 1;
                 ENSURE_AI(boss_kalecgos::boss_kalecgosAI, Kalecgos->AI())->isFriendly = true;
-            }
+            }*/
 
-            instance->SetBossState(DATA_KALECGOS, DONE);
+            //instance->SetBossState(DATA_KALECGOS, DONE);
         }
 
         void TeleportAllPlayersBack()
@@ -717,8 +746,8 @@ public:
 
         void UpdateAI(uint32 diff) override
         {
-            if (!me->HasAura(AURA_SPECTRAL_INVISIBILITY))
-                me->CastSpell(me, AURA_SPECTRAL_INVISIBILITY, true);
+           // if (!me->HasAura(AURA_SPECTRAL_INVISIBILITY))
+         //       me->CastSpell(me, AURA_SPECTRAL_INVISIBILITY, true);
 
             if (!UpdateVictim())
                 return;
@@ -728,9 +757,9 @@ public:
                 Creature* Kalec = ObjectAccessor::GetCreature(*me, KalecGUID);
                 if (!Kalec || !Kalec->IsAlive())
                 {
-                    if (Creature* Kalecgos = ObjectAccessor::GetCreature(*me, KalecgosGUID))
-                        Kalecgos->AI()->EnterEvadeMode();
-                    return;
+                   // if (Creature* Kalecgos = ObjectAccessor::GetCreature(*me, KalecgosGUID))
+                   //     Kalecgos->AI()->EnterEvadeMode();
+                  //  return;
                 }
 
                 if (HealthBelowPct(10) && !isEnraged)
@@ -739,7 +768,7 @@ public:
                         Kalecgos->AI()->DoAction(DO_ENRAGE);
                     DoAction(DO_ENRAGE);
                 }
-
+/*
                 Creature* Kalecgos = ObjectAccessor::GetCreature(*me, KalecgosGUID);
                 if (Kalecgos && !Kalecgos->IsInCombat())
                 {
@@ -765,10 +794,12 @@ public:
                         return;
                     }
                 }
+                
+*/                
                 CheckTimer = 1000;
             } else CheckTimer -= diff;
 
-            if (ResetThreat <= diff)
+     /*       if (ResetThreat <= diff)
             {
                 ThreatContainer::StorageType threatlist = me->getThreatManager().getThreatList();
                 for (ThreatContainer::StorageType::const_iterator itr = threatlist.begin(); itr != threatlist.end(); ++itr)
@@ -778,7 +809,7 @@ public:
                             me->getThreatManager().modifyThreatPercent(unit, -100);
                 }
                 ResetThreat = 1000;
-            } else ResetThreat -= diff;
+            } else ResetThreat -= diff;*/
 
             if (ShadowBoltTimer <= diff)
             {

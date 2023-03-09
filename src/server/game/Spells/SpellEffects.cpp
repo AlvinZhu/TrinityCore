@@ -1072,8 +1072,15 @@ void Spell::EffectTeleportUnits(SpellEffIndex /*effIndex*/)
         orientation = m_targets.GetUnitTarget()->GetOrientation();
     TC_LOG_DEBUG("spells", "Spell::EffectTeleportUnits - teleport unit to %u %f %f %f %f\n", mapid, x, y, z, orientation);
 
-    if (unitTarget->GetTypeId() == TYPEID_PLAYER)
-        unitTarget->ToPlayer()->TeleportTo(mapid, x, y, z, orientation, unitTarget == m_caster ? TELE_TO_SPELL | TELE_TO_NOT_LEAVE_COMBAT : 0);
+	if (unitTarget->GetTypeId() == TYPEID_PLAYER)
+	{
+		if (unitTarget->IsPlayerBot())
+		{
+
+		}
+		else
+			unitTarget->ToPlayer()->TeleportTo(mapid, x, y, z, orientation, unitTarget == m_caster ? TELE_TO_SPELL | TELE_TO_NOT_LEAVE_COMBAT : 0);
+	}
     else if (mapid == unitTarget->GetMapId())
         unitTarget->NearTeleportTo(x, y, z, orientation, unitTarget == m_caster);
     else
@@ -4554,6 +4561,17 @@ void Spell::EffectLeap(SpellEffIndex /*effIndex*/)
     if (!m_targets.HasDst())
         return;
 
+	if (Player* playerCaster = m_caster->ToPlayer())
+	{
+		if (playerCaster->IsPlayerBot())
+		{
+			if (playerCaster->getClass() == Classes::CLASS_MAGE ||
+				playerCaster->getClass() == Classes::CLASS_ROGUE ||
+				playerCaster->getClass() == Classes::CLASS_WARLOCK ||
+				playerCaster->getClass() == Classes::CLASS_WARRIOR)
+				return;
+		}
+	}
     Position pos = destTarget->GetPosition();
     pos = unitTarget->GetFirstCollisionPosition(unitTarget->GetDistance(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ()), 0.0f);
     unitTarget->NearTeleportTo(pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ(), pos.GetOrientation(), unitTarget == m_caster);
@@ -4734,9 +4752,14 @@ void Spell::EffectKnockBack(SpellEffIndex effIndex)
     if (!unitTarget)
         return;
 
+//hxsd
     if (Creature* creatureTarget = unitTarget->ToCreature())
+{
         if (creatureTarget->isWorldBoss() || creatureTarget->IsDungeonBoss())
             return;
+        if (m_caster->ToCreature())
+            return;
+ }
 
     // Spells with SPELL_EFFECT_KNOCK_BACK (like Thunderstorm) can't knockback target if target has ROOT/STUN
     if (unitTarget->HasUnitState(UNIT_STATE_ROOT | UNIT_STATE_STUNNED))

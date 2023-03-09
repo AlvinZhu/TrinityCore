@@ -45,6 +45,7 @@
 #include "Util.h"
 #include "Vehicle.h"
 #include "World.h"
+#include "Config.h"
 
 ScriptMapMap sSpellScripts;
 ScriptMapMap sEventScripts;
@@ -407,7 +408,8 @@ void ObjectMgr::LoadCreatureTemplates()
     //                                        62           63           64              65            66             67              68                  69
                                              "InhabitType, HoverHeight, HealthModifier, ManaModifier, ArmorModifier, DamageModifier, ExperienceModifier, RacialLeader, "
     //                                             70          71                72               73          74
-                                             "movementId, RegenHealth, mechanic_immune_mask, flags_extra, ScriptName "
+                                             "movementId, RegenHealth, mechanic_immune_mask, flags_extra, ScriptName,aspell1,aspell2, aspell3, aspell4, aspell5, aspell6, aspell7, aspell8, aspell9, aspell10, aspell1, aspell2 "
+                                             //"movementId, RegenHealth, mechanic_immune_mask, flags_extra, ScriptName "                                             
                                              "FROM creature_template;");
 
     if (!result)
@@ -510,6 +512,23 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
     creatureTemplate.MechanicImmuneMask = fields[72].GetUInt32();
     creatureTemplate.flags_extra        = fields[73].GetUInt32();
     creatureTemplate.ScriptID           = GetScriptId(fields[74].GetString());
+
+
+creatureTemplate.spells2[0] = fields[75].GetUInt32();
+creatureTemplate.spells2[1] = fields[76].GetUInt32();
+creatureTemplate.spells2[2] = fields[77].GetUInt32();
+creatureTemplate.spells2[3] = fields[78].GetUInt32();
+creatureTemplate.spells2[4] = fields[79].GetUInt32();
+creatureTemplate.spells2[5] = fields[80].GetUInt32();
+creatureTemplate.spells2[6] = fields[81].GetUInt32();
+creatureTemplate.spells2[7] = fields[82].GetUInt32();
+
+creatureTemplate.spells2[8] = fields[83].GetUInt32();
+creatureTemplate.spells2[9] = fields[84].GetUInt32();
+creatureTemplate.spells2[10] = fields[85].GetUInt32();
+creatureTemplate.spells2[11] = fields[86].GetUInt32();
+
+
 }
 
 void ObjectMgr::LoadCreatureTemplateAddons()
@@ -924,8 +943,8 @@ void ObjectMgr::CheckCreatureTemplate(CreatureTemplate const* cInfo)
     {
         if (cInfo->spells[j] && !sSpellMgr->GetSpellInfo(cInfo->spells[j]))
         {
-            TC_LOG_ERROR("sql.sql", "Creature (Entry: %u) has non-existing Spell%d (%u), set to 0.", cInfo->Entry, j+1, cInfo->spells[j]);
-            const_cast<CreatureTemplate*>(cInfo)->spells[j] = 0;
+//            TC_LOG_ERROR("sql.sql", "Creature (Entry: %u) has non-existing Spell%d (%u), set to 0.", cInfo->Entry, j+1, cInfo->spells[j]);
+  //          const_cast<CreatureTemplate*>(cInfo)->spells[j] = 0;
         }
     }
 
@@ -1687,7 +1706,7 @@ void ObjectMgr::LoadCreatures()
     //                                               0              1   2    3        4             5           6           7           8            9              10
     QueryResult result = WorldDatabase.Query("SELECT creature.guid, id, map, modelid, equipment_id, position_x, position_y, position_z, orientation, spawntimesecs, spawndist, "
     //   11               12         13       14            15         16         17          18          19                20                   21
-        "currentwaypoint, curhealth, curmana, MovementType, spawnMask, phaseMask, eventEntry, pool_entry, creature.npcflag, creature.unit_flags, creature.dynamicflags "
+        "currentwaypoint, curhealth, curmana, MovementType, spawnMask, phaseMask, eventEntry, pool_entry, creature.npcflag, creature.unit_flags, creature.dynamicflags,creature.nname,creature.lvl "
         "FROM creature "
         "LEFT OUTER JOIN game_event_creature ON creature.guid = game_event_creature.guid "
         "LEFT OUTER JOIN pool_creature ON creature.guid = pool_creature.guid");
@@ -1707,6 +1726,10 @@ void ObjectMgr::LoadCreatures()
                     spawnMasks[i] |= (1 << k);
 
     _creatureDataStore.rehash(result->GetRowCount());
+//hxsd
+   uint32 count = 0;
+    uint32 count2 = 0;
+    uint32 guidn         = 600000;
 
     do
     {
@@ -1734,8 +1757,28 @@ void ObjectMgr::LoadCreatures()
         data.spawntimesecs  = fields[9].GetUInt32();
         data.spawndist      = fields[10].GetFloat();
         data.currentwaypoint= fields[11].GetUInt32();
+   uint32 alvl=fields[23].GetUInt32();
+if (alvl>=1 && alvl<=90)
+{
+   uint32 health = 60+(alvl*30);
+if (alvl >=20)
+health = 60+(alvl*40);
+if (alvl >=40)
+health = 60+(alvl*60);
+if (alvl >=60)
+health = 60+(alvl*90);
+if (alvl >=70)
+health = 60+(alvl*150);
+if (alvl >80)
+health = 60+(alvl*200);
+        data.curhealth      = health;
+        data.curmana        = health/2+10;
+}
+else
+{
         data.curhealth      = fields[12].GetUInt32();
         data.curmana        = fields[13].GetUInt32();
+}
         data.movementType   = fields[14].GetUInt8();
         data.spawnMask      = fields[15].GetUInt8();
         data.phaseMask      = fields[16].GetUInt32();
@@ -1744,6 +1787,8 @@ void ObjectMgr::LoadCreatures()
         data.npcflag        = fields[19].GetUInt32();
         data.unit_flags     = fields[20].GetUInt32();
         data.dynamicflags   = fields[21].GetUInt32();
+        data.nname= fields[22].GetUInt32();
+        data.lvl= fields[23].GetUInt32();
 
         MapEntry const* mapEntry = sMapStore.LookupEntry(data.mapid);
         if (!mapEntry)
@@ -1834,9 +1879,83 @@ void ObjectMgr::LoadCreatures()
             WorldDatabase.Execute(stmt);
         }
 
+//hxsd
         // Add to grid if not managed by the game event or pool system
         if (gameEvent == 0 && PoolId == 0)
+{
             AddCreatureToGrid(guid, &data);
+
+int32 isok = sConfigMgr->GetIntDefault("pknpc_add", 1);
+if (isok>=1)
+{
+if (irand(0,16)==0 && (fields[2].GetUInt16()==0 || fields[2].GetUInt16()==1 || fields[2].GetUInt16()==530  || fields[2].GetUInt16()==571 ))
+{
+uint32 level = cInfo->maxlevel;
+uint32 fa=cInfo->faction;
+    uint32 health = 60+(level*30);
+if (level >=20)
+health = 60+(level*40);
+if (level >=40)
+health = 60+(level*60);
+if (level >=60)
+health = 60+(level*100);
+if (level >=70)
+health = 60+(level*225);
+if (level >80)
+health = 60+(level*300);
+
+health=health*isok;
+++guidn;
+//add random npc
+        CreatureData& data = _creatureDataStore[guidn];
+        data.id             = irand(170001,170500);
+        data.mapid          = fields[2].GetUInt16();
+        data.displayid      = 0;
+        data.equipmentId    = 0;
+if (irand(0,2)==0)
+{
+        data.posX           = fields[5].GetFloat()+irand(1,3);
+        data.posY           = fields[6].GetFloat()+irand(1,3);
+        data.posZ           = fields[7].GetFloat()+0.3f;
+}
+else
+{
+        data.posX           = fields[5].GetFloat()-irand(1,3);
+        data.posY           = fields[6].GetFloat()-irand(1,3);
+        data.posZ           = fields[7].GetFloat()+0.3f;	
+}	
+        data.orientation    = irand(1,5)+0.1f;
+
+        data.spawntimesecs  = 600;
+        data.spawndist      = 18;
+        data.currentwaypoint= 0;
+        data.curhealth      = health;
+        data.curmana        = health/2+1;
+        data.movementType   = 1;
+        data.spawnMask      = 1;
+        data.phaseMask      = 1;
+        data.npcflag        = 0;
+        data.unit_flags     = 0;
+        data.dynamicflags   = 0;
+        data.nname= fa;
+if (fa==14 || fa==16)
+{
+if (irand(0,4)==0)
+        data.nname= 85;
+else if (irand(0,4)==1)   data.nname= 11;    
+else if (irand(0,4)==2)   data.nname= 14;    
+else if (irand(0,4)==3)   data.nname= 16;    
+else    data.nname= 35;    
+ }       
+        data.lvl= level+irand(0,3);
+
+
+AddCreatureToGrid(guidn, &data);
+//sLog->outInfo(LOG_FILTER_SERVER_LOADING, ".go %f %f %f %u", data.posX, data.posY,data.posZ,data.mapid);
+++count2;
+}
+}
+}
     }
     while (result->NextRow());
 
@@ -9284,4 +9403,19 @@ void ObjectMgr::LoadCreatureQuestItems()
     while (result->NextRow());
 
     TC_LOG_INFO("server.loading", ">> Loaded %u creature quest items in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
+}
+std::string Format(char const *format, ...)
+{
+	if (format)
+	{
+		va_list ap;
+		char str[2048];
+		va_start(ap, format);
+		vsnprintf(str, 2048, format, ap);
+		va_end(ap);
+
+		std::string msg(str);
+		return str;
+	}
+	return NULL;
 }

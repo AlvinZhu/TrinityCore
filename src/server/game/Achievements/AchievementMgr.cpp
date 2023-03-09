@@ -513,6 +513,8 @@ void AchievementMgr::DeleteFromDB(ObjectGuid guid)
 
 void AchievementMgr::SaveToDB(SQLTransaction& trans)
 {
+     if (GetPlayer()->IsPlayerBot())
+    return;
     if (!m_completedAchievements.empty())
     {
         for (CompletedAchievementMap::iterator iter = m_completedAchievements.begin(); iter != m_completedAchievements.end(); ++iter)

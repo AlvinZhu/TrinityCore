@@ -81,7 +81,10 @@ void LoadDisables()
         std::string params_0 = fields[3].GetString();
         std::string params_1 = fields[4].GetString();
 
-        DisableData data;
+		if (type == DISABLE_TYPE_BATTLEGROUND && entry == 10)
+			continue;
+		
+		DisableData data;
         data.flags = flags;
 
         switch (type)

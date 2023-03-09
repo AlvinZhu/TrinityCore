@@ -70,6 +70,8 @@ class boss_buru : public CreatureScript
             boss_buruAI(Creature* creature) : BossAI(creature, DATA_BURU)
             {
                 _phase = 0;
+				instScript = creature->GetInstanceScript();
+				BotAttackTimer = 1000;
             }
 
             void EnterEvadeMode(EvadeReason why) override
@@ -145,10 +147,10 @@ class boss_buru : public CreatureScript
                 {
                     switch (eventId)
                     {
-                        case EVENT_DISMEMBER:
-                            DoCastVictim(SPELL_DISMEMBER);
-                            events.ScheduleEvent(EVENT_DISMEMBER, 5000);
-                            break;
+                        //case EVENT_DISMEMBER:
+                        //    DoCastVictim(SPELL_DISMEMBER);
+                        //    events.ScheduleEvent(EVENT_DISMEMBER, 5000);
+                        //    break;
                         case EVENT_GATHERING_SPEED:
                             DoCast(me, SPELL_GATHERING_SPEED);
                             events.ScheduleEvent(EVENT_GATHERING_SPEED, 9000);
@@ -158,13 +160,18 @@ class boss_buru : public CreatureScript
                             break;
                         case EVENT_CREEPING_PLAGUE:
                             DoCast(me, SPELL_CREEPING_PLAGUE);
-                            events.ScheduleEvent(EVENT_CREEPING_PLAGUE, 6000);
+                            events.ScheduleEvent(EVENT_CREEPING_PLAGUE, 20000);
                             break;
                         case EVENT_RESPAWN_EGG:
                             if (Creature* egg = me->GetMap()->GetCreature(*Eggs.begin()))
                             {
                                 egg->Respawn();
                                 Eggs.pop_front();
+								if (instScript)
+								{
+									if (BotAttackCreature* pBotAttack = instScript->GetBotAttacksCreature(me))
+										pBotAttack->AddNewCreatureNeedAttack(egg, 15);
+								}
                             }
                             break;
                         default:
@@ -179,13 +186,27 @@ class boss_buru : public CreatureScript
                     me->RemoveAurasDueToSpell(SPELL_THORNS);
                     _phase = PHASE_TRANSFORM;
                 }
+				if (me->IsInCombat())
+				{
+					if (BotAttackTimer <= int32(diff))
+					{
+						if (BotAttackCreature* pBotAttack = instScript->GetBotAttacksCreature(me))
+							pBotAttack->UpdateNeedAttackCreatures(diff, this, false);
+						BotAttackTimer = 1000;
+					}
+					else
+						BotAttackTimer -= diff;
+				}
 
                 DoMeleeAttackIfReady();
             }
         private:
             GuidList Eggs;
             uint8 _phase;
-        };
+
+			InstanceScript* instScript;
+			int32 BotAttackTimer;
+		};
 
         CreatureAI* GetAI(Creature* creature) const override
         {
@@ -204,13 +225,16 @@ class npc_buru_egg : public CreatureScript
             {
                 _instance = me->GetInstanceScript();
                 SetCombatMovement(false);
+				BotAttackTimer = 5000;
             }
 
             void EnterCombat(Unit* attacker) override
             {
-                if (Creature* buru = me->GetMap()->GetCreature(_instance->GetGuidData(DATA_BURU)))
-                    if (!buru->IsInCombat())
-                        buru->AI()->AttackStart(attacker);
+				if (Creature* buru = me->GetMap()->GetCreature(_instance->GetGuidData(DATA_BURU)))
+				{
+					if (!buru->IsInCombat())
+						buru->AI()->AttackStart(attacker);
+				}
             }
 
             void JustSummoned(Creature* who) override
@@ -227,12 +251,37 @@ class npc_buru_egg : public CreatureScript
                 DoCastAOE(SPELL_EXPLODE_2, true); // Unknown purpose
                 DoCast(me, SPELL_SUMMON_HATCHLING, true);
 
-                if (Creature* buru = me->GetMap()->GetCreature(_instance->GetGuidData(DATA_BURU)))
-                    if (boss_buru::boss_buruAI* buruAI = dynamic_cast<boss_buru::boss_buruAI*>(buru->AI()))
-                        buruAI->ManageRespawn(me->GetGUID());
+				if (Creature* buru = me->GetMap()->GetCreature(_instance->GetGuidData(DATA_BURU)))
+				{
+					if (boss_buru::boss_buruAI* buruAI = dynamic_cast<boss_buru::boss_buruAI*>(buru->AI()))
+						buruAI->ManageRespawn(me->GetGUID());
+					if (buru->IsAlive())
+					{
+						uint32 dec = uint32(float(buru->GetMaxHealth()) * 0.08f);
+						uint32 curHeal = buru->GetHealth();
+						if (curHeal <= dec)
+							buru->SetHealth(1);
+						else
+							buru->SetHealth(curHeal - dec);
+					}
+				}
             }
-        private:
+			void UpdateAI(uint32 diff) override
+			{
+				if (!me->IsInCombat())
+					return;
+				if (BotAttackTimer <= int32(diff))
+				{
+					if (BotAttackCreature* pBotAttack = _instance->GetBotAttacksCreature(NULL))
+						pBotAttack->AddNewCreatureNeedAttack(me, 16);
+					BotAttackTimer = 5000;
+				}
+				else
+					BotAttackTimer -= diff;
+			}
+		private:
             InstanceScript* _instance;
+			int32 BotAttackTimer;
         };
 
         CreatureAI* GetAI(Creature* creature) const override

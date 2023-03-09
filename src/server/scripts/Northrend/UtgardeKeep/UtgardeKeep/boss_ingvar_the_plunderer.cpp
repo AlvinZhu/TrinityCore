@@ -104,7 +104,9 @@ class boss_ingvar_the_plunderer : public CreatureScript
 
         struct boss_ingvar_the_plundererAI : public BossAI
         {
-            boss_ingvar_the_plundererAI(Creature* creature) : BossAI(creature, DATA_INGVAR) { }
+            boss_ingvar_the_plundererAI(Creature* creature) : BossAI(creature, DATA_INGVAR)
+			{
+			}
 
             void Reset() override
             {
@@ -193,7 +195,7 @@ class boss_ingvar_the_plunderer : public CreatureScript
 
             void UpdateAI(uint32 diff) override
             {
-                if (!UpdateVictim() && !events.IsInPhase(PHASE_EVENT))
+				if (!events.IsInPhase(PHASE_EVENT) && !UpdateVictim())
                     return;
 
                 events.Update(diff);

@@ -115,30 +115,45 @@ class boss_marli : public CreatureScript
                             if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0))
                             {
                                 Talk(SAY_SPIDER_SPAWN);
-                                for (uint8 i = 0; i < 4; ++i)
-                                    if (Creature* spider = me->SummonCreature(NPC_SPIDER, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 15000))
-                                        spider->AI()->AttackStart(target);
-                            }
+								std::vector<Creature*> summs;
+								for (uint8 i = 0; i < 2; ++i)
+								{
+									if (Creature* spider = me->SummonCreature(NPC_SPIDER, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 15000))
+									{
+										summs.push_back(spider);
+										spider->AI()->AttackStart(target);
+									}
+								}
+								BotAllotCreatureTarget(summs, 80, 4);
+							}
                             events.ScheduleEvent(EVENT_ASPECT_OF_MARLI, 12000, 0, PHASE_TWO);
-                            events.ScheduleEvent(EVENT_TRANSFORM, 45000, 0, PHASE_TWO);
-                            events.ScheduleEvent(EVENT_POISON_VOLLEY, 15000);
+                            events.ScheduleEvent(EVENT_TRANSFORM, 55000, 0, PHASE_TWO);
+                            events.ScheduleEvent(EVENT_POISON_VOLLEY, 20000);
                             events.ScheduleEvent(EVENT_SPAWN_SPIDER, 30000);
-                            events.ScheduleEvent(EVENT_TRANSFORM, 45000, 0, PHASE_TWO);
+                            events.ScheduleEvent(EVENT_TRANSFORM, 55000, 0, PHASE_TWO);
                             events.SetPhase(PHASE_TWO);
                             break;
                         case EVENT_POISON_VOLLEY:
                             DoCastVictim(SPELL_POISON_VOLLEY, true);
-                            events.ScheduleEvent(EVENT_POISON_VOLLEY, urand(10000, 20000));
+							BotAllFullDispelByDecPoison(true);
+                            events.ScheduleEvent(EVENT_POISON_VOLLEY, urand(16000, 24000));
                             break;
-                        case EVENT_ASPECT_OF_MARLI:
-                            DoCastVictim(SPELL_ASPECT_OF_MARLI, true);
-                            events.ScheduleEvent(EVENT_ASPECT_OF_MARLI, urand(13000, 18000), 0, PHASE_TWO);
-                            break;
+                        //case EVENT_ASPECT_OF_MARLI:
+                        //    DoCastVictim(SPELL_ASPECT_OF_MARLI, true);
+                        //    events.ScheduleEvent(EVENT_ASPECT_OF_MARLI, urand(13000, 18000), 0, PHASE_TWO);
+                        //    break;
                         case EVENT_SPAWN_SPIDER:
-                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0))
-                                if (Creature* spider = me->SummonCreature(NPC_SPIDER, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 15000))
-                                    spider->AI()->AttackStart(target);
-                            events.ScheduleEvent(EVENT_SPAWN_SPIDER, urand(12000, 17000));
+							if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0))
+							{
+								if (Creature* spider = me->SummonCreature(NPC_SPIDER, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 15000))
+								{
+									std::vector<Creature*> summs;
+									summs.push_back(spider);
+									spider->AI()->AttackStart(target);
+									BotAllotCreatureTarget(summs, 80, 7);
+								}
+							}
+                            events.ScheduleEvent(EVENT_SPAWN_SPIDER, urand(30000, 40000));
                             break;
                         case EVENT_TRANSFORM:
                         {
@@ -152,8 +167,11 @@ class boss_marli : public CreatureScript
                             */
                             me->HandleStatModifier(UNIT_MOD_DAMAGE_MAINHAND, TOTAL_PCT, 35.0f, true); // hack
                             DoCastVictim(SPELL_ENVOLWINGWEB);
-                            if (DoGetThreat(me->GetVictim()))
-                                DoModifyThreatPercent(me->GetVictim(), -100);
+							Unit* pTarget = me->GetVictim();
+							if (DoGetThreat(pTarget))
+								DoModifyThreatPercent(pTarget, -100);
+							if (pTarget)
+								pTarget->SetTarget(ObjectGuid::Empty);
                             events.ScheduleEvent(EVENT_CHARGE_PLAYER, 1500, 0, PHASE_THREE);
                             events.ScheduleEvent(EVENT_TRANSFORM_BACK, 25000, 0, PHASE_THREE);
                             events.SetPhase(PHASE_THREE);
@@ -174,7 +192,7 @@ class boss_marli : public CreatureScript
                                 DoCast(target, SPELL_CHARGE);
                                 AttackStart(target);
                             }
-                            events.ScheduleEvent(EVENT_CHARGE_PLAYER, 8000, 0, PHASE_THREE);
+                            events.ScheduleEvent(EVENT_CHARGE_PLAYER, 18000, 0, PHASE_THREE);
                             break;
                         }
                         case EVENT_TRANSFORM_BACK:
@@ -188,10 +206,10 @@ class boss_marli : public CreatureScript
                             */
                             me->HandleStatModifier(UNIT_MOD_DAMAGE_MAINHAND, TOTAL_PCT, 35.0f, false); // hack
                             events.ScheduleEvent(EVENT_ASPECT_OF_MARLI, 12000, 0, PHASE_TWO);
-                            events.ScheduleEvent(EVENT_TRANSFORM, 45000, 0, PHASE_TWO);
-                            events.ScheduleEvent(EVENT_POISON_VOLLEY, 15000);
+                            events.ScheduleEvent(EVENT_TRANSFORM, 55000, 0, PHASE_TWO);
+                            events.ScheduleEvent(EVENT_POISON_VOLLEY, 20000);
                             events.ScheduleEvent(EVENT_SPAWN_SPIDER, 30000);
-                            events.ScheduleEvent(EVENT_TRANSFORM, urand(35000, 60000), 0, PHASE_TWO);
+                            events.ScheduleEvent(EVENT_TRANSFORM, urand(55000, 65000), 0, PHASE_TWO);
                             events.SetPhase(PHASE_TWO);
                             break;
                         }
@@ -243,11 +261,11 @@ class npc_spawn_of_marli : public CreatureScript
                     return;
 
                 //LevelUp_Timer
-                if (LevelUp_Timer <= diff)
-                {
-                    DoCast(me, SPELL_LEVELUP);
-                    LevelUp_Timer = 3000;
-                } else LevelUp_Timer -= diff;
+                //if (LevelUp_Timer <= diff)
+                //{
+                //    DoCast(me, SPELL_LEVELUP);
+                //    LevelUp_Timer = 3000;
+                //} else LevelUp_Timer -= diff;
 
                 DoMeleeAttackIfReady();
             }

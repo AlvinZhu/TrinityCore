@@ -218,6 +218,34 @@ enum SpellEffectHandleMode
 
 typedef std::list<std::pair<uint32, ObjectGuid>> DispelList;
 
+enum SpellInterruptConditionType
+{
+	SICT_NONE = 0,
+	SICT_LIFE_PCT
+};
+struct SpellInterruptCondition
+{
+	SpellInterruptConditionType conditionType;
+	ObjectGuid castTarget;
+	uint32 conditionValue;
+
+	SpellInterruptCondition()
+	{
+		conditionType = SICT_NONE;
+		castTarget = ObjectGuid::Empty;
+		conditionValue = 0;
+	}
+	SpellInterruptCondition(SpellInterruptConditionType conType, ObjectGuid& target, uint32 value)
+	{
+		conditionType = conType;
+		castTarget = target;
+		conditionValue = value;
+	}
+
+	void ClearInterruptCondition();
+	bool CheckInterruptCondition(Unit* caster);
+};
+
 static const uint32 SPELL_INTERRUPT_NONPLAYER = 32747;
 
 class TC_GAME_API Spell
@@ -385,7 +413,7 @@ class TC_GAME_API Spell
 
         GameObject* SearchSpellFocus();
 
-        void prepare(SpellCastTargets const* targets, AuraEffect const* triggeredByAura = NULL);
+		SpellCastResult prepare(SpellCastTargets const* targets, AuraEffect const* triggeredByAura = NULL);
         void cancel();
         void update(uint32 difftime);
         void cast(bool skipCheck = false);
@@ -501,6 +529,9 @@ class TC_GAME_API Spell
         void CleanupTargetList();
 
         void SetSpellValue(SpellValueMod mod, int32 value);
+
+		void SetInterruptConditionByLifePCT(ObjectGuid& target, uint32 pct = 99);
+
     protected:
         bool HasGlobalCooldown() const;
         void TriggerGlobalCooldown();
@@ -695,6 +726,8 @@ class TC_GAME_API Spell
         PathGenerator m_preGeneratedPath;
 
         ByteBuffer * m_effectExecuteData[MAX_SPELL_EFFECTS];
+
+		SpellInterruptCondition m_SpellInterruptCondition;
 
         Spell(Spell const& right) = delete;
         Spell& operator=(Spell const& right) = delete;

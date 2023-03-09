@@ -45,6 +45,8 @@
 #include "BattlegroundMgr.h"
 #include "Battlefield.h"
 #include "BattlefieldMgr.h"
+#include "CustomTalkMenu.h"
+#include "Player.h"
 
 void WorldSession::HandleRepopRequestOpcode(WorldPacket& recvData)
 {
@@ -103,7 +105,17 @@ void WorldSession::HandleGossipSelectOptionOpcode(WorldPacket& recvData)
 
     Creature* unit = NULL;
     GameObject* go = NULL;
-    if (guid.IsCreatureOrVehicle())
+	Item* item = NULL;
+
+	if (guid.IsItem())
+	{
+		item = _player->GetItemByGuid(guid);
+		if (!item)
+		{
+			return;
+		}
+	}
+    else if (guid.IsCreatureOrVehicle())
     {
         unit = GetPlayer()->GetNPCIfCanInteractWith(guid, UNIT_NPC_FLAG_GOSSIP);
         if (!unit)
@@ -121,6 +133,11 @@ void WorldSession::HandleGossipSelectOptionOpcode(WorldPacket& recvData)
             return;
         }
     }
+	else if (guid == _player->GetGUID() && !item)
+	{
+		sCustomTalkMenu->OnSelectMenuItem(_player, gossipListId);
+		return;
+	}
     else
     {
         TC_LOG_DEBUG("network", "WORLD: HandleGossipSelectOptionOpcode - unsupported %s.", guid.ToString().c_str());
@@ -131,6 +148,7 @@ void WorldSession::HandleGossipSelectOptionOpcode(WorldPacket& recvData)
     if (GetPlayer()->HasUnitState(UNIT_STATE_DIED))
         GetPlayer()->RemoveAurasByType(SPELL_AURA_FEIGN_DEATH);
 
+	if (!item)
     if ((unit && unit->GetCreatureTemplate()->ScriptID != unit->LastUsedScriptID) || (go && go->GetGOInfo()->ScriptId != go->LastUsedScriptID))
     {
         TC_LOG_DEBUG("network", "WORLD: HandleGossipSelectOptionOpcode - Script reloaded while in use, ignoring and set new scipt id");
@@ -143,7 +161,12 @@ void WorldSession::HandleGossipSelectOptionOpcode(WorldPacket& recvData)
     }
     if (!code.empty())
     {
-        if (unit)
+
+		if (item)
+		{
+			sScriptMgr->OnItemSelect(_player, item, _player->PlayerTalkClass->GetGossipOptionSender(gossipListId), _player->PlayerTalkClass->GetGossipOptionAction(gossipListId));
+		}
+		else  if (unit)
         {
             unit->AI()->sGossipSelectCode(_player, menuId, gossipListId, code.c_str());
             if (!sScriptMgr->OnGossipSelectCode(_player, unit, _player->PlayerTalkClass->GetGossipOptionSender(gossipListId), _player->PlayerTalkClass->GetGossipOptionAction(gossipListId), code.c_str()))
@@ -158,7 +181,11 @@ void WorldSession::HandleGossipSelectOptionOpcode(WorldPacket& recvData)
     }
     else
     {
-        if (unit)
+		if (item)
+		{
+			sScriptMgr->OnItemSelect(_player, item, _player->PlayerTalkClass->GetGossipOptionSender(gossipListId), _player->PlayerTalkClass->GetGossipOptionAction(gossipListId));
+		}
+		else  if (unit)
         {
             unit->AI()->sGossipSelect(_player, menuId, gossipListId);
             if (!sScriptMgr->OnGossipSelect(_player, unit, _player->PlayerTalkClass->GetGossipOptionSender(gossipListId), _player->PlayerTalkClass->GetGossipOptionAction(gossipListId)))
@@ -253,12 +280,8 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
     {
         Player* target = itr->second;
         // player can see member of other team only if CONFIG_ALLOW_TWO_SIDE_WHO_LIST
-        if (target->GetTeam() != team && !HasPermission(rbac::RBAC_PERM_TWO_SIDE_WHO_LIST))
-            continue;
-
-        // player can see MODERATOR, GAME MASTER, ADMINISTRATOR only if CONFIG_GM_IN_WHO_LIST
-        if (!HasPermission(rbac::RBAC_PERM_WHO_SEE_ALL_SEC_LEVELS) && target->GetSession()->GetSecurity() > AccountTypes(gmLevelInWhoList))
-            continue;
+		if (target->GetTeam() != team && !HasPermission(rbac::RBAC_PERM_TWO_SIDE_WHO_LIST))
+			continue;
 
         // do not process players which are not in world
         if (!target->IsInWorld())
@@ -569,13 +592,13 @@ void WorldSession::HandleAddFriendOpcodeCallBack(PreparedQueryResult result, std
         team = Player::TeamForRace(fields[1].GetUInt8());
         friendAccountId = fields[2].GetUInt32();
 
-        if (HasPermission(rbac::RBAC_PERM_ALLOW_GM_FRIEND) || AccountMgr::IsPlayerAccount(AccountMgr::GetSecurity(friendAccountId, realm.Id.Realm)))
+        //if (/*HasPermission(rbac::RBAC_PERM_ALLOW_GM_FRIEND) || */AccountMgr::IsPlayerAccount(AccountMgr::GetSecurity(friendAccountId, realm.Id.Realm)))
         {
             if (friendGuid)
             {
                 if (friendGuid == GetPlayer()->GetGUID())
                     friendResult = FRIEND_SELF;
-                else if (GetPlayer()->GetTeam() != team && !HasPermission(rbac::RBAC_PERM_TWO_SIDE_ADD_FRIEND))
+                else if (GetPlayer()->GetTeam() != team)// && !HasPermission(rbac::RBAC_PERM_TWO_SIDE_ADD_FRIEND))
                     friendResult = FRIEND_ENEMY;
                 else if (GetPlayer()->GetSocial()->HasFriend(friendGuid.GetCounter()))
                     friendResult = FRIEND_ALREADY;

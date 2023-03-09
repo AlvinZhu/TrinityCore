@@ -86,19 +86,19 @@ class boss_hakkar : public CreatureScript
             void EnterCombat(Unit* /*who*/) override
             {
                 _EnterCombat();
-                events.ScheduleEvent(EVENT_BLOOD_SIPHON, 90000);
+                events.ScheduleEvent(EVENT_BLOOD_SIPHON, 150000);
                 events.ScheduleEvent(EVENT_CORRUPTED_BLOOD, 25000);
                 events.ScheduleEvent(EVENT_CAUSE_INSANITY, 17000);
-                events.ScheduleEvent(EVENT_WILL_OF_HAKKAR, 17000);
-                events.ScheduleEvent(EVENT_ENRAGE, 600000);
+                events.ScheduleEvent(EVENT_WILL_OF_HAKKAR, 90000);
+                events.ScheduleEvent(EVENT_ENRAGE, 160000);
                 if (instance->GetBossState(DATA_JEKLIK) != DONE)
-                    events.ScheduleEvent(EVENT_ASPECT_OF_JEKLIK, 4000);
+                    events.ScheduleEvent(EVENT_ASPECT_OF_JEKLIK, 40000);
                 if (instance->GetBossState(DATA_VENOXIS) != DONE)
-                    events.ScheduleEvent(EVENT_ASPECT_OF_VENOXIS, 7000);
+                    events.ScheduleEvent(EVENT_ASPECT_OF_VENOXIS, 120000);
                 if (instance->GetBossState(DATA_MARLI) != DONE)
                     events.ScheduleEvent(EVENT_ASPECT_OF_MARLI, 12000);
                 if (instance->GetBossState(DATA_THEKAL) != DONE)
-                    events.ScheduleEvent(EVENT_ASPECT_OF_THEKAL, 8000);
+                    events.ScheduleEvent(EVENT_ASPECT_OF_THEKAL, 90000);
                 if (instance->GetBossState(DATA_ARLOKK) != DONE)
                     events.ScheduleEvent(EVENT_ASPECT_OF_ARLOKK, 18000);
                 Talk(SAY_AGGRO);
@@ -118,47 +118,51 @@ class boss_hakkar : public CreatureScript
                 {
                     switch (eventId)
                     {
-                        case EVENT_BLOOD_SIPHON:
-                            DoCastVictim(SPELL_BLOOD_SIPHON, true);
-                            events.ScheduleEvent(EVENT_BLOOD_SIPHON, 90000);
-                            break;
-                        case EVENT_CORRUPTED_BLOOD:
-                            DoCastVictim(SPELL_CORRUPTED_BLOOD, true);
-                            events.ScheduleEvent(EVENT_CORRUPTED_BLOOD, urand(30000, 45000));
-                            break;
+                        //case EVENT_BLOOD_SIPHON:
+                        //    DoCastVictim(SPELL_BLOOD_SIPHON, true);
+                        //    events.ScheduleEvent(EVENT_BLOOD_SIPHON, 150000);
+                        //    break;
+                        //case EVENT_CORRUPTED_BLOOD:
+                        //    DoCastVictim(SPELL_CORRUPTED_BLOOD, true);
+                        //    events.ScheduleEvent(EVENT_CORRUPTED_BLOOD, urand(30000, 45000));
+                        //    break;
                         case EVENT_CAUSE_INSANITY:
                             // DoCast(SelectTarget(SELECT_TARGET_RANDOM, 0, 100, true), SPELL_CAUSE_INSANITY);
                             // events.ScheduleEvent(EVENT_CAUSE_INSANITY, urand(35000, 45000));
                             break;
                         case EVENT_WILL_OF_HAKKAR:
-                            DoCast(SelectTarget(SELECT_TARGET_RANDOM, 0, 100, true), SPELL_WILL_OF_HAKKAR);
-                            events.ScheduleEvent(EVENT_WILL_OF_HAKKAR, urand(25000, 35000));
+							if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100, true))
+							{
+								if (target->IsPlayerBot())
+									DoCast(target, SPELL_WILL_OF_HAKKAR);
+							}
+                            events.ScheduleEvent(EVENT_WILL_OF_HAKKAR, urand(45000, 90000));
                             break;
                         case EVENT_ENRAGE:
                             if (!me->HasAura(SPELL_ENRAGE))
                                 DoCast(me, SPELL_ENRAGE);
-                            events.ScheduleEvent(EVENT_ENRAGE, 90000);
+                            events.ScheduleEvent(EVENT_ENRAGE, 180000);
                             break;
                         case EVENT_ASPECT_OF_JEKLIK:
                             DoCastVictim(SPELL_ASPECT_OF_JEKLIK, true);
-                            events.ScheduleEvent(EVENT_ASPECT_OF_JEKLIK, urand(10000, 14000));
+                            events.ScheduleEvent(EVENT_ASPECT_OF_JEKLIK, urand(40000, 60000));
                             break;
                         case EVENT_ASPECT_OF_VENOXIS:
                             DoCastVictim(SPELL_ASPECT_OF_VENOXIS, true);
-                            events.ScheduleEvent(EVENT_ASPECT_OF_VENOXIS, 8000);
+                            events.ScheduleEvent(EVENT_ASPECT_OF_VENOXIS, 120000);
                             break;
-                        case EVENT_ASPECT_OF_MARLI:
-                            DoCastVictim(SPELL_ASPECT_OF_MARLI, true);
-                            events.ScheduleEvent(EVENT_ASPECT_OF_MARLI, 10000);
-                            break;
+                        //case EVENT_ASPECT_OF_MARLI:
+                        //    DoCastVictim(SPELL_ASPECT_OF_MARLI, true);
+                        //    events.ScheduleEvent(EVENT_ASPECT_OF_MARLI, 10000);
+                        //    break;
                         case EVENT_ASPECT_OF_THEKAL:
                             DoCastVictim(SPELL_ASPECT_OF_THEKAL, true);
-                            events.ScheduleEvent(EVENT_ASPECT_OF_THEKAL, 15000);
+                            events.ScheduleEvent(EVENT_ASPECT_OF_THEKAL, 90000);
                             break;
-                        case EVENT_ASPECT_OF_ARLOKK:
-                            DoCastVictim(SPELL_ASPECT_OF_ARLOKK, true);
-                            events.ScheduleEvent(EVENT_ASPECT_OF_ARLOKK, urand(10000, 15000));
-                            break;
+                        //case EVENT_ASPECT_OF_ARLOKK:
+                        //    DoCastVictim(SPELL_ASPECT_OF_ARLOKK, true);
+                        //    events.ScheduleEvent(EVENT_ASPECT_OF_ARLOKK, urand(10000, 15000));
+                        //    break;
                         default:
                             break;
                     }

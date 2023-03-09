@@ -77,9 +77,36 @@ public:
             // Razorgore
             EggCount = 0;
             EggEvent = 0;
+
+			//BotAttacksForBoss = NULL;
         }
 
-        void OnCreatureCreate(Creature* creature) override
+		//BotAttackCreature* BotAttacksForBoss;
+
+		//BotAttackCreature* GetBotAttacksCreature(Creature* boss) override
+		//{
+		//	if (boss == NULL)
+		//		return BotAttacksForBoss;
+		//	if (!BotAttacksForBoss)
+		//	{
+		//		BotAttacksForBoss = new BotAttackCreature(boss, 1000);
+		//		return BotAttacksForBoss;
+		//	}
+		//	else
+		//	{
+		//		if (BotAttacksForBoss->MatchMainCreature(boss))
+		//			return BotAttacksForBoss;
+		//		else
+		//		{
+		//			delete BotAttacksForBoss;
+		//			BotAttacksForBoss = new BotAttackCreature(boss, 1000);
+		//			return BotAttacksForBoss;
+		//		}
+		//	}
+		//	return NULL;
+		//}
+		
+		void OnCreatureCreate(Creature* creature) override
         {
             InstanceScript::OnCreatureCreate(creature);
 

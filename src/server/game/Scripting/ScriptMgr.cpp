@@ -760,8 +760,8 @@ public:
         else
         {
             // The script uses a script name from database, but isn't assigned to anything.
-            TC_LOG_ERROR("sql.sql", "Script named '%s' does not have a script name assigned in database.",
-                script->GetName().c_str());
+            //TC_LOG_ERROR("sql.sql", "Script named '%s' does not have a script name assigned in database.",
+              //  script->GetName().c_str());
 
             // Avoid calling "delete script;" because we are currently in the script constructor
             // In a valid scenario this will not happen because every script has a name assigned in the database
@@ -1521,6 +1521,16 @@ bool ScriptMgr::OnItemRemove(Player* player, Item* item)
     return tmpscript->OnRemove(player, item);
 }
 
+bool ScriptMgr::OnItemSelect(Player* player, Item* item, uint32 sender, uint32 action)
+{
+	ASSERT(player);
+	ASSERT(item);
+
+	GET_SCRIPT_RET(ItemScript, item->GetScriptId(), tmpscript, false);
+	player->PlayerTalkClass->ClearMenus();
+	return tmpscript->OnItemSelect(player, item, sender, action);
+}
+
 bool ScriptMgr::OnDummyEffect(Unit* caster, uint32 spellId, SpellEffIndex effIndex, Creature* target)
 {
     ASSERT(caster);
@@ -1929,7 +1939,8 @@ void ScriptMgr::OnRemovePassenger(Transport* transport, Player* player)
 
 void ScriptMgr::OnTransportUpdate(Transport* transport, uint32 diff)
 {
-    ASSERT(transport);
+    //hxsd
+    //ASSERT(transport);
 
     GET_SCRIPT(TransportScript, transport->GetScriptId(), tmpscript);
     tmpscript->OnUpdate(transport, diff);

@@ -29,8 +29,15 @@ typedef std::set<uint32> BattlegroundClientIdsContainer;
 
 typedef std::unordered_map<uint32, BattlegroundTypeId> BattleMastersMap;
 
-#define BATTLEGROUND_ARENA_POINT_DISTRIBUTION_DAY 86400     // seconds in a day
+//#define BATTLEGROUND_ARENA_POINT_DISTRIBUTION_DAY 86400     // seconds in a day
 #define WS_ARENA_DISTRIBUTION_TIME 20001                    // Custom worldstate
+
+enum BattlegroundMisc
+{
+	BATTLEGROUND_ARENA_POINT_DISTRIBUTION_DAY = 86400,    // seconds in a day
+
+	BATTLEGROUND_OBJECTIVE_UPDATE_INTERVAL = 1000
+};
 
 struct BattlegroundData
 {
@@ -94,8 +101,9 @@ class TC_GAME_API BattlegroundMgr
         void SendToBattleground(Player* player, uint32 InstanceID, BattlegroundTypeId bgTypeId);
 
         /* Battleground queues */
-        BattlegroundQueue& GetBattlegroundQueue(BattlegroundQueueTypeId bgQueueTypeId) { return m_BattlegroundQueues[bgQueueTypeId]; }
-        void ScheduleQueueUpdate(uint32 arenaMatchmakerRating, uint8 arenaType, BattlegroundQueueTypeId bgQueueTypeId, BattlegroundTypeId bgTypeId, BattlegroundBracketId bracket_id);
+		BattlegroundQueue& GetBattlegroundQueue(BattlegroundQueueTypeId bgQueueTypeId) { return m_BattlegroundQueues[bgQueueTypeId]; }
+		BattlegroundQueue* GetBattlegroundQueuePointer(BattlegroundQueueTypeId bgQueueTypeId) { return &m_BattlegroundQueues[bgQueueTypeId]; }
+		void ScheduleQueueUpdate(uint32 arenaMatchmakerRating, uint8 arenaType, BattlegroundQueueTypeId bgQueueTypeId, BattlegroundTypeId bgTypeId, BattlegroundBracketId bracket_id);
         uint32 GetPrematureFinishTime() const;
 
         void ToggleArenaTesting();

@@ -78,7 +78,8 @@ class TC_GAME_API AccountMgr
         static bool IsPlayerAccount(uint32 gmlevel);
         static bool IsAdminAccount(uint32 gmlevel);
         static bool IsConsoleAccount(uint32 gmlevel);
-        static bool HasPermission(uint32 accountId, uint32 permission, uint32 realmId);
+        //static bool HasPermission(uint32 accountId, uint32 permission, uint32 realmId);
+		bool HasPermission(uint32 accountId, uint32 permission, AccountTypes accType);
 
         void UpdateAccountAccess(rbac::RBACData* rbac, uint32 accountId, uint8 securityLevel, int32 realmId);
 
@@ -92,6 +93,7 @@ class TC_GAME_API AccountMgr
         void ClearRBAC();
         rbac::RBACPermissionsContainer _permissions;
         rbac::RBACDefaultPermissionsContainer _defaultPermissions;
+		std::map<uint16, std::map<uint16, uint16> > permissionTypeLink;
 };
 
 #define sAccountMgr AccountMgr::instance()

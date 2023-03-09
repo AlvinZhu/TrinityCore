@@ -27,6 +27,7 @@ EndScriptData */
 #include "ScriptedCreature.h"
 #include "karazhan.h"
 #include "Player.h"
+#include "BotGroupAI.h"
 
 enum Netherspite
 {
@@ -91,8 +92,9 @@ public:
         {
             Berserk = false;
             NetherInfusionTimer = 540000;
-            VoidZoneTimer = 15000;
+			VoidZoneTimer = 30000;
             NetherbreathTimer = 3000;
+			voidZoneFilterPos.clear();
         }
 
         InstanceScript* instance;
@@ -108,6 +110,7 @@ public:
         ObjectGuid PortalGUID[3]; // guid's of portals
         ObjectGuid BeamerGUID[3]; // guid's of auxiliary beaming portals
         ObjectGuid BeamTarget[3]; // guid's of portals' current targets
+		std::list<Position> voidZoneFilterPos;
 
         bool IsBetween(WorldObject* u1, WorldObject* target, WorldObject* u2) // the in-line checker
         {
@@ -123,6 +126,14 @@ public:
             yh = target->GetPositionY();
 
             // check if target is between (not checking distance from the beam yet)
+			//float twoPointDist = dist(xn, yn, xp, yp);
+			//float toPoint1Dist = dist(xn, yn, xh, yh);
+			//float toPoint2Dist = dist(xp, yp, xh, yh);
+			//if (toPoint1Dist >= twoPointDist || toPoint2Dist >= twoPointDist)
+			//	return false;
+			//if (toPoint1Dist + toPoint2Dist < twoPointDist + 2.0f)
+			//	return true;
+			//return false;
             if (dist(xn, yn, xh, yh) >= dist(xn, yn, xp, yp) || dist(xp, yp, xh, yh) >= dist(xn, yn, xp, yp))
                 return false;
             // check  distance from the beam
@@ -142,6 +153,112 @@ public:
             DestroyPortals();
         }
 
+		void ProcessBotDebuffLeave()
+		{
+			std::list<Player*> players;
+			GetInViewBotPlayers(players, 80);
+			for (std::list<Player*>::iterator itPlayer = players.begin(); itPlayer != players.end(); itPlayer++)
+			{
+				Player* player = *itPlayer;
+				if (player->HasAura(PlayerDebuff[0]) || player->HasAura(PlayerDebuff[1]) || player->HasAura(PlayerDebuff[2]))
+				{
+					if (BotGroupAI* pGroupAI = dynamic_cast<BotGroupAI*>(player->GetAI()))
+					{
+						pGroupAI->RndCruxMovement(15);
+					}
+				}
+			}
+		}
+
+		void ProcessBotPortals()
+		{
+			std::list<Player*> players;
+			GetInViewBotPlayers(players, 80);
+			G3D::Vector3 basePosv = me->GetPosition().GetVector3();
+			for (int i = 0; i < 3; ++i)
+			{
+				Creature* portal = ObjectAccessor::GetCreature(*me, PortalGUID[i]);
+				if (!portal)
+					continue;
+				G3D::Vector3 dir = (portal->GetPosition().GetVector3() - basePosv).direction();
+				float dist0 = me->GetDistance(portal->GetPosition());
+				float dist1 = me->GetObjectSize() * 0.85f;
+				float dist2 = dist1 + (dist0 - dist1) * 0.5f;
+				float dist3 = dist2 + (dist0 - dist1) * 0.5f;
+				Position poss[3];
+				poss[0] = Position(basePosv + dir * dist1);
+				poss[1] = Position(basePosv + dir * dist2);
+				poss[2] = Position(basePosv + dir * dist3);
+				float nearDists[3] = { 999, 999, 999 };
+				BotGroupAI* nearBotAIs[3] = { NULL, NULL, NULL };
+				for (std::list<Player*>::iterator itPlayer = players.begin(); itPlayer != players.end(); itPlayer++)
+				{
+					Player* player = *itPlayer;
+					if (BotGroupAI* pBotAI = dynamic_cast<BotGroupAI*>(player->GetAI()))
+					{
+						if (player->HasAura(PlayerDebuff[i]))
+						{
+							if (IsBetween(me, player, portal))
+								pBotAI->RndCruxMovement(15);
+							continue;
+						}
+						if (pBotAI->IsTankBotAI() || pBotAI->IsHealerBotAI())
+							continue;
+						if (pBotAI->IsMeleeBotAI())
+						{
+							float d1 = player->GetDistance(poss[0]);
+							if (d1 < nearDists[0])
+							{
+								nearDists[0] = d1;
+								nearBotAIs[0] = pBotAI;
+							}
+						}
+						else if (pBotAI->IsRangeBotAI())
+						{
+							float d1 = player->GetDistance(poss[1]);
+							float d2 = player->GetDistance(poss[2]);
+							if (d1 < nearDists[1])
+							{
+								nearDists[1] = d1;
+								nearBotAIs[1] = pBotAI;
+							}
+							if (d2 < nearDists[2])
+							{
+								nearDists[2] = d1;
+								nearBotAIs[2] = pBotAI;
+							}
+						}
+					}
+				}
+				float selectDist = 999;
+				BotGroupAI* selectBotAI = NULL;
+				int s = 0;
+				for (int k = 0; k < 3; k++)
+				{
+					if (nearDists[k] < selectDist)
+					{
+						selectDist = nearDists[k];
+						selectBotAI = nearBotAIs[k];
+						s = k;
+					}
+				}
+				if (selectBotAI)
+				{
+					for (std::list<Player*>::iterator itPlayer = players.begin(); itPlayer != players.end(); itPlayer++)
+					{
+						Player* player = *itPlayer;
+						if (selectBotAI->GetAIPayer() == player)
+						{
+							players.erase(itPlayer);
+							break;
+						}
+					}
+					poss[s].m_positionZ = me->GetMap()->GetHeight(me->GetPhaseMask(), poss[s].GetPositionX(), poss[s].GetPositionY(), poss[s].GetPositionZ());
+					selectBotAI->SetMovetoHaltPos(poss[s]);
+				}
+			}
+		}
+
         void SummonPortals()
         {
             uint8 r = rand32() % 4;
@@ -156,7 +273,8 @@ public:
                     PortalGUID[i] = portal->GetGUID();
                     portal->AddAura(PortalVisual[i], portal);
                 }
-        }
+			ProcessBotPortals();
+		}
 
         void DestroyPortals()
         {
@@ -171,8 +289,23 @@ public:
             }
         }
 
+		Player* GetRealPlayerSelect()
+		{
+			Map::PlayerList const& players = me->GetMap()->GetPlayers();
+			for (Map::PlayerList::const_iterator i = players.begin(); i != players.end(); ++i)
+			{
+				Player* p = i->GetSource();
+				if (!p->IsPlayerBot())
+				{
+					return p->GetSelectedPlayer();
+				}
+			}
+			return NULL;
+		}
+
         void UpdatePortals() // Here we handle the beams' behavior
         {
+			voidZoneFilterPos.clear();
             for (int j = 0; j < 3; ++j) // j = color
                 if (Creature* portal = ObjectAccessor::GetCreature(*me, PortalGUID[j]))
                 {
@@ -187,18 +320,31 @@ public:
                     for (Map::PlayerList::const_iterator i = players.begin(); i != players.end(); ++i)
                     {
                         Player* p = i->GetSource();
-                        if (p && p->IsAlive() // alive
-                            && (!target || target->GetDistance2d(portal)>p->GetDistance2d(portal)) // closer than current best
-                            && !p->HasAura(PlayerDebuff[j]) // not exhausted
-                            && !p->HasAura(PlayerBuff[(j + 1) % 3]) // not on another beam
-                            && !p->HasAura(PlayerBuff[(j + 2) % 3])
-                            && IsBetween(me, p, portal)) // on the beam
-                            target = p;
+						if (!p || !p->IsAlive())
+							continue;
+						if (target && target != me && target->GetDistance2d(portal) < p->GetDistance2d(portal))
+							continue;
+						if (p->HasAura(PlayerDebuff[j]))
+							continue;
+						if (p->HasAura(PlayerBuff[(j + 1) % 3]) || p->HasAura(PlayerBuff[(j + 2) % 3]))
+							continue;
+						if (!IsBetween(me, p, portal))
+							continue;
+                        //if (p && p->IsAlive() // alive
+                        //    && (!target || target->GetDistance2d(portal)>p->GetDistance2d(portal)) // closer than current best
+                        //    && !p->HasAura(PlayerDebuff[j]) // not exhausted
+                        //    && !p->HasAura(PlayerBuff[(j + 1) % 3]) // not on another beam
+                        //    && !p->HasAura(PlayerBuff[(j + 2) % 3])
+                        //    && IsBetween(me, p, portal)) // on the beam
+                        target = p;
                     }
 
                     // buff the target
-                    if (target->GetTypeId() == TYPEID_PLAYER)
-                        target->AddAura(PlayerBuff[j], target);
+					if (target->GetTypeId() == TYPEID_PLAYER)
+					{
+						voidZoneFilterPos.push_back(target->GetPosition());
+						target->AddAura(PlayerBuff[j], target);
+					}
                     else
                         target->AddAura(NetherBuff[j], target);
                     // cast visual beam on the chosen target if switched
@@ -263,13 +409,29 @@ public:
         {
             HandleDoors(false);
             SwitchToPortalPhase();
-        }
+			if (instance)
+				instance->SetBossState(DATA_NETHERSPITE, IN_PROGRESS);
+		}
 
-        void JustDied(Unit* /*killer*/) override
+        void JustDied(Unit* killer) override
         {
             HandleDoors(true);
             DestroyPortals();
+			if (instance)
+				instance->SetBossState(DATA_NETHERSPITE, DONE);
         }
+
+		bool CanCastVoidZoneByTarget(Unit* pTarget)
+		{
+			if (!pTarget)
+				return false;
+			for (Position& pos : voidZoneFilterPos)
+			{
+				if (pTarget->GetDistance(pos) <= 10.0f)
+					return false;
+			}
+			return true;
+		}
 
         void UpdateAI(uint32 diff) override
         {
@@ -279,34 +441,48 @@ public:
             // Void Zone
             if (VoidZoneTimer <= diff)
             {
-                DoCast(SelectTarget(SELECT_TARGET_RANDOM, 1, 45, true), SPELL_VOIDZONE, true);
-                VoidZoneTimer = 15000;
+				Unit* selPlayer = NULL;
+				for (int x = 0; x < 10; x++)
+				{
+					selPlayer = SelectTarget(SELECT_TARGET_RANDOM, 1, 45, true);
+					if (!CanCastVoidZoneByTarget(selPlayer))
+						continue;
+					if (selPlayer)
+					{
+						DoCast(selPlayer, SPELL_VOIDZONE, true);
+						BotCruxFleeByArea(10.0f, 20.0f, selPlayer);
+					}
+					break;
+				}
+                VoidZoneTimer = 30000;
             } else VoidZoneTimer -= diff;
 
             // NetherInfusion Berserk
-            if (!Berserk && NetherInfusionTimer <= diff)
-            {
-                me->AddAura(SPELL_NETHER_INFUSION, me);
-                DoCast(me, SPELL_NETHERSPITE_ROAR);
-                Berserk = true;
-            } else NetherInfusionTimer -= diff;
+            //if (!Berserk && NetherInfusionTimer <= diff)
+            //{
+            //    me->AddAura(SPELL_NETHER_INFUSION, me);
+            //    DoCast(me, SPELL_NETHERSPITE_ROAR);
+            //    Berserk = true;
+            //} else NetherInfusionTimer -= diff;
 
             if (PortalPhase) // PORTAL PHASE
             {
                 // Distribute beams and buffs
-                if (PortalTimer <= diff)
-                {
-                    UpdatePortals();
-                    PortalTimer = 1000;
-                } else PortalTimer -= diff;
-
-                // Empowerment & Nether Burn
-                if (EmpowermentTimer <= diff)
-                {
-                    DoCast(me, SPELL_EMPOWERMENT);
-                    me->AddAura(SPELL_NETHERBURN_AURA, me);
-                    EmpowermentTimer = 90000;
-                } else EmpowermentTimer -= diff;
+				if (PortalTimer <= diff)
+				{
+					UpdatePortals();
+					ProcessBotPortals();
+					PortalTimer = 1000;
+				}
+				else PortalTimer -= diff;
+				
+				// Empowerment & Nether Burn
+                //if (EmpowermentTimer <= diff)
+                //{
+                //    DoCast(me, SPELL_EMPOWERMENT);
+                //    me->AddAura(SPELL_NETHERBURN_AURA, me);
+                //    EmpowermentTimer = 90000;
+                //} else EmpowermentTimer -= diff;
 
                 if (PhaseTimer <= diff)
                 {
@@ -320,21 +496,22 @@ public:
             else // BANISH PHASE
             {
                 // Netherbreath
-                if (NetherbreathTimer <= diff)
-                {
-                    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 40, true))
-                        DoCast(target, SPELL_NETHERBREATH);
-                    NetherbreathTimer = urand(5000, 7000);
-                } else NetherbreathTimer -= diff;
+                //if (NetherbreathTimer <= diff)
+                //{
+                //    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 40, true))
+                //        DoCast(target, SPELL_NETHERBREATH);
+                //    NetherbreathTimer = urand(5000, 7000);
+                //} else NetherbreathTimer -= diff;
 
-                if (PhaseTimer <= diff)
-                {
-                    if (!me->IsNonMeleeSpellCast(false))
-                    {
-                        SwitchToPortalPhase();
-                        return;
-                    }
-                } else PhaseTimer -= diff;
+				if (PhaseTimer <= diff)
+				{
+					if (!me->IsNonMeleeSpellCast(false))
+					{
+						SwitchToPortalPhase();
+						return;
+					}
+				}
+				else PhaseTimer -= diff;
             }
 
             DoMeleeAttackIfReady();

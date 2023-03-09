@@ -160,7 +160,8 @@ class TC_GAME_API AuctionHouseMgr
         typedef std::pair<PlayerAuctions*, uint32> AuctionPair;
 
         AuctionHouseObject* GetAuctionsMap(uint32 factionTemplateId);
-        AuctionHouseObject* GetAuctionsMapByHouseId(uint8 auctionHouseId);
+		AuctionHouseObject* GetAuctionsMap(TeamId team);
+		AuctionHouseObject* GetAuctionsMapByHouseId(uint8 auctionHouseId);
         AuctionHouseObject* GetBidsMap(uint32 factionTemplateId);
 
         Item* GetAItem(ObjectGuid::LowType id)
@@ -181,8 +182,9 @@ class TC_GAME_API AuctionHouseMgr
         void SendAuctionCancelledToBidderMail(AuctionEntry* auction, SQLTransaction& trans);
 
         static uint32 GetAuctionDeposit(AuctionHouseEntry const* entry, uint32 time, Item* pItem, uint32 count);
-        static AuctionHouseEntry const* GetAuctionHouseEntry(uint32 factionTemplateId);
-        static AuctionHouseEntry const* GetAuctionHouseEntryFromHouse(uint8 houseId);
+		static AuctionHouseEntry const* GetAuctionHouseEntry(uint32 factionTemplateId);
+		static AuctionHouseEntry const* GetAuctionHouseEntry(TeamId team);
+		static AuctionHouseEntry const* GetAuctionHouseEntryFromHouse(uint8 houseId);
     public:
 
         //load first auction items, because of check if item exists, when loading

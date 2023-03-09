@@ -128,8 +128,10 @@ class boss_akilzon : public CreatureScript
 
             void JustDied(Unit* /*killer*/) override
             {
+                
                 Talk(SAY_DEATH);
-                _JustDied();
+                me->SummonCreature(23999, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ()+0.1);
+               // _JustDied();
             }
 
             void KilledUnit(Unit* who) override

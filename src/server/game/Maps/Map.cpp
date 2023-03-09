@@ -36,6 +36,14 @@
 #include "Transport.h"
 #include "Vehicle.h"
 #include "VMapFactory.h"
+#include "PlayerBotMgr.h"
+#include "FieldBotMgr.h"
+#include "../CommandBG/CommandAB.h"
+#include "../CommandBG/CommandWS.h"
+#include "../CommandBG/CommandEY.h"
+#include "../CommandBG/CommandAV.h"
+#include "../CommandBG/CommandIC.h"
+#include "Config.h"
 
 u_map_magic MapMagic        = { {'M','A','P','S'} };
 u_map_magic MapVersionMagic = { {'v','1','.','8'} };
@@ -81,8 +89,8 @@ bool Map::ExistMap(uint32 mapid, int gx, int gy)
 
     if (!pf)
     {
-        TC_LOG_ERROR("maps", "Map file '%s' does not exist!", fileName);
-        TC_LOG_ERROR("maps", "Please place MAP-files (*.map) in the appropriate directory (%s), or correct the DataDir setting in your worldserver.conf file.", (sWorld->GetDataPath()+"maps/").c_str());
+     //   TC_LOG_ERROR("maps", "Map file '%s' does not exist!", fileName);
+     //   TC_LOG_ERROR("maps", "Please place MAP-files (*.map) in the appropriate directory (%s), or correct the DataDir setting in your worldserver.conf file.", (sWorld->GetDataPath()+"maps/").c_str());
     }
     else
     {
@@ -108,19 +116,27 @@ bool Map::ExistVMap(uint32 mapid, int gx, int gy)
     {
         if (vmgr->isMapLoadingEnabled())
         {
-            bool exists = vmgr->existsMap((sWorld->GetDataPath()+ "vmaps").c_str(),  mapid, gx, gy);
-            if (!exists)
+            VMAP::LoadResult result = vmgr->existsMap((sWorld->GetDataPath() + "vmaps").c_str(), mapid, gx, gy);
+            std::string name = vmgr->getDirFileName(mapid, gx, gy);
+            switch (result)
             {
-                std::string name = vmgr->getDirFileName(mapid, gx, gy);
-                TC_LOG_ERROR("maps", "VMap file '%s' does not exist", (sWorld->GetDataPath()+"vmaps/"+name).c_str());
-                TC_LOG_ERROR("maps", "Please place VMAP-files (*.vmtree and *.vmtile) in the vmap-directory (%s), or correct the DataDir setting in your worldserver.conf file.", (sWorld->GetDataPath()+"vmaps/").c_str());
-                return false;
+                case VMAP::LoadResult::Success:
+                    break;
+                case VMAP::LoadResult::FileNotFound:
+                   // TC_LOG_ERROR("maps", "VMap file '%s' does not exist", (sWorld->GetDataPath() + "vmaps/" + name).c_str());
+                   // TC_LOG_ERROR("maps", "Please place VMAP files (*.vmtree and *.vmtile) in the vmap directory (%s), or correct the DataDir setting in your worldserver.conf file.", (sWorld->GetDataPath() + "vmaps/").c_str());
+                    return false;
+                case VMAP::LoadResult::VersionMismatch:
+                    //TC_LOG_ERROR("maps", "VMap file '%s' couldn't be loaded", (sWorld->GetDataPath() + "vmaps/" + name).c_str());
+                   // TC_LOG_ERROR("maps", "This is because the version of the VMap file and the version of this module are different, please re-extract the maps with the tools compiled with this module.");
+                    return false;
             }
         }
     }
 
     return true;
 }
+
 
 void Map::LoadMMap(int gx, int gy)
 {
@@ -132,7 +148,7 @@ void Map::LoadMMap(int gx, int gy)
     if (mmapLoadResult)
         TC_LOG_DEBUG("mmaps", "MMAP loaded name:%s, id:%d, x:%d, y:%d (mmap rep.: x:%d, y:%d)", GetMapName(), GetId(), gx, gy, gx, gy);
     else
-        TC_LOG_ERROR("mmaps", "Could not load MMAP name:%s, id:%d, x:%d, y:%d (mmap rep.: x:%d, y:%d)", GetMapName(), GetId(), gx, gy, gx, gy);
+        TC_LOG_DEBUG("mmaps", "Could not load MMAP name:%s, id:%d, x:%d, y:%d (mmap rep.: x:%d, y:%d)", GetMapName(), GetId(), gx, gy, gx, gy);
 }
 
 void Map::LoadVMap(int gx, int gy)
@@ -147,7 +163,7 @@ void Map::LoadVMap(int gx, int gy)
             TC_LOG_DEBUG("maps", "VMAP loaded name:%s, id:%d, x:%d, y:%d (vmap rep.: x:%d, y:%d)", GetMapName(), GetId(), gx, gy, gx, gy);
             break;
         case VMAP::VMAP_LOAD_RESULT_ERROR:
-            TC_LOG_ERROR("maps", "Could not load VMAP name:%s, id:%d, x:%d, y:%d (vmap rep.: x:%d, y:%d)", GetMapName(), GetId(), gx, gy, gx, gy);
+//            TC_LOG_ERROR("maps", "Could not load VMAP name:%s, id:%d, x:%d, y:%d (vmap rep.: x:%d, y:%d)", GetMapName(), GetId(), gx, gy, gx, gy);
             break;
         case VMAP::VMAP_LOAD_RESULT_IGNORED:
             TC_LOG_DEBUG("maps", "Ignored VMAP name:%s, id:%d, x:%d, y:%d (vmap rep.: x:%d, y:%d)", GetMapName(), GetId(), gx, gy, gx, gy);
@@ -543,6 +559,107 @@ bool Map::AddPlayerToMap(Player* player)
         ConvertCorpseToBones(player->GetGUID());
 
     sScriptMgr->OnPlayerEnterMap(this, player);
+ //hxsd
+ int32 isok = sConfigMgr->GetIntDefault("pknpc_add", 1);
+if (isok>=1)
+{
+ QueryResult result = WorldDatabase.PQuery("SELECT pknpcid FROM pknpc where cid= %u  limit 0,4;",player->GetGUID());
+    if (result)
+    {
+    uint16 jl=2;	
+    do
+    {
+        Field* fields = result->Fetch();
+
+        uint32 eid = fields[0].GetUInt32();
+//printf("pknpc1 %u\n", eid);
+		int lvl=int(player->getLevel());
+		std::list<Creature*> summons;
+		player->GetAllMinionsByEntry(summons, eid);
+
+		if (summons.size() < 1)
+		{
+		SummonPropertiesEntry const* properties = sSummonPropertiesStore.LookupEntry(713);
+		TempSummon *summon = player->GetMap()->SummonCreature(eid, *player, properties, 0, player);
+		
+		//printf("pknpcok %u\n", eid);
+		if (!summon)
+			return true;
+		((Guardian*)summon)->InitStatsForLevel(lvl);
+		summon->setFaction(player->getFaction());
+		((Minion*)summon)->SetFollowAngle(jl);
+                summon->GetMotionMaster()->MoveFollow(player, jl, summon->GetFollowAngle());
+
+    uint32 health = 60+(lvl*30);
+if (lvl >=20)
+health = 60+(lvl*40);
+if (lvl >=40)
+health = 60+(lvl*60);
+if (lvl >=60)
+health = 60+(lvl*100);
+if (lvl >=70)
+health = 60+(lvl*225);
+if (lvl >80)
+health = 60+(lvl*300);
+health=health * isok;
+                
+                summon->SetLevel(lvl);
+		summon->SetMaxHealth(health);
+		summon->SetHealth(health);
+
+  if (player->GetMaxHealth() >60000)
+  {
+     summon->SetMaxHealth(player->GetMaxHealth());
+   summon->SetHealth(player->GetMaxHealth()); 
+  }		
+		summon->SetFullHealth();
+		uint32 dmg = 10;
+                dmg = lvl+(lvl * 3);
+		if (lvl >= 20)
+			dmg = (lvl * 8);
+
+		if (lvl >= 40)
+			dmg =  (lvl * 12);
+
+		if (lvl >= 60)
+			dmg = (lvl * 18);
+
+/*
+		if (lvl >= 80)
+			dmg = (lvl * 40);
+
+		if (lvl >= 86)
+			dmg = dmg + (lvl * 50);
+*/
+dmg=dmg * isok;
+			
+		summon->SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, dmg);
+//		summon->SetBaseWeaponDamage(OFF_ATTACK, MINDAMAGE, dmg);
+//		summon->SetBaseWeaponDamage(OFF_ATTACK, MAXDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(RANGED_ATTACK, MINDAMAGE, dmg);
+		summon->SetBaseWeaponDamage(RANGED_ATTACK, MAXDAMAGE, dmg);
+/*		summon->SetStatFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, dmg);
+		summon->SetStatFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, dmg);*/
+		summon->SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, dmg);
+	     summon->SetFullHealth();
+	     summon->UpdateAttackPowerAndDamage();
+	     jl=jl+2;
+
+
+
+}
+
+
+    }
+    while (result->NextRow());
+    	
+    }
+ 
+}
+ 
     return true;
 }
 
@@ -711,6 +828,9 @@ void Map::Update(const uint32 t_diff)
 
         // update players at tick
         player->Update(t_diff);
+
+		if (!player->IsPlayerBot())
+			sFieldBotMgr->Update(player->GetGUID());
 
         VisitNearbyCellsOf(player, grid_object_update, world_object_update);
 
@@ -2593,9 +2713,9 @@ float Map::GetWaterLevel(float x, float y) const
         return 0;
 }
 
-bool Map::isInLineOfSight(float x1, float y1, float z1, float x2, float y2, float z2, uint32 phasemask) const
+bool Map::isInLineOfSight(float x1, float y1, float z1, float x2, float y2, float z2, uint32 phasemask, VMAP::ModelIgnoreFlags ignoreFlags) const
 {
-    return VMAP::VMapFactory::createOrGetVMapManager()->isInLineOfSight(GetId(), x1, y1, z1, x2, y2, z2)
+    return VMAP::VMapFactory::createOrGetVMapManager()->isInLineOfSight(GetId(), x1, y1, z1, x2, y2, z2, ignoreFlags)
         && _dynamicTree.isInLineOfSight(x1, y1, z1, x2, y2, z2, phasemask);
 }
 
@@ -2891,7 +3011,10 @@ uint32 Map::GetPlayersCountExceptGMs() const
     uint32 count = 0;
     for (MapRefManager::const_iterator itr = m_mapRefManager.begin(); itr != m_mapRefManager.end(); ++itr)
         if (!itr->GetSource()->IsGameMaster())
+        {
             ++count;
+            count += itr->GetSource()->GetNpcBotsCount();
+        }
     return count;
 }
 
@@ -3066,8 +3189,8 @@ Map::EnterState InstanceMap::CannotEnter(Player* player)
     }
 
     // cannot enter while an encounter is in progress (unless this is a relog, in which case it is permitted)
-    if (!player->IsLoading() && IsRaid() && GetInstanceScript() && GetInstanceScript()->IsEncounterInProgress())
-        return CANNOT_ENTER_ZONE_IN_COMBAT;
+    //if (!player->IsLoading() && IsRaid() && GetInstanceScript() && GetInstanceScript()->IsEncounterInProgress())
+    //    return CANNOT_ENTER_ZONE_IN_COMBAT;
 
     // cannot enter if player is permanent saved to a different instance id
     if (InstancePlayerBind* playerBind = player->GetBoundInstance(GetId(), GetDifficulty()))
@@ -3395,6 +3518,8 @@ bool InstanceMap::HasPermBoundPlayers() const
 
 uint32 InstanceMap::GetMaxPlayers() const
 {
+	if (BotGroupAI::PVE_MAX_DUNGEON)
+		return 40;
     MapDifficulty const* mapDiff = GetMapDifficulty();
     if (mapDiff && mapDiff->maxPlayers)
         return mapDiff->maxPlayers;
@@ -3411,7 +3536,7 @@ uint32 InstanceMap::GetMaxResetDelay() const
 /* ******* Battleground Instance Maps ******* */
 
 BattlegroundMap::BattlegroundMap(uint32 id, time_t expiry, uint32 InstanceId, Map* _parent, uint8 spawnMode)
-  : Map(id, expiry, InstanceId, spawnMode, _parent), m_bg(NULL)
+	: Map(id, expiry, InstanceId, spawnMode, _parent), m_bg(NULL), m_pAllianceCommander(NULL), m_pHordeCommander(NULL)
 {
     //lets initialize visibility distance for BG/Arenas
     BattlegroundMap::InitVisibilityDistance();
@@ -3461,13 +3586,38 @@ bool BattlegroundMap::AddPlayerToMap(Player* player)
         // reset instance validity, battleground maps do not homebind
         player->m_InstanceValid = true;
     }
-    return Map::AddPlayerToMap(player);
+    bool result = Map::AddPlayerToMap(player);
+	if (result && player->IsPlayerBot())
+	{
+		if (player->GetTeamId() == TEAM_ALLIANCE && m_pAllianceCommander)
+		{
+			m_pAllianceCommander->AddPlayerBot(player, m_bg);
+		}
+		else if (player->GetTeamId() == TEAM_HORDE && m_pHordeCommander)
+		{
+			m_pHordeCommander->AddPlayerBot(player, m_bg);
+		}
+	}
+
+	return result;
 }
 
 void BattlegroundMap::RemovePlayerFromMap(Player* player, bool remove)
 {
     TC_LOG_DEBUG("maps", "MAP: Removing player '%s' from bg '%u' of map '%s' before relocating to another map", player->GetName().c_str(), GetInstanceId(), GetMapName());
-    Map::RemovePlayerFromMap(player, remove);
+	if (player->IsPlayerBot())
+	{
+		PlayerBotMgr::SwitchPlayerBotAI(player, PlayerBotAIType::PBAIT_FIELD, true);
+		if (player->GetTeamId() == TEAM_ALLIANCE && m_pAllianceCommander)
+		{
+			m_pAllianceCommander->RemovePlayerBot(player);
+		}
+		else if (player->GetTeamId() == TEAM_HORDE && m_pHordeCommander)
+		{
+			m_pHordeCommander->RemovePlayerBot(player);
+		}
+	}
+	Map::RemovePlayerFromMap(player, remove);
 }
 
 void BattlegroundMap::SetUnload()
@@ -3482,6 +3632,102 @@ void BattlegroundMap::RemoveAllPlayers()
             if (Player* player = itr->GetSource())
                 if (!player->IsBeingTeleportedFar())
                     player->TeleportTo(player->GetBattlegroundEntryPoint());
+}
+
+void BattlegroundMap::Update(const uint32 diff)
+{
+	Map::Update(diff);
+	if (m_pAllianceCommander)
+		m_pAllianceCommander->Update(diff);
+	if (m_pHordeCommander)
+		m_pHordeCommander->Update(diff);
+}
+
+void BattlegroundMap::InsureCommander(BattlegroundTypeId bgType)
+{
+	if (!m_pAllianceCommander)
+	{
+		switch (bgType)
+		{
+		case BATTLEGROUND_AB:
+			m_pAllianceCommander = new CommandAB(m_bg, TeamId::TEAM_ALLIANCE);
+			break;
+		case BATTLEGROUND_WS:
+			m_pAllianceCommander = new CommandWS(m_bg, TeamId::TEAM_ALLIANCE);
+			break;
+		case BATTLEGROUND_EY:
+			m_pAllianceCommander = new CommandEY(m_bg, TeamId::TEAM_ALLIANCE);
+			break;
+		case BATTLEGROUND_AV:
+			m_pAllianceCommander = new CommandAV(m_bg, TeamId::TEAM_ALLIANCE);
+			break;
+		case BATTLEGROUND_IC:
+			m_pAllianceCommander = new CommandIC(m_bg, TeamId::TEAM_ALLIANCE);
+			break;
+		}
+	}
+	if (!m_pHordeCommander)
+	{
+		switch (bgType)
+		{
+		case BATTLEGROUND_AB:
+			m_pHordeCommander = new CommandAB(m_bg, TeamId::TEAM_HORDE);
+			break;
+		case BATTLEGROUND_WS:
+			m_pHordeCommander = new CommandWS(m_bg, TeamId::TEAM_HORDE);
+			break;
+		case BATTLEGROUND_EY:
+			m_pHordeCommander = new CommandEY(m_bg, TeamId::TEAM_HORDE);
+			break;
+		case BATTLEGROUND_AV:
+			m_pHordeCommander = new CommandAV(m_bg, TeamId::TEAM_HORDE);
+			break;
+		case BATTLEGROUND_IC:
+			m_pHordeCommander = new CommandIC(m_bg, TeamId::TEAM_HORDE);
+			break;
+		}
+	}
+}
+
+void BattlegroundMap::InitCommander()
+{
+	if (m_pAllianceCommander)
+		m_pAllianceCommander->Initialize();
+	if (m_pHordeCommander)
+		m_pHordeCommander->Initialize();
+}
+
+void BattlegroundMap::ResetCommander()
+{
+	if (m_pAllianceCommander)
+		m_pAllianceCommander->UpdateBelongBattleground(m_bg);
+	if (m_pHordeCommander)
+		m_pHordeCommander->UpdateBelongBattleground(m_bg);
+}
+
+void BattlegroundMap::ReadyCommander()
+{
+	if (m_pAllianceCommander)
+		m_pAllianceCommander->ReadyGame();
+	if (m_pHordeCommander)
+		m_pHordeCommander->ReadyGame();
+}
+
+void BattlegroundMap::StartCommander()
+{
+	if (m_pAllianceCommander)
+		m_pAllianceCommander->StartGame();
+	if (m_pHordeCommander)
+		m_pHordeCommander->StartGame();
+}
+
+CommandBG* BattlegroundMap::GetCommander(TeamId team)
+{
+	if (team == TEAM_ALLIANCE)
+		return m_pAllianceCommander;
+	else if (team == TEAM_HORDE)
+		return m_pHordeCommander;
+	return NULL;
 }
 
 Corpse* Map::GetCorpse(ObjectGuid const& guid)

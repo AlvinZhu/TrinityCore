@@ -282,9 +282,9 @@ class boss_lady_deathwhisper : public CreatureScript
             {
                 if (!instance->CheckRequiredBosses(DATA_LADY_DEATHWHISPER, who->ToPlayer()))
                 {
-                    EnterEvadeMode();
-                    instance->DoCastSpellOnPlayers(LIGHT_S_HAMMER_TELEPORT);
-                    return;
+//                    EnterEvadeMode();
+  //                  instance->DoCastSpellOnPlayers(LIGHT_S_HAMMER_TELEPORT);
+    //                return;
                 }
 
                 me->setActive(true);
@@ -294,7 +294,7 @@ class boss_lady_deathwhisper : public CreatureScript
                 events.SetPhase(PHASE_ONE);
                 // phase-independent events
                 events.ScheduleEvent(EVENT_BERSERK, 600000);
-                events.ScheduleEvent(EVENT_DEATH_AND_DECAY, 10000);
+                events.ScheduleEvent(EVENT_DEATH_AND_DECAY, 300000);
                 // phase one only
                 events.ScheduleEvent(EVENT_P1_SUMMON_WAVE, 5000, 0, PHASE_ONE);
                 events.ScheduleEvent(EVENT_P1_SHADOW_BOLT, urand(5500, 6000), 0, PHASE_ONE);
@@ -373,27 +373,37 @@ class boss_lady_deathwhisper : public CreatureScript
             void DamageTaken(Unit* /*damageDealer*/, uint32& damage) override
             {
                 // phase transition
-                if (events.IsInPhase(PHASE_ONE) && damage > me->GetPower(POWER_MANA))
-                {
-                    Talk(SAY_PHASE_2);
-                    Talk(EMOTE_PHASE_2);
-                    DoStartMovement(me->GetVictim());
-                    damage -= me->GetPower(POWER_MANA);
-                    me->SetPower(POWER_MANA, 0);
-                    me->RemoveAurasDueToSpell(SPELL_MANA_BARRIER);
-                    events.SetPhase(PHASE_TWO);
-                    events.ScheduleEvent(EVENT_P2_FROSTBOLT, urand(10000, 12000), 0, PHASE_TWO);
-                    events.ScheduleEvent(EVENT_P2_FROSTBOLT_VOLLEY, urand(19000, 21000), 0, PHASE_TWO);
-                    events.ScheduleEvent(EVENT_P2_TOUCH_OF_INSIGNIFICANCE, urand(6000, 9000), 0, PHASE_TWO);
-                    events.ScheduleEvent(EVENT_P2_SUMMON_SHADE, urand(12000, 15000), 0, PHASE_TWO);
-                    // on heroic mode Lady Deathwhisper is immune to taunt effects in phase 2 and continues summoning adds
-                    if (IsHeroic())
-                    {
-                        me->ApplySpellImmune(0, IMMUNITY_STATE, SPELL_AURA_MOD_TAUNT, true);
-                        me->ApplySpellImmune(0, IMMUNITY_EFFECT, SPELL_EFFECT_ATTACK_ME, true);
-                        events.ScheduleEvent(EVENT_P2_SUMMON_WAVE, 45000, 0, PHASE_TWO);
-                    }
-                }
+				if (events.IsInPhase(PHASE_ONE))
+				{
+					if (damage > me->GetPower(POWER_MANA))
+					{
+						Talk(SAY_PHASE_2);
+						Talk(EMOTE_PHASE_2);
+						DoStartMovement(me->GetVictim());
+						damage -= me->GetPower(POWER_MANA);
+						me->SetPower(POWER_MANA, 0);
+						me->RemoveAurasDueToSpell(SPELL_MANA_BARRIER);
+						events.SetPhase(PHASE_TWO);
+						events.ScheduleEvent(EVENT_P2_FROSTBOLT, urand(10000, 12000), 0, PHASE_TWO);
+						//events.ScheduleEvent(EVENT_P2_FROSTBOLT_VOLLEY, urand(19000, 21000), 0, PHASE_TWO);
+						//events.ScheduleEvent(EVENT_P2_TOUCH_OF_INSIGNIFICANCE, urand(6000, 9000), 0, PHASE_TWO);
+						events.ScheduleEvent(EVENT_P2_SUMMON_SHADE, urand(12000, 15000), 0, PHASE_TWO);
+						// on heroic mode Lady Deathwhisper is immune to taunt effects in phase 2 and continues summoning adds
+						if (IsHeroic())
+						{
+							me->ApplySpellImmune(0, IMMUNITY_STATE, SPELL_AURA_MOD_TAUNT, true);
+							me->ApplySpellImmune(0, IMMUNITY_EFFECT, SPELL_EFFECT_ATTACK_ME, true);
+							events.ScheduleEvent(EVENT_P2_SUMMON_WAVE, 45000, 0, PHASE_TWO);
+						}
+					}
+					else
+					{
+						uint32 onceDec = me->GetMaxPower(POWER_MANA) / 2000;
+						uint32 curPow = me->GetPower(POWER_MANA);
+						if (curPow > onceDec)
+							me->SetPower(POWER_MANA, curPow - onceDec);
+					}
+				}
             }
 
             void JustSummoned(Creature* summon) override
@@ -426,6 +436,12 @@ class boss_lady_deathwhisper : public CreatureScript
 
                 events.Update(diff);
 
+				if (InstanceScript* inst = me->GetInstanceScript())
+				{
+					if (BotAttackCreature* pBotAttack = inst->GetBotAttacksCreature(me))
+						pBotAttack->UpdateNeedAttackCreatures(diff, this, true);
+				}
+
                 if (me->HasUnitState(UNIT_STATE_CASTING) && !events.IsInPhase(PHASE_INTRO))
                     return;
 
@@ -452,17 +468,20 @@ class boss_lady_deathwhisper : public CreatureScript
                             Talk(SAY_INTRO_7);
                             break;
                         case EVENT_DEATH_AND_DECAY:
-                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM))
-                                DoCast(target, SPELL_DEATH_AND_DECAY);
-                            events.ScheduleEvent(EVENT_DEATH_AND_DECAY, urand(22000, 30000));
+							if (Unit* target = SelectTarget(SELECT_TARGET_FARTHEST))
+							{
+								DoCast(target, SPELL_DEATH_AND_DECAY);
+								BotCruxFleeByRange(24, target);
+							}
+                            events.ScheduleEvent(EVENT_DEATH_AND_DECAY, urand(300000, 360000));
                             break;
-                        case EVENT_DOMINATE_MIND_H:
-                            Talk(SAY_DOMINATE_MIND);
-                            for (uint8 i = 0; i < _dominateMindCount; i++)
-                                if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1, 0.0f, true, -SPELL_DOMINATE_MIND_H))
-                                    DoCast(target, SPELL_DOMINATE_MIND_H);
-                            events.ScheduleEvent(EVENT_DOMINATE_MIND_H, urand(40000, 45000));
-                            break;
+                        //case EVENT_DOMINATE_MIND_H:
+                        //    Talk(SAY_DOMINATE_MIND);
+                        //    for (uint8 i = 0; i < _dominateMindCount; i++)
+                        //        if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1, 0.0f, true, -SPELL_DOMINATE_MIND_H))
+                        //            DoCast(target, SPELL_DOMINATE_MIND_H);
+                        //    events.ScheduleEvent(EVENT_DOMINATE_MIND_H, urand(40000, 45000));
+                        //    break;
                         case EVENT_P1_SUMMON_WAVE:
                             SummonWaveP1();
                             events.ScheduleEvent(EVENT_P1_SUMMON_WAVE, IsHeroic() ? 45000 : 60000, 0, PHASE_ONE);
@@ -470,43 +489,43 @@ class boss_lady_deathwhisper : public CreatureScript
                         case EVENT_P1_SHADOW_BOLT:
                             if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM))
                                 DoCast(target, SPELL_SHADOW_BOLT);
-                            events.ScheduleEvent(EVENT_P1_SHADOW_BOLT, urand(5000, 8000), 0, PHASE_ONE);
+                            events.ScheduleEvent(EVENT_P1_SHADOW_BOLT, urand(20000, 25000), 0, PHASE_ONE);
                             break;
-                        case EVENT_P1_REANIMATE_CULTIST:
-                            ReanimateCultist();
-                            break;
-                        case EVENT_P1_EMPOWER_CULTIST:
-                            EmpowerCultist();
-                            events.ScheduleEvent(EVENT_P1_EMPOWER_CULTIST, urand(18000, 25000));
-                            break;
+                        //case EVENT_P1_REANIMATE_CULTIST:
+                        //    ReanimateCultist();
+                        //    break;
+                        //case EVENT_P1_EMPOWER_CULTIST:
+                        //    EmpowerCultist();
+                        //    events.ScheduleEvent(EVENT_P1_EMPOWER_CULTIST, urand(18000, 25000));
+                        //    break;
                         case EVENT_P2_FROSTBOLT:
                             DoCastVictim(SPELL_FROSTBOLT);
-                            events.ScheduleEvent(EVENT_P2_FROSTBOLT, urand(10000, 11000), 0, PHASE_TWO);
+                            events.ScheduleEvent(EVENT_P2_FROSTBOLT, urand(15000, 20000), 0, PHASE_TWO);
                             break;
-                        case EVENT_P2_FROSTBOLT_VOLLEY:
-                            DoCastAOE(SPELL_FROSTBOLT_VOLLEY);
-                            events.ScheduleEvent(EVENT_P2_FROSTBOLT_VOLLEY, urand(13000, 15000), 0, PHASE_TWO);
-                            break;
-                        case EVENT_P2_TOUCH_OF_INSIGNIFICANCE:
-                            DoCastVictim(SPELL_TOUCH_OF_INSIGNIFICANCE);
-                            events.ScheduleEvent(EVENT_P2_TOUCH_OF_INSIGNIFICANCE, urand(9000, 13000), 0, PHASE_TWO);
-                            break;
-                        case EVENT_P2_SUMMON_SHADE:
-                            if (Unit* shadeTarget = SelectTarget(SELECT_TARGET_RANDOM, 1))
-                            {
-                                _nextVengefulShadeTargetGUID = shadeTarget->GetGUID();
-                                DoCast(shadeTarget, SPELL_SUMMON_SHADE);
-                            }
-                            events.ScheduleEvent(EVENT_P2_SUMMON_SHADE, urand(18000, 23000), 0, PHASE_TWO);
-                            break;
+                        //case EVENT_P2_FROSTBOLT_VOLLEY:
+                        //    DoCastAOE(SPELL_FROSTBOLT_VOLLEY);
+                        //    events.ScheduleEvent(EVENT_P2_FROSTBOLT_VOLLEY, urand(13000, 15000), 0, PHASE_TWO);
+                        //    break;
+                        //case EVENT_P2_TOUCH_OF_INSIGNIFICANCE:
+                        //    DoCastVictim(SPELL_TOUCH_OF_INSIGNIFICANCE);
+                        //    events.ScheduleEvent(EVENT_P2_TOUCH_OF_INSIGNIFICANCE, urand(9000, 13000), 0, PHASE_TWO);
+                        //    break;
+                        //case EVENT_P2_SUMMON_SHADE:
+                        //    if (Unit* shadeTarget = SelectTarget(SELECT_TARGET_RANDOM, 1))
+                        //    {
+                        //        _nextVengefulShadeTargetGUID = shadeTarget->GetGUID();
+                        //        DoCast(shadeTarget, SPELL_SUMMON_SHADE);
+                        //    }
+                        //    events.ScheduleEvent(EVENT_P2_SUMMON_SHADE, urand(40000, 55000), 0, PHASE_TWO);
+                        //    break;
                         case EVENT_P2_SUMMON_WAVE:
                             SummonWaveP2();
                             events.ScheduleEvent(EVENT_P2_SUMMON_WAVE, 45000, 0, PHASE_TWO);
                             break;
-                        case EVENT_BERSERK:
-                            DoCast(me, SPELL_BERSERK);
-                            Talk(SAY_BERSERK);
-                            break;
+                        //case EVENT_BERSERK:
+                        //    DoCast(me, SPELL_BERSERK);
+                        //    Talk(SAY_BERSERK);
+                        //    break;
                     }
                 }
 
@@ -561,8 +580,15 @@ class boss_lady_deathwhisper : public CreatureScript
             // helper for summoning wave mobs
             void Summon(uint32 entry, const Position& pos)
             {
-                if (TempSummon* summon = me->SummonCreature(entry, pos, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 10000))
-                    summon->CastSpell(summon, SPELL_TELEPORT_VISUAL);
+				if (TempSummon* summon = me->SummonCreature(entry, pos, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 10000))
+				{
+					summon->CastSpell(summon, SPELL_TELEPORT_VISUAL);
+					if (InstanceScript* inst = me->GetInstanceScript())
+					{
+						if (BotAttackCreature* pBotAttack = inst->GetBotAttacksCreature(NULL))
+							pBotAttack->AddNewCreatureNeedAttack(summon, 6);
+					}
+				}
             }
 
             void SetGUID(ObjectGuid guid, int32 id/* = 0*/) override

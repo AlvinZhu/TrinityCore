@@ -252,9 +252,9 @@ class boss_professor_putricide : public CreatureScript
 
                 if (!instance->CheckRequiredBosses(DATA_PROFESSOR_PUTRICIDE, who->ToPlayer()))
                 {
-                    EnterEvadeMode();
-                    instance->DoCastSpellOnPlayers(LIGHT_S_HAMMER_TELEPORT);
-                    return;
+//                    EnterEvadeMode();
+  //                  instance->DoCastSpellOnPlayers(LIGHT_S_HAMMER_TELEPORT);
+    //                return;
                 }
 
                 me->setActive(true);

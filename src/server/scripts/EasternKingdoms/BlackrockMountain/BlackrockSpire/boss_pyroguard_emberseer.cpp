@@ -249,12 +249,19 @@ public:
                         case EVENT_PLAYER_CHECK:
                         {
                             // Check to see if all players in instance have aura SPELL_EMBERSEER_START before starting event
-                            bool _hasAura = true;
+                            bool _hasAura = false;
                             Map::PlayerList const &players = me->GetMap()->GetPlayers();
-                            for (Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
-                                if (Player* player = itr->GetSource()->ToPlayer())
-                                    if (!player->HasAura(SPELL_EMBERSEER_OBJECT_VISUAL))
-                                        _hasAura = false;
+							for (Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
+							{
+								if (Player* player = itr->GetSource()->ToPlayer())
+								{
+									if (player->HasAura(SPELL_EMBERSEER_OBJECT_VISUAL))
+									{
+										_hasAura = true;
+										break;
+									}
+								}
+							}
 
                             if (_hasAura)
                             {

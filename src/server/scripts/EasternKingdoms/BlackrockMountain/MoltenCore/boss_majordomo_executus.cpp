@@ -98,6 +98,22 @@ class boss_majordomo : public CreatureScript
                 events.ScheduleEvent(EVENT_TELEPORT, 20000);
             }
 
+
+            void JustDied(Unit* killer)
+            {
+                                //SetHealth(100 + 30*lvl);
+                                if (killer)
+                                {
+                                if (instance->GetBossState(BOSS_MAJORDOMO_EXECUTUS) != DONE)
+                               {
+                                me->NearTeleportTo(RagnarosTelePos.GetPositionX(), RagnarosTelePos.GetPositionY(), RagnarosTelePos.GetPositionZ(), RagnarosTelePos.GetOrientation());
+                                me->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
+                                instance->instance->SummonCreature(NPC_RAGNAROS, RagnarosSummonPos);
+                                Talk(SAY_ARRIVAL2_MAJ);
+            }
+            }
+            }
+
             void UpdateAI(uint32 diff) override
             {
                 if (instance->GetBossState(BOSS_MAJORDOMO_EXECUTUS) != DONE)
@@ -202,6 +218,8 @@ class boss_majordomo : public CreatureScript
                 }
             }
         };
+
+
 
         CreatureAI* GetAI(Creature* creature) const override
         {

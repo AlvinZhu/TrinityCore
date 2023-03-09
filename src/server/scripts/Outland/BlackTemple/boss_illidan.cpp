@@ -30,6 +30,7 @@ EndScriptData */
 #include "black_temple.h"
 #include "Player.h"
 #include "SpellInfo.h"
+#include "BotGroupAI.h"
 
 // Other defines
 #define CENTER_X            676.740f
@@ -577,8 +578,8 @@ public:
 
         void DamageTaken(Unit* done_by, uint32 &damage) override
         {
-            if (damage >= me->GetHealth() && done_by != me)
-                damage = 0;
+           // if (damage >= me->GetHealth() && done_by != me)
+            //    damage = 0;
             if (done_by->GetGUID() == MaievGUID)
                 done_by->AddThreat(me, -(3*(float)damage)/4); // do not let maiev tank him
         }
@@ -700,8 +701,8 @@ public:
                     Timer[EVENT_TRANSFORM_SEQUENCE] = 500;
                     Talk(SAY_ILLIDAN_MORPH);
                 }
-                me->GetMotionMaster()->Clear();
-                me->AttackStop();
+                //me->GetMotionMaster()->Clear();
+                //me->AttackStop();
                 break;
             default:
                 break;
@@ -776,6 +777,13 @@ public:
 
         void SummonMaiev()
         {
+			std::list<Player*> players;
+			SearchTargetPlayerAllGroup(players, 120);
+			for (Player* p : players)
+			{
+				if (BotGroupAI* pGroupAI = dynamic_cast<BotGroupAI*>(p->GetAI()))
+					pGroupAI->AddWaitSpecialAura(SPELL_SHADOW_PRISON);
+			}
             DoCast(me, SPELL_SHADOW_PRISON, true);
             DoCast(me, SPELL_SUMMON_MAIEV, true);
             if (!MaievGUID) // If Maiev cannot be summoned, reset the encounter and post some errors to the console.
@@ -1436,7 +1444,7 @@ public:
             me->SetUInt32Value(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_NONE); // Database sometimes has strange values..
             me->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
             me->setActive(false);
-            me->SetVisible(false);
+           // me->SetVisible(false);
         }
 
         // Do not call reset in Akama's evade mode, as this will stop him from summoning minions after he kills the first bit

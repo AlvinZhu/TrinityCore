@@ -31,6 +31,9 @@
 #include "Unit.h"
 #include "TradeData.h"
 #include "CinematicMgr.h"
+#include "PlayerBotSetting.h"
+#include "bothelper.h"
+#include "../../scripts/Custom/Transmogrification.h"
 
 #include <limits>
 #include <string>
@@ -56,9 +59,13 @@ class PlayerSocial;
 class SpellCastTargets;
 class UpdateMask;
 class PlayerAI;
+class PlayerBotSetting;
 
 struct CharacterCustomizeInfo;
-
+// NpcBot mod
+struct NpcBotMap;
+#define MAX_NPCBOTS 39
+class BotHelper;
 typedef std::deque<Mail*> PlayerMails;
 
 #define PLAYER_MAX_SKILLS           127
@@ -128,9 +135,29 @@ struct SpellModifier
     Aura* const ownerAura;
 };
 
+typedef std::unordered_map<ObjectGuid, uint32> TransmogMapType;
+
+#ifdef PRESETS
+typedef std::map<uint8, uint32> PresetslotMapType;
+struct PresetData
+{
+    std::string name;
+    PresetslotMapType slotMap; // slotMap[slotId] = entry
+};
+typedef std::map<uint8, PresetData> PresetMapType;
+#endif
+
 typedef std::unordered_map<uint32, PlayerTalent*> PlayerTalentMap;
 typedef std::unordered_map<uint32, PlayerSpell*> PlayerSpellMap;
 typedef std::list<SpellModifier*> SpellModList;
+
+struct ReforgeData
+{
+    uint32 increase, decrease;
+    int32 stat_value;
+};
+
+typedef std::unordered_map<uint32, ReforgeData> ReforgeMapType;
 
 typedef std::unordered_map<uint32 /*instanceId*/, time_t/*releaseTime*/> InstanceTimeMap;
 
@@ -1037,6 +1064,19 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         ~Player();
 
         PlayerAI* AI() const { return reinterpret_cast<PlayerAI*>(i_AI); }
+		uint32 FindTalentType();
+		bool AIEquipItem(uint32 entry);
+		bool CheckNeedTenacityFlush();
+		bool ResetPlayerToLevel(uint32 level, uint32 talent = 3, bool needTenacity = false);
+		bool IsSettingFinish();
+		void SupplementAmmo();
+		void OnLevelupToBotAI();
+		uint32 ReupdateTalents();
+		uint32 SwitchTalent(uint32 talent);
+		bool IsTankPlayer();
+		int32 GetEquipCombatPower() { return m_EquipCombatPower; }
+		void FlushEquipCombatPower(uint8 eSlot, bool apply, const ItemTemplate* pEquipTemplate);
+		bool EquipIsTidiness();
 
         void CleanupsBeforeDelete(bool finalCleanup = true) override;
 
@@ -1203,7 +1243,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         InventoryResult CanTakeMoreSimilarItems(uint32 entry, uint32 count, uint32* itemLimitCategory = NULL) const { return CanTakeMoreSimilarItems(entry, count, NULL, NULL, itemLimitCategory); }
         InventoryResult CanStoreNewItem(uint8 bag, uint8 slot, ItemPosCountVec& dest, uint32 item, uint32 count, uint32* no_space_count = nullptr) const;
         InventoryResult CanStoreItem(uint8 bag, uint8 slot, ItemPosCountVec& dest, Item* pItem, bool swap = false) const;
-        InventoryResult CanStoreItems(Item** items, int count, uint32* itemLimitCategory) const;
+        InventoryResult CanStoreItems(Item** items, int count, uint32* itemLimitCategory, Player* otherPlayer);
         InventoryResult CanEquipNewItem(uint8 slot, uint16& dest, uint32 item, bool swap) const;
         InventoryResult CanEquipItem(uint8 slot, uint16& dest, Item* pItem, bool swap, bool not_loading = true) const;
 
@@ -1750,7 +1790,11 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         uint32 GetBaseSpellPowerBonus() const { return m_baseSpellPower; }
         int32 GetSpellPenetrationItemMod() const { return m_spellPenetrationItemMod; }
 
-        float GetExpertiseDodgeOrParryReduction(WeaponAttackType attType) const;
+		float GetSkillPercentByType(SkillType skillType) const { return float(GetSkillValue(skillType)) / float(GetMaxSkillValueForLevel()); }
+		float GetDefenseSkillPercent() const { return float(GetDefenseSkillValue()) / float(GetMaxSkillValueForLevel()); }
+		float GetWeaponSkillPercent(WeaponAttackType attType) const { return float(GetWeaponSkillValue(attType)) / float(GetMaxSkillValueForLevel()); }
+
+		float GetExpertiseDodgeOrParryReduction(WeaponAttackType attType) const;
         void UpdateBlockPercentage();
         void UpdateCritPercentage(WeaponAttackType attType);
         void UpdateAllCritPercentages();
@@ -1973,7 +2017,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void ApplyEquipSpell(SpellInfo const* spellInfo, Item* item, bool apply, bool form_change = false);
         void UpdateEquipSpellsAtFormChange();
         void CastItemCombatSpell(Unit* target, WeaponAttackType attType, uint32 procVictim, uint32 procEx);
-        void CastItemUseSpell(Item* item, SpellCastTargets const& targets, uint8 cast_count, uint32 glyphIndex);
+        SpellCastResult CastItemUseSpell(Item* item, SpellCastTargets const& targets, uint8 cast_count, uint32 glyphIndex);
         void CastItemCombatSpell(Unit* target, WeaponAttackType attType, uint32 procVictim, uint32 procEx, Item* item, ItemTemplate const* proto);
 
         void SendEquipmentSetList();
@@ -2249,6 +2293,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void SetTitle(CharTitlesEntry const* title, bool lost = false);
 
         //bool isActiveObject() const { return true; }
+        ReforgeMapType reforgeMap; // reforgeMap[iGUID] = ReforgeData
         bool CanSeeSpellClickOn(Creature const* creature) const;
 
         uint32 GetChampioningFaction() const { return m_ChampioningFaction; }
@@ -2277,6 +2322,43 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         std::string GetMapAreaAndZoneString() const;
         std::string GetCoordsMapAreaAndZoneString() const;
 
+		TransmogMapType transmogMap; // transmogMap[iGUID] = entry
+#ifdef PRESETS
+		PresetMapType presetMap; // presetMap[presetId] = presetData
+#endif
+		/*********************************************************/
+		/***                     BOT SYSTEM                    ***/
+		/*********************************************************/
+		void SetBotHelper(BotHelper* hlpr) { ASSERT(!_botHlpr); _botHlpr = hlpr; }
+		BotHelper* GetBotHelper() const { return _botHlpr; }
+		void RefreshBot(uint32 p_time);
+		void CreateBot(uint32 botentry, uint8 botrace, uint8 botclass, bool revive = false);
+		void CreateNPCBot(uint8 botclass);
+		int8 GetNpcBotSlot(ObjectGuid guid) const;
+		void SendBotCommandState(Creature* cre, CommandStates state);
+		bool HaveBot() const;
+		void RemoveBot(ObjectGuid guid, bool final = false, bool eraseFromDB = true);
+		void SetBot(Creature* cre) { m_bot = cre; }
+		uint8 GetNpcBotsCount() const;
+		void SetBotMustBeCreated(uint32 m_entry, uint8 m_race, uint8 m_class, uint32 *equips);
+		void ClearBotMustBeCreated(uint64 value, bool guid = true, bool fully = false);
+		bool GetBotMustBeCreated();
+		uint8 GetBotFollowDist() const { return m_followdist; }
+		void SetBotFollowDist(int8 dist) { m_followdist = dist; }
+		void SetNpcBotDied(ObjectGuid guid);
+		NpcBotMap const* GetBotMap(uint8 pos) const { return m_botmap[pos]; }
+		uint8 GetMaxNpcBots() const;
+		uint8 GetNpcBotXpReduction() const { return m_xpReductionNpcBots; }
+		bool RestrictBots() const;
+		uint32 GetNpcBotCost() const;
+		std::string GetNpcBotCostStr() const;
+		void InitBotEquips(Creature* bot);
+		void UpdateBotEquips(Creature* bot, uint8 slot, uint32 itemId);
+		uint32 GetBotEquip(Creature* bot, uint8 slot) const;
+		void UpdateBotModelid(Creature* bot);
+		/*********************************************************/
+		/***                 END BOT SYSTEM                    ***/
+		/*********************************************************/
     protected:
         // Gamemaster whisper whitelist
         GuidList WhisperList;
@@ -2529,6 +2611,30 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         bool m_needsZoneUpdate;
 
     private:
+		/*********************************************************/
+		/***                     BOT SYSTEM                    ***/
+		/*********************************************************/
+
+		BotHelper* _botHlpr;
+		Creature* m_bot;
+		int8 m_followdist;
+		uint8 m_maxNpcBots;
+		uint8 m_maxClassNpcBots;
+		uint8 m_xpReductionNpcBots;
+		bool m_enableNpcBots;
+		bool m_enableNpcBotsArenas;
+		bool m_enableNpcBotsBGs;
+		bool m_enableNpcBotsDungeons;
+		bool m_enableNpcBotsRaids;
+		bool m_limitNpcBotsDungeons;
+		bool m_limitNpcBotsRaids;
+		uint32 m_NpcBotsCost;
+		uint32 m_botTimer;
+		uint32 m_botCreateTimer;
+		NpcBotMap* m_botmap[MAX_NPCBOTS];
+		/*********************************************************/
+		/***                END BOT SYSTEM                     ***/
+		/*********************************************************/
         // internal common parts for CanStore/StoreItem functions
         InventoryResult CanStoreItem_InSpecificSlot(uint8 bag, uint8 slot, ItemPosCountVec& dest, ItemTemplate const* pProto, uint32& count, bool swap, Item* pSrcItem) const;
         InventoryResult CanStoreItem_InBag(uint8 bag, ItemPosCountVec& dest, ItemTemplate const* pProto, uint32& count, bool merge, bool non_specialized, Item* pSrcItem, uint8 skip_bag, uint8 skip_slot) const;
@@ -2547,9 +2653,12 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
 
         void AdjustQuestReqItemCount(Quest const* quest, QuestStatusData& questStatusData);
 
+	public:
         bool IsCanDelayTeleport() const { return m_bCanDelayTeleport; }
-        void SetCanDelayTeleport(bool setting) { m_bCanDelayTeleport = setting; }
-        bool IsHasDelayedTeleport() const { return m_bHasDelayedTeleport; }
+		bool IsHasDelayedTeleport() const { return m_bHasDelayedTeleport; }
+
+	private:
+		void SetCanDelayTeleport(bool setting) { m_bCanDelayTeleport = setting; }
         void SetDelayedTeleportFlag(bool setting) { m_bHasDelayedTeleport = setting; }
         void ScheduleDelayedOperation(uint32 operation) { if (operation < DELAYED_END) m_DelayedOperations |= operation; }
 
@@ -2604,6 +2713,9 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         uint32 manaBeforeDuel;
 
         WorldLocation _corpseLocation;
+
+		PlayerBotSetting* m_PlayerBotSetting;
+		int32 m_EquipCombatPower;
 };
 
 TC_GAME_API void AddItemsSetItem(Player* player, Item* item);

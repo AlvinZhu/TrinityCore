@@ -20,6 +20,7 @@
 #include "ScriptedCreature.h"
 #include "Player.h"
 #include "blackwing_lair.h"
+#include "BotGroupAI.h"
 
 enum Emotes
 {
@@ -196,8 +197,8 @@ public:
             _EnterCombat();
 
             events.ScheduleEvent(EVENT_SHIMMER, 0);
-            events.ScheduleEvent(EVENT_BREATH_1, 30000);
-            events.ScheduleEvent(EVENT_BREATH_2, 60000);
+            events.ScheduleEvent(EVENT_BREATH_1, 150000);
+            //events.ScheduleEvent(EVENT_BREATH_2, 180000);
             events.ScheduleEvent(EVENT_AFFLICTION, 10000);
             events.ScheduleEvent(EVENT_FRENZY, 15000);
         }
@@ -232,12 +233,14 @@ public:
                         }
                     case EVENT_BREATH_1:
                             DoCastVictim(Breath1_Spell);
-                            events.ScheduleEvent(EVENT_BREATH_1, 60000);
+							BotCruxFleeByRange(me->GetObjectSize() + 30);
+                            events.ScheduleEvent(EVENT_BREATH_1, 150000);
                             break;
-                    case EVENT_BREATH_2:
-                            DoCastVictim(Breath2_Spell);
-                            events.ScheduleEvent(EVENT_BREATH_2, 60000);
-                            break;
+       //             case EVENT_BREATH_2:
+       //                     DoCastVictim(Breath2_Spell);
+							//BotCruxFleeByRange(me->GetObjectSize() + 30);
+							//events.ScheduleEvent(EVENT_BREATH_2, 150000);
+       //                     break;
                     case EVENT_AFFLICTION:
                         {
                             Map::PlayerList const &players = me->GetMap()->GetPlayers();
@@ -245,21 +248,20 @@ public:
                             {
                                 if (Player* player = itr->GetSource()->ToPlayer())
                                 {
-                                    DoCast(player, RAND(SPELL_BROODAF_BLUE, SPELL_BROODAF_BLACK, SPELL_BROODAF_RED, SPELL_BROODAF_BRONZE, SPELL_BROODAF_GREEN), true);
+                                    DoCast(player, RAND(SPELL_BROODAF_BLUE, SPELL_BROODAF_BLACK, SPELL_BROODAF_RED), true);
 
-                                        if (player->HasAura(SPELL_BROODAF_BLUE) &&
-                                            player->HasAura(SPELL_BROODAF_BLACK) &&
-                                            player->HasAura(SPELL_BROODAF_RED) &&
-                                            player->HasAura(SPELL_BROODAF_BRONZE) &&
-                                            player->HasAura(SPELL_BROODAF_GREEN))
-                                        {
-                                            DoCast(player, SPELL_CHROMATIC_MUT_1);
-                                        }
+                                        //if (player->HasAura(SPELL_BROODAF_BLUE) &&
+                                        //    player->HasAura(SPELL_BROODAF_BLACK) &&
+                                        //    player->HasAura(SPELL_BROODAF_RED) &&
+                                        //    player->HasAura(SPELL_BROODAF_BRONZE))
+                                        //{
+                                        //    DoCast(player, SPELL_CHROMATIC_MUT_1);
+                                        //}
 
                                 }
                             }
                         }
-                        events.ScheduleEvent(EVENT_AFFLICTION, 10000);
+                        events.ScheduleEvent(EVENT_AFFLICTION, 15000);
                         break;
                     case EVENT_FRENZY:
                         DoCast(me, SPELL_FRENZY);

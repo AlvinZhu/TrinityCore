@@ -237,6 +237,17 @@ enum UlduarGameObjects
     GO_THORIM_CHEST_HERO                    = 194315,
     GO_THORIM_CHEST                         = 194314,
 
+  // Thorim
+    GO_LEVER                                = 179148,
+    GO_CACHE_OF_STORMS_10                   = 194312,
+    GO_CACHE_OF_STORMS_HARDMODE_10          = 194313,
+    GO_CACHE_OF_STORMS_25                   = 194315,
+    GO_CACHE_OF_STORMS_HARDMODE_25          = 194314,
+    GO_THORIM_RUNIC_DOOR                    = 194557,
+    GO_THORIM_STONE_DOOR                    = 194558,
+    GO_THORIM_LIGHTNING_FIELD               = 194559,
+    GO_THORIM_DARK_IRON_PROTCULLIS          = 194560,
+
     // Mimiron
     GO_MIMIRON_TRAM                         = 194675,
     GO_MIMIRON_ELEVATOR                     = 194749,

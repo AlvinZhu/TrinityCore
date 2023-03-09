@@ -63,6 +63,10 @@
 #include "World.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
+#include "BotGroupAI.h"
+#include "BotAI.h"
+#include "BotMovementAI.h"
+#include "FieldBotMgr.h"
 
 #include <cmath>
 
@@ -368,6 +372,17 @@ void Unit::Update(uint32 p_time)
                 m_CombatTimer -= p_time;
         }
     }
+	// update combat timer also for npcbots
+	if (IsInCombat() && GetTypeId() == TYPEID_UNIT && !GetVictim() && (ToCreature()->GetIAmABot() || ToCreature()->GetIAmABotsPet()))
+	{
+		if (m_HostileRefManager.isEmpty())
+		{
+			if (m_CombatTimer <= p_time)
+				ClearInCombat();
+			else
+				m_CombatTimer -= p_time;
+		}
+	}
 
     // not implemented before 3.0.2
     if (uint32 base_att = getAttackTimer(BASE_ATTACK))
@@ -549,10 +564,14 @@ bool Unit::HasAuraTypeWithFamilyFlags(AuraType auraType, uint32 familyName, uint
 bool Unit::HasBreakableByDamageAuraType(AuraType type, uint32 excludeAura) const
 {
     AuraEffectList const& auras = GetAuraEffectsByType(type);
-    for (AuraEffectList::const_iterator itr = auras.begin(); itr != auras.end(); ++itr)
-        if ((!excludeAura || excludeAura != (*itr)->GetSpellInfo()->Id) && //Avoid self interrupt of channeled Crowd Control spells like Seduction
-            ((*itr)->GetSpellInfo()->AuraInterruptFlags & AURA_INTERRUPT_FLAG_TAKE_DAMAGE))
-            return true;
+	for (AuraEffectList::const_iterator itr = auras.begin(); itr != auras.end(); ++itr)
+	{
+		if ((!excludeAura || excludeAura != (*itr)->GetSpellInfo()->Id) && //Avoid self interrupt of channeled Crowd Control spells like Seduction
+			((*itr)->GetSpellInfo()->AuraInterruptFlags & AURA_INTERRUPT_FLAG_TAKE_DAMAGE))
+		{
+			return true;
+		}
+	}
     return false;
 }
 
@@ -586,6 +605,26 @@ uint32 Unit::DealDamage(Unit* victim, uint32 damage, CleanDamage const* cleanDam
 
     if (IsAIEnabled)
         GetAI()->DamageDealt(victim, damage, damagetype);
+	//else if (victim->GetMap()->IsDungeon() && ToPlayer() && !IsPlayerBot())
+	//{
+	//	Player* vicPlayer = victim->ToPlayer();
+	//	if (!vicPlayer->InBattleground())
+	//		damage *= BotUtility::DungeonBotDamageModify * 0.95f;
+	//}
+	if (victim && victim->ToPlayer())
+	{
+		Player* vicPlayer = victim->ToPlayer();
+		if (BotGroupAI* pGroupAI = dynamic_cast<BotGroupAI*>(vicPlayer->GetAI()))
+			pGroupAI->DamageEndure(this, damage, damagetype);
+		else if (BotBGAI* pBGAI = dynamic_cast<BotBGAI*>(vicPlayer->GetAI()))
+			pBGAI->DamageEndure(this, damage, damagetype);
+		else if (BotMovementAI* pMAI = dynamic_cast<BotMovementAI*>(vicPlayer->GetAI()))
+			pMAI->DamageEndure(this, damage, damagetype);
+		//else if (victim->GetMap()->IsDungeon() && !vicPlayer->InBattleground() && !victim->IsPlayerBot())
+		//{
+		//	damage *= 1.0f / (BotUtility::DungeonBotEndureModify * 0.95f);
+		//}
+	}
 
     // Hook for OnDamage Event
     sScriptMgr->OnDamage(this, victim, damage);
@@ -600,6 +639,12 @@ uint32 Unit::DealDamage(Unit* victim, uint32 damage, CleanDamage const* cleanDam
             if (pet && pet->IsAlive())
                 pet->AI()->OwnerAttackedBy(this);
         }
+
+		// NpcBot mod: also signal owned npcbots
+		for (ControlList::const_iterator itr = victim->ToPlayer()->m_Controlled.begin(); itr != victim->ToPlayer()->m_Controlled.end(); ++itr)
+			if (Creature* cre = (*itr)->ToCreature())
+				if (cre->GetIAmABot() && cre->IsAIEnabled)
+					cre->AI()->OwnerAttackedBy(this);
 
         if (victim->ToPlayer()->GetCommandStatus(CHEAT_GOD))
             return 0;
@@ -1030,6 +1075,10 @@ void Unit::CalculateSpellDamageTaken(SpellNonMeleeDamage* damageInfo, int32 dama
             case SPELL_DAMAGE_CLASS_RANGED:
             case SPELL_DAMAGE_CLASS_MELEE:
             {
+				//Npcbot mod: apply bot damage mods
+				if (Creature* bot = ToCreature())
+					if (bot->GetIAmABot() || bot->GetIAmABotsPet())
+						bot->ApplyBotDamageMultiplierMelee(damage, *damageInfo, spellInfo, attackType, crit);
                 // Physical Damage
                 if (damageSchoolMask & SPELL_SCHOOL_MASK_NORMAL)
                 {
@@ -1087,6 +1136,11 @@ void Unit::CalculateSpellDamageTaken(SpellNonMeleeDamage* damageInfo, int32 dama
             case SPELL_DAMAGE_CLASS_NONE:
             case SPELL_DAMAGE_CLASS_MAGIC:
             {
+				//Npcbot mod: apply bot damage mods
+				if (Creature* bot = ToCreature())
+					if (bot->GetIAmABot() || bot->GetIAmABotsPet())
+						bot->ApplyBotDamageMultiplierSpell(damage, *damageInfo, spellInfo, attackType, crit);
+
                 // If crit add critical bonus
                 if (crit)
                 {
@@ -1203,6 +1257,11 @@ void Unit::CalculateMeleeDamage(Unit* victim, uint32 damage, CalcDamageInfo* dam
 
     // Script Hook For CalculateMeleeDamage -- Allow scripts to change the Damage pre class mitigation calculations
     sScriptMgr->ModifyMeleeDamage(damageInfo->target, damageInfo->attacker, damage);
+
+	//Npcbot mod: apply bot damage mods
+	if (Creature* bot = ToCreature())
+		if (bot->GetIAmABot() || bot->GetIAmABotsPet())
+			bot->ApplyBotDamageMultiplierMelee(damage, *damageInfo);
 
     // Calculate armor reduction
     if (IsDamageReducedByArmor((SpellSchoolMask)(damageInfo->damageSchoolMask)))
@@ -1981,7 +2040,7 @@ void Unit::AttackerStateUpdate (Unit* victim, WeaponAttackType attType, bool ext
 
     if ((attType == BASE_ATTACK || attType == OFF_ATTACK) && !IsWithinLOSInMap(victim))
         return;
-
+ 
     CombatStart(victim);
     RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_MELEE_ATTACK);
 
@@ -2247,7 +2306,17 @@ uint32 Unit::CalculateDamage(WeaponAttackType attType, bool normalized, bool add
     if (minDamage > maxDamage)
         std::swap(minDamage, maxDamage);
 
-    if (maxDamage == 0.0f)
+    if (_isnan(minDamage))
+        minDamage = 1.0f;
+
+    if (_isnan(maxDamage))
+        maxDamage = 1.0f;
+
+    if (minDamage <= 0.0f)
+        minDamage = 1.0f;
+
+
+    if (maxDamage <= 0.0f)
         maxDamage = 5.0f;
 
     return urand(uint32(minDamage), uint32(maxDamage));
@@ -3691,7 +3760,7 @@ void Unit::RemoveAura(AuraApplicationMap::iterator &i, AuraRemoveMode mode)
     if (aurApp->GetRemoveMode())
         return;
     Aura* aura = aurApp->GetBase();
-    _UnapplyAura(i, mode);
+	_UnapplyAura(i, mode);
     // Remove aura - for Area and Target auras
     if (aura->GetOwner() == this)
         aura->Remove(mode);
@@ -7773,7 +7842,8 @@ bool Unit::HandleProcTriggerSpell(Unit* victim, uint32 damage, AuraEffect* trigg
     if (triggerEntry == NULL)
     {
         // Don't cast unknown spell
-        TC_LOG_ERROR("entities.unit.handleproctriggerspell", "Unit::HandleProcTriggerSpell: Spell %u (effIndex: %u) has unknown TriggerSpell %u. Unhandled custom case?", auraSpellInfo->Id, triggeredByAura->GetEffIndex(), trigger_spell_id);
+//hxsd
+//        TC_LOG_ERROR("entities.unit.handleproctriggerspell", "Unit::HandleProcTriggerSpell: Spell %u (effIndex: %u) has unknown TriggerSpell %u. Unhandled custom case?", auraSpellInfo->Id, triggeredByAura->GetEffIndex(), trigger_spell_id);
         return false;
     }
 
@@ -9602,6 +9672,22 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
     if (Player* modOwner = GetSpellModOwner())
         modOwner->ApplySpellMod(spellProto->Id, damagetype == DOT ? SPELLMOD_DOT : SPELLMOD_DAMAGE, tmpDamage);
 
+if (GetTypeId() == TYPEID_UNIT && GetEntry() >= 170001)
+    {
+        if (tmpDamage >= 0.8f && tmpDamage <= 30.0f)
+        {
+            uint32 lvl = getLevel();
+            tmpDamage = irand(3,5) * lvl;
+            if (lvl >= 40) tmpDamage = irand(5,10) * lvl;
+            if (lvl >= 50) tmpDamage = irand(15,20) * lvl;
+            if (lvl >= 60) tmpDamage = irand(25,30) * lvl;
+            if (lvl >= 70) tmpDamage = irand(35,40) * lvl;
+            if (lvl >= 80) tmpDamage = irand(45,50) * lvl;
+            if (lvl >= 90) tmpDamage = irand(70,80) * lvl;
+            if (lvl >10) tmpDamage += irand(lvl, lvl * 10);
+        }
+    }
+
     return uint32(std::max(tmpDamage, 0.0f));
 }
 
@@ -10077,7 +10163,8 @@ float Unit::GetUnitSpellCriticalChance(Unit* victim, SpellInfo const* spellProto
     //! Mobs can't crit with spells. Player Totems can
     //! Fire Elemental (from totem) can too - but this part is a hack and needs more research
     if (GetGUID().IsCreatureOrVehicle() && !(IsTotem() && GetOwnerGUID().IsPlayer()) && GetEntry() != 15438)
-        return 0.0f;
+		if (!ToCreature()->GetIAmABot())
+			return 0.0f;
 
     // not critting spell
     if (spellProto->HasAttribute(SPELL_ATTR2_CANT_CRIT))
@@ -11940,22 +12027,22 @@ void Unit::UpdateSpeed(UnitMoveType mtype)
             // Set creature speed rate
             if (GetTypeId() == TYPEID_UNIT)
             {
-                Unit* pOwner = GetCharmerOrOwner();
-                if ((IsPet() || IsGuardian()) && !IsInCombat() && pOwner) // Must check for owner or crash on "Tame Beast"
-                {
-                    // For every yard over 5, increase speed by 0.01
-                    //  to help prevent pet from lagging behind and despawning
-                    float dist = GetDistance(pOwner);
-                    float base_rate = 1.00f; // base speed is 100% of owner speed
+                //Unit* pOwner = GetCharmerOrOwner();
+                //if ((IsPet() || IsGuardian()) && !IsInCombat() && pOwner) // Must check for owner or crash on "Tame Beast"
+                //{
+                //    // For every yard over 5, increase speed by 0.01
+                //    //  to help prevent pet from lagging behind and despawning
+                //    float dist = GetDistance(pOwner);
+                //    float base_rate = 1.00f; // base speed is 100% of owner speed
 
-                    if (dist < 5)
-                        dist = 5;
+                //    if (dist < 5)
+                //        dist = 5;
 
-                    float mult = base_rate + ((dist - 5) * 0.01f);
+                //    float mult = base_rate + ((dist - 5) * 0.01f);
 
-                    speed *= pOwner->GetSpeedRate(mtype) * mult; // pets derive speed from owner when not in combat
-                }
-                else
+                //    speed *= pOwner->GetSpeedRate(mtype) * mult; // pets derive speed from owner when not in combat
+                //}
+                //else
                     speed *= ToCreature()->GetCreatureTemplate()->speed_run;    // at this point, MOVE_WALK is never reached
             }
 
@@ -12254,7 +12341,10 @@ void Unit::TauntFadeOut(Unit* taunter)
     if (m_ThreatManager.isThreatListEmpty())
     {
         if (creature->IsAIEnabled)
+            {
+         //TC_LOG_ERROR("misc", "unit evade isThreatListEmpty ");
             creature->AI()->EnterEvadeMode(CreatureAI::EVADE_REASON_NO_HOSTILES);
+        }
         return;
     }
 
@@ -12272,7 +12362,7 @@ void Unit::TauntFadeOut(Unit* taunter)
 
 Unit* Creature::SelectVictim()
 {
-    // function provides main threat functionality
+     // function provides main threat functionality
     // next-victim-selection algorithm and evade mode are called
     // threat list sorting etc.
 
@@ -12367,7 +12457,7 @@ Unit* Creature::SelectVictim()
     // search nearby enemy before enter evade mode
     if (HasReactState(REACT_AGGRESSIVE))
     {
-        target = SelectNearestTargetInAttackDistance(m_CombatDistance ? m_CombatDistance : ATTACK_DISTANCE);
+        target = SelectNearestTargetInAttackDistance(m_CombatDistance ? m_CombatDistance : 5.0f);
 
         if (target && _IsTargetAcceptable(target) && CanCreatureAttack(target))
             return target;
@@ -12388,6 +12478,88 @@ Unit* Creature::SelectVictim()
     }
 
     // enter in evade mode in other case
+//hxsd fix evademode
+	
+if (!IsPlayerBot() && !HasUnitState(UNIT_STATE_EVADE) && IsInCombat() )
+{
+    if (GetVictim() )
+    {
+if (GetVictim()->IsInWorld())
+if (GetVictim()->GetTypeId() == TYPEID_PLAYER && !GetVictim()->IsPlayerBot())
+{
+  if ( GetVictim()->ToPlayer()->IsGameMaster())
+{
+  AI()->EnterEvadeMode(CreatureAI::EVADE_REASON_NO_HOSTILES);
+return nullptr;
+}
+}
+}
+ 
+ if (CanHaveThreatList()  )
+ {
+        if ( !m_ThreatManager.isThreatListEmpty())
+            target = m_ThreatManager.getHostilTarget();
+if (target && CanCreatureAttack(target) )
+{
+if (target->IsPlayerBot() && !target->ToPlayer()->GetGroup())
+{
+ AI()->EnterEvadeMode(CreatureAI::EVADE_REASON_NO_HOSTILES);
+return nullptr;
+}
+
+//if (target->ToPlayer()->GetGroup() || target->ToPlayer() || target->IsPet() )
+if ((!target->HasUnitState(UNIT_STATE_UNATTACKABLE) && GetDistance(target) <=60.0f)  && ((!target->HasAura(5384) && !target->HasAura(1784) && !target->HasAura(1785) && !target->HasAura(1786) && !target->HasAura(1787) && !target->HasAura(1856) && !target->HasAura(1857) && !target->HasAura(66))))
+{
+//	AI()->AttackStart(target);
+return target;
+}
+}
+}
+ /*
+if (!target)
+{
+         target = SelectNearestTargetInAttackDistance(28.0f);
+        if (target && _IsTargetAcceptable(target) && CanCreatureAttack(target) ) 
+{
+if (target->IsPlayerBot() && !target->ToPlayer()->GetGroup())
+{
+ AI()->EnterEvadeMode(CreatureAI::EVADE_REASON_NO_HOSTILES);
+return nullptr;
+}
+
+//if (target->ToPlayer()->GetGroup() || target->ToPlayer() || target->IsPet() )
+if ((!target->HasUnitState(UNIT_STATE_UNATTACKABLE) && GetDistance(target) <=50.0f) && ( (!target->HasAura(5384)  && !target->HasAura(1784) && !target->HasAura(1785) && !target->HasAura(1786) && !target->HasAura(1787) && !target->HasAura(1856) && !target->HasAura(1857) && !target->HasAura(66))))
+{
+	//AI()->AttackStart(target);
+            return target;
+ }
+ }
+}
+*/
+if (!target)
+{
+     if (GetVictim() && !IsPlayerBot()  )
+{
+target=GetVictim();
+//GetVictim()->IsInWorld() &&
+if (target->IsPlayerBot() && !target->ToPlayer()->GetGroup())
+{
+ AI()->EnterEvadeMode(CreatureAI::EVADE_REASON_NO_HOSTILES);
+return nullptr;
+}
+//if (target->ToPlayer()->GetGroup() || target->ToPlayer() || target->IsPet() )
+if (CanCreatureAttack(target))
+if ((!target->HasUnitState(UNIT_STATE_UNATTACKABLE) && GetDistance(target) <=60.0f) && ( (!target->HasAura(5384)  && !target->HasAura(1784) && !target->HasAura(1785) && !target->HasAura(1786) && !target->HasAura(1787) && !target->HasAura(1856) && !target->HasAura(1857) && !target->HasAura(66))))
+{
+
+	//AI()->AttackStart(GetVictim());
+return target;
+}
+ }
+ }
+}
+
+   // TC_LOG_ERROR("misc", "unit evade in other case ");
     AI()->EnterEvadeMode(CreatureAI::EVADE_REASON_NO_HOSTILES);
 
     return nullptr;
@@ -12862,6 +13034,11 @@ bool Unit::HandleStatModifier(UnitMods unitMod, UnitModifierType modifierType, f
             break;
     }
 
+	if (Player* master = ToPlayer())
+		for (uint8 i = 0; i != master->GetMaxNpcBots(); ++i)
+			if (Creature* bot = master->GetBotMap(i)->_Cre())
+				bot->SetBotShouldUpdateStats();
+
     return true;
 }
 
@@ -13243,6 +13420,19 @@ void Unit::CleanupsBeforeDelete(bool finalCleanup)
     CleanupBeforeRemoveFromMap(finalCleanup);
 
     WorldObject::CleanupsBeforeDelete(finalCleanup);
+}
+
+bool Unit::IsPlayerBot()
+{
+	//if (GetTypeId() != TYPEID_PLAYER)
+	//	return false;
+	Player* player = ToPlayer();//dynamic_cast<Player*> (this);
+	if (!player)
+		return false;
+	WorldSession* pSession = player->GetSession();
+	if (!pSession)
+		return false;
+	return pSession->IsBotSession();
 }
 
 void Unit::UpdateCharmAI()
@@ -13902,8 +14092,12 @@ void Unit::ProcDamageAndSpellFor(bool isVictim, Unit* target, uint32 procFlag, u
         bool prepare = i->aura->CallScriptPrepareProcHandlers(aurApp, eventInfo);
 
         Milliseconds cooldown = Milliseconds::zero();
-        if (prepare && i->spellProcEvent && i->spellProcEvent->cooldown)
+        //if (prepare && i->spellProcEvent && i->spellProcEvent->cooldown)
+      //      cooldown = Seconds(i->spellProcEvent->cooldown);
+//hxsd 
+if (prepare && GetTypeId() == TYPEID_PLAYER && i->spellProcEvent && i->spellProcEvent->cooldown)
             cooldown = Seconds(i->spellProcEvent->cooldown);
+
 
         // Note: must SetCantProc(false) before return
         if (spellInfo->HasAttribute(SPELL_ATTR3_DISABLE_PROC))
@@ -14455,7 +14649,9 @@ Unit* Unit::SelectNearbyTarget(Unit* exclude, float dist) const
 
 void Unit::ApplyAttackTimePercentMod(WeaponAttackType att, float val, bool apply)
 {
-    float remainingTimePct = (float)m_attackTimer[att] / (GetAttackTime(att) * m_modAttackSpeedPct[att]);
+	if (IsPlayerBot() && getLevel() < 50)
+		return;
+	float remainingTimePct = (float)m_attackTimer[att] / (GetAttackTime(att) * m_modAttackSpeedPct[att]);
     if (val > 0)
     {
         ApplyPercentModFloatVar(m_modAttackSpeedPct[att], val, !apply);
@@ -14471,6 +14667,8 @@ void Unit::ApplyAttackTimePercentMod(WeaponAttackType att, float val, bool apply
 
 void Unit::ApplyCastTimePercentMod(float val, bool apply)
 {
+	if (IsPlayerBot() && getLevel() < 50)
+		return;
     if (val > 0)
         ApplyPercentModFloatValue(UNIT_MOD_CAST_SPEED, val, !apply);
     else
@@ -15148,7 +15346,9 @@ void Unit::Kill(Unit* victim, bool durabilityLoss)
             plrVictim->CombatStopWithPets(true);
             plrVictim->DuelComplete(DUEL_INTERRUPTED);
         }
-    }
+
+		sFieldBotMgr->KillFieldPlayer(player, plrVictim);
+	}
     else                                                // creature died
     {
         TC_LOG_DEBUG("entities.unit", "DealDamageNotPlayer");
@@ -15290,21 +15490,28 @@ void Unit::SetControlled(bool apply, UnitState state)
                     SetRooted(true);
                 break;
             case UNIT_STATE_CONFUSED:
+                 //hxsd
+                //if (!IsPlayerBot() )
                 if (!HasUnitState(UNIT_STATE_STUNNED))
                 {
                     ClearUnitState(UNIT_STATE_MELEE_ATTACKING);
                     SendMeleeAttackStop();
                     // SendAutoRepeatCancel ?
+                     //hxsd
+                //if (!IsPlayerBot() )
                     SetConfused(true);
                     CastStop();
                 }
                 break;
             case UNIT_STATE_FLEEING:
+                //hxsd
+                //if (!IsPlayerBot() )
                 if (!HasUnitState(UNIT_STATE_STUNNED | UNIT_STATE_CONFUSED))
                 {
                     ClearUnitState(UNIT_STATE_MELEE_ATTACKING);
                     SendMeleeAttackStop();
                     // SendAutoRepeatCancel ?
+                    
                     SetFeared(true);
                     CastStop();
                 }
@@ -15355,9 +15562,13 @@ void Unit::SetControlled(bool apply, UnitState state)
             if (HasAuraType(SPELL_AURA_MOD_ROOT))
                 SetRooted(true);
 
+             //hxsd
+                //if (!IsPlayerBot())
             if (HasAuraType(SPELL_AURA_MOD_CONFUSE))
                 SetConfused(true);
-            else if (HasAuraType(SPELL_AURA_MOD_FEAR))
+                
+            else if (HasAuraType(SPELL_AURA_MOD_FEAR) )
+            //if (!IsPlayerBot())//hxsd
                 SetFeared(true);
         }
     }
@@ -16186,6 +16397,13 @@ void Unit::SetPhaseMask(uint32 newPhaseMask, bool update)
                     summon->SetPhaseMask(newPhaseMask, true);
 
         RemoveNotOwnSingleTargetAuras(newPhaseMask); // we can lost access to caster or target
+		if (!IsPlayerBot() && ToPlayer())
+		{
+			if (Group* pGroup = ToPlayer()->GetGroup())
+			{
+				pGroup->OnLeaderChangePhase(ToPlayer(), newPhaseMask);
+			}
+		}
     }
 
     // Update visibility after phasing pets and summons so they wont despawn
@@ -16437,6 +16655,182 @@ uint32 Unit::GetModelForForm(ShapeshiftForm form) const
                 break;
         }
     }
+		else if (ToCreature() && ToCreature()->GetIAmABot())
+		{
+			Player const *player = ToCreature()->GetBotOwner();
+			//let's make druids alike for each player
+			switch (form)
+			{
+			case FORM_CAT:
+				// Based on master's Hair color
+				if (player->getRace() == RACE_NIGHTELF)
+				{
+					uint8 hairColor = player->GetByteValue(PLAYER_BYTES, 3);
+					switch (hairColor)
+					{
+					case 7: // Violet
+					case 8:
+						return 29405;
+					case 3: // Light Blue
+						return 29406;
+					case 0: // Green
+					case 1: // Light Green
+					case 2: // Dark Green
+						return 29407;
+					case 4: // White
+						return 29408;
+					default: // original - Dark Blue
+						return 892;
+					}
+				}
+				// Based on master's Skin color
+				else if (player->getRace() == RACE_TAUREN)
+				{
+					uint8 skinColor = player->GetByteValue(PLAYER_BYTES, 0);
+					// Male master
+					if (player->getGender() == GENDER_MALE)
+					{
+						switch (skinColor)
+						{
+						case 12: // White
+						case 13:
+						case 14:
+						case 18: // Completly White
+							return 29409;
+						case 9: // Light Brown
+						case 10:
+						case 11:
+							return 29410;
+						case 6: // Brown
+						case 7:
+						case 8:
+							return 29411;
+						case 0: // Dark
+						case 1:
+						case 2:
+						case 3: // Dark Grey
+						case 4:
+						case 5:
+							return 29412;
+						default: // original - Grey
+							return 8571;
+						}
+					}
+					// Female master
+					else switch (skinColor)
+					{
+					case 10: // White
+						return 29409;
+					case 6: // Light Brown
+					case 7:
+						return 29410;
+					case 4: // Brown
+					case 5:
+						return 29411;
+					case 0: // Dark
+					case 1:
+					case 2:
+					case 3:
+						return 29412;
+					default: // original - Grey
+						return 8571;
+					}
+				}
+				else if (Player::TeamForRace(player->getRace()) == ALLIANCE)
+					return 892;
+				else
+					return 8571;
+			case FORM_DIREBEAR:
+			case FORM_BEAR:
+				// Based on Hair color
+				if (player->getRace() == RACE_NIGHTELF)
+				{
+					uint8 hairColor = player->GetByteValue(PLAYER_BYTES, 3);
+					switch (hairColor)
+					{
+					case 0: // Green
+					case 1: // Light Green
+					case 2: // Dark Green
+						return 29413; // 29415?
+					case 6: // Dark Blue
+						return 29414;
+					case 4: // White
+						return 29416;
+					case 3: // Light Blue
+						return 29417;
+					default: // original - Violet
+						return 2281;
+					}
+				}
+				// Based on Skin color
+				else if (player->getRace() == RACE_TAUREN)
+				{
+					uint8 skinColor = player->GetByteValue(PLAYER_BYTES, 0);
+					// Male
+					if (player->getGender() == GENDER_MALE)
+					{
+						switch (skinColor)
+						{
+						case 0: // Dark (Black)
+						case 1:
+						case 2:
+							return 29418;
+						case 3: // White
+						case 4:
+						case 5:
+						case 12:
+						case 13:
+						case 14:
+							return 29419;
+						case 9: // Light Brown/Grey
+						case 10:
+						case 11:
+						case 15:
+						case 16:
+						case 17:
+							return 29420;
+						case 18: // Completly White
+							return 29421;
+						default: // original - Brown
+							return 2289;
+						}
+					}
+					// Female
+					else switch (skinColor)
+					{
+					case 0: // Dark (Black)
+					case 1:
+						return 29418;
+					case 2: // White
+					case 3:
+						return 29419;
+					case 6: // Light Brown/Grey
+					case 7:
+					case 8:
+					case 9:
+						return 29420;
+					case 10: // Completly White
+						return 29421;
+					default: // original - Brown
+						return 2289;
+					}
+				}
+				else if (Player::TeamForRace(player->getRace()) == ALLIANCE)
+					return 2281;
+				else
+					return 2289;
+			case FORM_FLIGHT:
+				if (Player::TeamForRace(player->getRace()) == ALLIANCE)
+					return 20857;
+				return 20872;
+			case FORM_FLIGHT_EPIC:
+				if (Player::TeamForRace(player->getRace()) == ALLIANCE)
+					return 21243;
+				return 21244;
+			default:
+				break;
+			}
+		}
 
     uint32 modelid = 0;
     SpellShapeshiftEntry const* formEntry = sSpellShapeshiftStore.LookupEntry(form);
@@ -16685,6 +17079,8 @@ void Unit::_EnterVehicle(Vehicle* vehicle, int8 seatId, AuraApplication const* a
     // If vehicle flag for fixed position set (cannons), or if the following hardcoded units, then set state rooted
     //  30236 | Argent Cannon
     //  39759 | Tankbuster Cannon
+//hxsd
+//if (!IsPlayerBot())
     if ((vehicle->GetVehicleInfo()->m_flags & VEHICLE_FLAG_FIXED_POSITION) || vehicle->GetBase()->GetEntry() == 30236 || vehicle->GetBase()->GetEntry() == 39759)
         SetControlled(true, UNIT_STATE_ROOT);
 
@@ -17653,18 +18049,18 @@ void Unit::TextEmote(uint32 textId, WorldObject const* target /*= nullptr*/, boo
 
 void Unit::Whisper(uint32 textId, Player* target, bool isBossWhisper /*= false*/)
 {
-    if (!target)
-        return;
+	if (!target)
+		return;
 
-    BroadcastText const* bct = sObjectMgr->GetBroadcastText(textId);
-    if (!bct)
-    {
-        TC_LOG_ERROR("entities.unit", "WorldObject::MonsterWhisper: `broadcast_text` was not %u found", textId);
-        return;
-    }
+	BroadcastText const* bct = sObjectMgr->GetBroadcastText(textId);
+	if (!bct)
+	{
+		TC_LOG_ERROR("entities.unit", "WorldObject::Whisper: `broadcast_text` was not %u found", textId);
+		return;
+	}
 
-    LocaleConstant locale = target->GetSession()->GetSessionDbLocaleIndex();
-    WorldPacket data;
-    ChatHandler::BuildChatPacket(data, isBossWhisper ? CHAT_MSG_RAID_BOSS_WHISPER : CHAT_MSG_MONSTER_WHISPER, LANG_UNIVERSAL, this, target, bct->GetText(locale, getGender()), 0, "", locale);
-    target->SendDirectMessage(&data);
+	LocaleConstant locale = target->GetSession()->GetSessionDbLocaleIndex();
+	WorldPacket data;
+	ChatHandler::BuildChatPacket(data, isBossWhisper ? CHAT_MSG_RAID_BOSS_WHISPER : CHAT_MSG_MONSTER_WHISPER, LANG_UNIVERSAL, this, target, bct->GetText(locale, getGender()), 0, "", locale);
+	target->SendDirectMessage(&data);
 }

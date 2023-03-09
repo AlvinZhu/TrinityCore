@@ -89,6 +89,7 @@ class instance_ulduar : public InstanceMapScript
         {
             instance_ulduar_InstanceMapScript(InstanceMap* map) : InstanceScript(map)
             {
+				SaronFrontDoorGUID = ObjectGuid::Empty;
                 SetHeaders(DataHeader);
                 SetBossNumber(MAX_ENCOUNTER);
                 LoadBossBoundaries(boundaries);
@@ -164,6 +165,7 @@ class instance_ulduar : public InstanceMapScript
             ObjectGuid AlgalonUniverseGUID;
             ObjectGuid AlgalonTrapdoorGUID;
             ObjectGuid GiftOfTheObserverGUID;
+			ObjectGuid SaronFrontDoorGUID;
 
             // Miscellaneous
             uint32 TeamInInstance;
@@ -182,6 +184,23 @@ class instance_ulduar : public InstanceMapScript
                 packet << uint32(WORLD_STATE_ALGALON_TIMER_ENABLED) << uint32(_algalonTimer && _algalonTimer <= 60);
                 packet << uint32(WORLD_STATE_ALGALON_DESPAWN_TIMER) << uint32(std::min<uint32>(_algalonTimer, 60));
             }
+
+			void DeleteSaronFrontDoorIfReady()
+			{
+				if (!instance || SaronFrontDoorGUID == ObjectGuid::Empty)
+					return;
+				if (GetBossState(BOSS_FREYA) == DONE &&
+					GetBossState(BOSS_HODIR) == DONE &&
+					GetBossState(BOSS_THORIM) == DONE &&
+					GetBossState(BOSS_MIMIRON) == DONE)
+				{
+					if (GameObject* frontDoor = instance->GetGameObject(SaronFrontDoorGUID))
+					{
+						frontDoor->Delete();
+						SaronFrontDoorGUID = ObjectGuid::Empty;
+					}
+				}
+			}
 
             void OnPlayerEnter(Player* player) override
             {
@@ -229,6 +248,8 @@ class instance_ulduar : public InstanceMapScript
                     instance->SummonCreature(NPC_THORIM_YS, YSKeepersPos[2]);
                 if (_summonYSKeeper[3])
                     instance->SummonCreature(NPC_MIMIRON_YS, YSKeepersPos[3]);
+
+				DeleteSaronFrontDoorIfReady();
             }
 
             void OnCreatureCreate(Creature* creature) override
@@ -596,6 +617,9 @@ class instance_ulduar : public InstanceMapScript
                     case GO_GIFT_OF_THE_OBSERVER_25:
                         GiftOfTheObserverGUID = gameObject->GetGUID();
                         break;
+					case 194255:
+						SaronFrontDoorGUID = gameObject->GetGUID();
+						break;
                     default:
                         break;
                 }
@@ -732,12 +756,18 @@ class instance_ulduar : public InstanceMapScript
                     case BOSS_YOGG_SARON:
                         break;
                     case BOSS_MIMIRON:
-                        if (state == DONE)
-                            instance->SummonCreature(NPC_MIMIRON_OBSERVATION_RING, ObservationRingKeepersPos[3]);
+						if (state == DONE)
+						{
+							instance->SummonCreature(NPC_MIMIRON_OBSERVATION_RING, ObservationRingKeepersPos[3]);
+							DeleteSaronFrontDoorIfReady();
+						}
                         break;
                     case BOSS_FREYA:
-                        if (state == DONE)
-                            instance->SummonCreature(NPC_FREYA_OBSERVATION_RING, ObservationRingKeepersPos[0]);
+						if (state == DONE)
+						{
+							instance->SummonCreature(NPC_FREYA_OBSERVATION_RING, ObservationRingKeepersPos[0]);
+							DeleteSaronFrontDoorIfReady();
+						}
                         break;
                     case BOSS_IRONBRANCH:
                     case BOSS_STONEBARK:
@@ -767,7 +797,8 @@ class instance_ulduar : public InstanceMapScript
                                 HodirChest->SetRespawnTime(HodirChest->GetRespawnDelay());
 
                             instance->SummonCreature(NPC_HODIR_OBSERVATION_RING, ObservationRingKeepersPos[1]);
-                        }
+							DeleteSaronFrontDoorIfReady();
+						}
                         break;
                     case BOSS_THORIM:
                         if (state == DONE)
@@ -776,7 +807,8 @@ class instance_ulduar : public InstanceMapScript
                                 gameObject->SetRespawnTime(gameObject->GetRespawnDelay());
 
                             instance->SummonCreature(NPC_THORIM_OBSERVATION_RING, ObservationRingKeepersPos[2]);
-                        }
+							DeleteSaronFrontDoorIfReady();
+						}
                         break;
                     case BOSS_ALGALON:
                         if (state == DONE)
@@ -1219,6 +1251,7 @@ class instance_ulduar : public InstanceMapScript
                 // which is North and should not be used for boundary checks in BossAI::CheckBoundary()
                 if (door->GetEntry() == GO_LEVIATHAN_DOOR && door->GetPositionX() > 400.f)
                 {
+					add = false;
                     if (add)
                         GetBossInfo(BOSS_LEVIATHAN)->door[DOOR_TYPE_PASSAGE].insert(door->GetGUID());
                     else

@@ -31,6 +31,7 @@
 #include "Opcodes.h"
 #include "ScriptReloadMgr.h"
 #include "ScriptMgr.h"
+#include "ScriptedCreature.h"
 
 BossBoundaryData::~BossBoundaryData()
 {
@@ -48,6 +49,8 @@ InstanceScript::InstanceScript(Map* map) : instance(map), completedEncounters(0)
    // to keep it loaded until this object is destroyed.
     module_reference = sScriptMgr->AcquireModuleReferenceOfScriptName(scriptname);
 #endif // #ifndef TRINITY_API_USE_DYNAMIC_LINKING
+
+	BotAttacksForBoss = NULL;
 }
 
 void InstanceScript::SaveToDB()
@@ -617,6 +620,29 @@ void InstanceScript::SendEncounterUnit(uint32 type, Unit* unit /*= NULL*/, uint8
     }
 
     instance->SendToPlayers(&data);
+}
+
+BotAttackCreature* InstanceScript::GetBotAttacksCreature(Creature* boss)
+{
+	if (boss == NULL)
+		return BotAttacksForBoss;
+	if (!BotAttacksForBoss)
+	{
+		BotAttacksForBoss = new BotAttackCreature(boss, 1000);
+		return BotAttacksForBoss;
+	}
+	else
+	{
+		if (BotAttacksForBoss->MatchMainCreature(boss))
+			return BotAttacksForBoss;
+		else
+		{
+			delete BotAttacksForBoss;
+			BotAttacksForBoss = new BotAttackCreature(boss, 1000);
+			return BotAttacksForBoss;
+		}
+	}
+	return NULL;
 }
 
 void InstanceScript::UpdateEncounterState(EncounterCreditType type, uint32 creditEntry, Unit* /*source*/)

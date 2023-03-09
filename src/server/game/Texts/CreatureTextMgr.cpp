@@ -207,7 +207,8 @@ uint32 CreatureTextMgr::SendChat(Creature* source, uint8 textGroup, WorldObject 
     CreatureTextMap::const_iterator sList = mTextMap.find(source->GetEntry());
     if (sList == mTextMap.end())
     {
-        TC_LOG_ERROR("sql.sql.creaturetextmgr", "CreatureTextMgr: Could not find Text for Creature %s (Entry %u, GUID %u) in 'creature_text' table. Ignoring.", source->GetName().c_str(), source->GetEntry(), source->GetGUID().GetCounter());
+        //hxsd
+        //TC_LOG_ERROR("sql.sql.creaturetextmgr", "CreatureTextMgr: Could not find Text for Creature %s (Entry %u, GUID %u) in 'creature_text' table. Ignoring.", source->GetName().c_str(), source->GetEntry(), source->GetGUID().GetCounter());
         return 0;
     }
 
@@ -409,7 +410,8 @@ bool CreatureTextMgr::TextExist(uint32 sourceEntry, uint8 textGroup)
     CreatureTextMap::const_iterator sList = mTextMap.find(sourceEntry);
     if (sList == mTextMap.end())
     {
-        TC_LOG_DEBUG("entities.unit", "CreatureTextMgr::TextExist: Could not find Text for Creature (entry %u) in 'creature_text' table.", sourceEntry);
+        //hxsd
+        //TC_LOG_DEBUG("entities.unit", "CreatureTextMgr::TextExist: Could not find Text for Creature (entry %u) in 'creature_text' table.", sourceEntry);
         return false;
     }
 

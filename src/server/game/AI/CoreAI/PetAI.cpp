@@ -245,10 +245,18 @@ void PetAI::UpdateAI(uint32 diff)
     }
 
     // Update speed as needed to prevent dropping too far behind and despawning
-    me->UpdateSpeed(MOVE_RUN);
-    me->UpdateSpeed(MOVE_WALK);
-    me->UpdateSpeed(MOVE_FLIGHT);
+	me->UpdateSpeed(MOVE_RUN);
+	me->UpdateSpeed(MOVE_WALK);
+	me->UpdateSpeed(MOVE_FLIGHT);
 
+	//if (owner && owner->GetTypeId() == TYPEID_PLAYER && !me->IsInCombat())
+	//{
+	//	float petSpeed = 1.2f;
+	//	me->SetSpeedRate(MOVE_WALK, petSpeed);
+	//	me->SetSpeedRate(MOVE_RUN, petSpeed);
+	//	me->SetSpeedRate(MOVE_SWIM, petSpeed);
+	//	me->SetSpeedRate(MOVE_FLIGHT, petSpeed);
+	//}
 }
 
 void PetAI::UpdateAllies()

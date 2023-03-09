@@ -54,8 +54,10 @@ class MapInstanced;
 class BattlegroundMap;
 class InstanceMap;
 class Transport;
-namespace Trinity { struct ObjectUpdater; }
+class CommandBG;
 
+namespace Trinity { struct ObjectUpdater; }
+namespace VMAP { enum class ModelIgnoreFlags : uint32; }
 struct ScriptAction
 {
     ObjectGuid sourceGUID;
@@ -496,7 +498,8 @@ class TC_GAME_API Map : public GridRefManager<NGridType>
 
         float GetWaterOrGroundLevel(uint32 phasemask, float x, float y, float z, float* ground = NULL, bool swim = false) const;
         float GetHeight(uint32 phasemask, float x, float y, float z, bool vmap = true, float maxSearchDist = DEFAULT_HEIGHT_SEARCH) const;
-        bool isInLineOfSight(float x1, float y1, float z1, float x2, float y2, float z2, uint32 phasemask) const;
+        //bool isInLineOfSight(float x1, float y1, float z1, float x2, float y2, float z2, uint32 phasemask) const;
+        bool isInLineOfSight(float x1, float y1, float z1, float x2, float y2, float z2, uint32 phasemask, VMAP::ModelIgnoreFlags ignoreFlags) const;
         void Balance() { _dynamicTree.balance(); }
         void RemoveGameObjectModel(const GameObjectModel& model) { _dynamicTree.remove(model); }
         void InsertGameObjectModel(const GameObjectModel& model) { _dynamicTree.insert(model); }
@@ -574,6 +577,13 @@ class TC_GAME_API Map : public GridRefManager<NGridType>
         {
             _updateObjects.erase(obj);
         }
+
+		virtual void InsureCommander(BattlegroundTypeId bgType) {}
+		virtual void InitCommander() {}
+		virtual void ResetCommander() {}
+		virtual void ReadyCommander() {}
+		virtual void StartCommander() {}
+		virtual CommandBG* GetCommander(TeamId team) { return NULL; }
 
     private:
 
@@ -794,7 +804,8 @@ class TC_GAME_API BattlegroundMap : public Map
         BattlegroundMap(uint32 id, time_t, uint32 InstanceId, Map* _parent, uint8 spawnMode);
         ~BattlegroundMap();
 
-        bool AddPlayerToMap(Player*) override;
+		void Update(const uint32 diff) override;
+		bool AddPlayerToMap(Player*) override;
         void RemovePlayerFromMap(Player*, bool) override;
         EnterState CannotEnter(Player* player) override;
         void SetUnload();
@@ -804,8 +815,17 @@ class TC_GAME_API BattlegroundMap : public Map
         virtual void InitVisibilityDistance() override;
         Battleground* GetBG() { return m_bg; }
         void SetBG(Battleground* bg) { m_bg = bg; }
-    private:
+		void InsureCommander(BattlegroundTypeId bgType) override;
+		void InitCommander() override;
+		void ResetCommander() override;
+		void ReadyCommander() override;
+		void StartCommander() override;
+		CommandBG* GetCommander(TeamId team) override;
+
+private:
         Battleground* m_bg;
+		CommandBG* m_pAllianceCommander;
+		CommandBG* m_pHordeCommander;
 };
 
 template<class T, class CONTAINER>

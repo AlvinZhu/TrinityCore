@@ -1,5 +1,5 @@
-/*
- * Copyright (C) 2008-2016 TrinityCore <http://www.trinitycore.org/>
+ /*
+ * Copyright (C) 2008-2015 TrinityCore <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -27,6 +27,21 @@ EndScriptData */
 #include "SpellScript.h"
 #include "trial_of_the_champion.h"
 #include "ScriptedEscortAI.h"
+
+enum Says
+{
+    SAY_COMMON_AGGRO                    = 1,
+    SAY_COMMON_KILL                     = 3,
+    SAY_COMMON_DEATH                    = 4,
+
+    SAY_EADRIC_HAMMER                   = 2,
+    SAY_EADRIC_RADIANCE_WARNING         = 5,
+    SAY_EADRIC_HAMMER_WARNING           = 6,
+
+    SAY_PALETRESS_SUMMON_MEMORY         = 2,
+    SAY_PALETRESS_MEMORY_DIES           = 5,
+    SAY_PALETRESS_NIGHTMARE_WARNING     = 6
+};
 /*
 enum Yells
 {
@@ -188,12 +203,30 @@ public:
 
         void DamageTaken(Unit* /*done_by*/, uint32 &damage) override
         {
+      	
+        	
             if (damage >= me->GetHealth())
             {
                 damage = 0;
                 EnterEvadeMode();
                 me->setFaction(35);
                 bDone = true;
+                
+                damage = 0;
+
+                if (InstanceScript* instance = me->GetInstanceScript())
+                    instance->DoUpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, 68575);
+                instance->SetData(BOSS_ARGENT_CHALLENGE_E, DONE);
+                instance->SetData(BOSS_ARGENT_CHALLENGE_P, DONE);
+                me->SetUnitMovementFlags(MOVEMENTFLAG_WALKING);
+                me->GetMotionMaster()->MovePoint(1, me->GetHomePosition());
+                me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+                Talk(SAY_COMMON_DEATH);
+
+               if (instance->GetData(BOSS_GRAND_CHAMPIONS) == DONE)
+                    me->SummonCreature(VEHICLE_BLACK_KNIGHT, 769.834f, 651.915f, 447.035f, 0);
+               
+                me->DisappearAndDie();
             }
         }
 
@@ -201,19 +234,19 @@ public:
         {
             if (MovementType != POINT_MOTION_TYPE)
                 return;
+me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+           // instance->SetData(BOSS_ARGENT_CHALLENGE_E, DONE);
 
-            instance->SetData(BOSS_ARGENT_CHALLENGE_E, DONE);
-
-            me->DisappearAndDie();
+           // me->DisappearAndDie();
         }
 
         void UpdateAI(uint32 uiDiff) override
         {
-            if (bDone && uiResetTimer <= uiDiff)
-            {
-                me->GetMotionMaster()->MovePoint(0, 746.87f, 665.87f, 411.75f);
-                bDone = false;
-            } else uiResetTimer -= uiDiff;
+           // if (bDone && uiResetTimer <= uiDiff)
+            //{
+            //    me->GetMotionMaster()->MovePoint(0, 746.87f, 665.87f, 411.75f);
+            //    bDone = false;
+            //} else uiResetTimer -= uiDiff;
 
             if (!UpdateVictim())
                 return;
@@ -321,7 +354,22 @@ public:
                 damage = 0;
                 EnterEvadeMode();
                 me->setFaction(35);
+
+if (InstanceScript* instance = me->GetInstanceScript())
+                    instance->DoUpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, 68574);
+                me->SetUnitMovementFlags(MOVEMENTFLAG_WALKING);
+                me->GetMotionMaster()->MovePoint(1, me->GetHomePosition());
+                me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+                Talk(SAY_COMMON_DEATH);                
+                instance->SetData(BOSS_ARGENT_CHALLENGE_E, DONE);
+                instance->SetData(BOSS_ARGENT_CHALLENGE_P, DONE);
                 bDone = true;
+
+               if (instance->GetData(BOSS_GRAND_CHAMPIONS) == DONE )
+                    me->SummonCreature(VEHICLE_BLACK_KNIGHT, 769.834f, 651.915f, 447.035f, 0);
+
+                me->DisappearAndDie();
+                
             }
         }
 
@@ -329,19 +377,19 @@ public:
         {
             if (MovementType != POINT_MOTION_TYPE || Point != 0)
                 return;
+me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+            //instance->SetData(BOSS_ARGENT_CHALLENGE_P, DONE);
 
-            instance->SetData(BOSS_ARGENT_CHALLENGE_P, DONE);
-
-            me->DisappearAndDie();
+           // me->DisappearAndDie();
         }
 
         void UpdateAI(uint32 uiDiff) override
         {
-            if (bDone && uiResetTimer <= uiDiff)
-            {
-                me->GetMotionMaster()->MovePoint(0, 746.87f, 665.87f, 411.75f);
-                bDone = false;
-            } else uiResetTimer -= uiDiff;
+           // if (bDone && uiResetTimer <= uiDiff)
+           // {
+           //     me->GetMotionMaster()->MovePoint(0, 746.87f, 665.87f, 411.75f);
+           //     bDone = false;
+           // } else             uiResetTimer -= uiDiff;
 
             if (!UpdateVictim())
                 return;

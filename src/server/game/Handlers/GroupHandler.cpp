@@ -31,6 +31,8 @@
 #include "World.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
+#include "PlayerBotSession.h"
+#include "BotGroupAI.h"
 
 class Aura;
 
@@ -97,7 +99,7 @@ void WorldSession::HandleGroupInviteOpcode(WorldPacket& recvData)
     }
 
     // can't group with
-    if (!GetPlayer()->IsGameMaster() && !sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_INTERACTION_GROUP) && GetPlayer()->GetTeam() != player->GetTeam())
+    if (/*!GetPlayer()->IsGameMaster() && !sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_INTERACTION_GROUP) &&*/ GetPlayer()->GetTeam() != player->GetTeam())
     {
         SendPartyResult(PARTY_OP_INVITE, membername, ERR_PLAYER_WRONG_FACTION);
         return;
@@ -120,11 +122,16 @@ void WorldSession::HandleGroupInviteOpcode(WorldPacket& recvData)
         return;
     }
 
-    if (!player->GetSocial()->HasFriend(GetPlayer()->GetGUID().GetCounter()) && GetPlayer()->getLevel() < sWorld->getIntConfig(CONFIG_PARTY_LEVEL_REQ))
-    {
-        SendPartyResult(PARTY_OP_INVITE, membername, ERR_INVITE_RESTRICTED);
-        return;
-    }
+	WorldSession* pWorldSession = player->GetSession();
+	if (pWorldSession && player->IsPlayerBot())
+	{
+		PlayerBotSession* pSession = dynamic_cast<PlayerBotSession*>(pWorldSession);
+		if (pSession->HasSchedules())
+		{
+			SendPartyResult(PARTY_OP_INVITE, membername, ERR_NOT_IN_GROUP);
+			return;
+		}
+	}
 
     Group* group = GetPlayer()->GetGroup();
     if (group && group->isBGGroup())
@@ -387,6 +394,8 @@ void WorldSession::HandleGroupSetLeaderOpcode(WorldPacket& recvData)
 
     if (!group->IsLeader(GetPlayer()->GetGUID()) || player->GetGroup() != group)
         return;
+	if (player->IsPlayerBot())
+		return;
 
     // Everything's fine, accepted.
     group->ChangeLeader(guid);
@@ -570,8 +579,8 @@ void WorldSession::HandleGroupRaidConvertOpcode(WorldPacket & /*recvData*/)
     /********************/
 
     // everything's fine, do it (is it 0 (PARTY_OP_INVITE) correct code)
-    SendPartyResult(PARTY_OP_INVITE, "", ERR_PARTY_RESULT_OK);
-    group->ConvertToRaid();
+	SendPartyResult(PARTY_OP_INVITE, "", ERR_PARTY_RESULT_OK);
+	group->ConvertToRaid();
 }
 
 void WorldSession::HandleGroupChangeSubGroupOpcode(WorldPacket& recvData)
@@ -687,7 +696,21 @@ void WorldSession::HandleRaidReadyCheckOpcode(WorldPacket& recvData)
         group->BroadcastPacket(&data, false, -1);
 
         group->OfflineReadyCheck();
-    }
+
+		Group::MemberSlotList const& memList = group->GetMemberSlots();
+		for (Group::MemberSlot const& slot : memList)
+		{
+			Player* player = ObjectAccessor::FindPlayer(slot.guid);
+			if (!player || !player->IsAlive() || !player->IsPlayerBot() || !player->IsInWorld())
+				continue;
+			WorldPacket data(MSG_RAID_READY_CHECK_CONFIRM, 9);
+			data << uint64(player->GetGUID());
+			data << uint8(1);
+			group->BroadcastReadyCheck(&data);
+			if (BotGroupAI* pAI = dynamic_cast<BotGroupAI*>(player->GetAI()))
+				pAI->ResetBotAI();
+		}
+	}
     else                                                    // answer
     {
         uint8 state;

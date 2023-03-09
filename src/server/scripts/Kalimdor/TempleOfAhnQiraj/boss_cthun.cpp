@@ -27,6 +27,8 @@ EndScriptData */
 #include "ScriptedCreature.h"
 #include "temple_of_ahnqiraj.h"
 #include "Player.h"
+#include "BotGroupAI.h"
+#include "Group.h"
 
 /*
  * This is a 2 phases events. Here follows an explanation of the main events and transition between phases and sub-phases.
@@ -169,16 +171,16 @@ public:
         void Initialize()
         {
             //Phase information
-            PhaseTimer = 50000;                                 //First dark glare in 50 seconds
+            PhaseTimer = 4000000;                                 //First dark glare in 50 seconds
 
             //Eye beam phase 50 seconds
             BeamTimer = 3000;
-            EyeTentacleTimer = 45000;                           //Always spawns 5 seconds before Dark Beam
-            ClawTentacleTimer = 12500;                          //4 per Eye beam phase (unsure if they spawn during Dark beam)
+            EyeTentacleTimer = 30000;                           //Always spawns 5 seconds before Dark Beam
+            ClawTentacleTimer = 25000;                          //4 per Eye beam phase (unsure if they spawn during Dark beam)
 
             //Dark Beam phase 35 seconds (each tick = 1 second, 35 ticks)
             DarkGlareTick = 0;
-            DarkGlareTickTimer = 1000;
+            DarkGlareTickTimer = 2500;
             DarkGlareAngle = 0;
             ClockWise = false;
         }
@@ -222,15 +224,27 @@ public:
         {
             DoZoneInCombat();
             instance->SetData(DATA_CTHUN_PHASE, PHASE_EYE_GREEN_BEAM);
+			instance->GetBotAttacksCreature(me);
         }
 
-        void SpawnEyeTentacle(float x, float y)
+		Creature* SpawnEyeTentacle(float x, float y)
         {
-            if (Creature* Spawned = DoSpawnCreature(NPC_EYE_TENTACLE, x, y, 0, 0, TEMPSUMMON_CORPSE_DESPAWN, 500))
-                if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0))
-                    if (Spawned->AI())
-                        Spawned->AI()->AttackStart(target);
+			if (Creature* Spawned = DoSpawnCreature(NPC_EYE_TENTACLE, x, y, 0, 0, TEMPSUMMON_CORPSE_DESPAWN, 500))
+			{
+				if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0))
+					if (Spawned->AI())
+						Spawned->AI()->AttackStart(target);
+				return Spawned;
+			}
+			return NULL;
         }
+
+		float GetRedEyeAngle(uint32 offset)
+		{
+			if (ClockWise)
+				return DarkGlareAngle + offset * float(M_PI) / 35;
+			return DarkGlareAngle - offset * float(M_PI) / 35;
+		}
 
         void UpdateAI(uint32 diff) override
         {
@@ -245,17 +259,16 @@ public:
                 if (EyeTentacleTimer <= diff)
                 {
                     //Spawn the 8 Eye Tentacles in the corret spots
-                    SpawnEyeTentacle(0, 20);                //south
-                    SpawnEyeTentacle(10, 10);               //south west
-                    SpawnEyeTentacle(20, 0);                //west
-                    SpawnEyeTentacle(10, -10);              //north west
+					SpawnEyeTentacle(0, 20);                 //south
+					SpawnEyeTentacle(10, 10);               //south west
+					SpawnEyeTentacle(20, 0);                 //west
+					SpawnEyeTentacle(10, -10);               //north west
 
-                    SpawnEyeTentacle(0, -20);               //north
-                    SpawnEyeTentacle(-10, -10);             //north east
-                    SpawnEyeTentacle(-20, 0);               // east
-                    SpawnEyeTentacle(-10, 10);              // south east
-
-                    EyeTentacleTimer = 45000;
+					SpawnEyeTentacle(0, -20);              //north
+					SpawnEyeTentacle(-10, -10);             //north east
+					SpawnEyeTentacle(-20, 0);               // east
+					SpawnEyeTentacle(-10, 10);              // south east
+                    EyeTentacleTimer = 30000;
                 } else EyeTentacleTimer -= diff;
             }
 
@@ -263,21 +276,21 @@ public:
             {
                 case PHASE_EYE_GREEN_BEAM:
                     //BeamTimer
-                    if (BeamTimer <= diff)
-                    {
-                        //SPELL_GREEN_BEAM
-                        if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0))
-                        {
-                            me->InterruptNonMeleeSpells(false);
-                            DoCast(target, SPELL_GREEN_BEAM);
+                    //if (BeamTimer <= diff)
+                    //{
+                    //    //SPELL_GREEN_BEAM
+                    //    if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0))
+                    //    {
+                    //        me->InterruptNonMeleeSpells(false);
+                    //        DoCast(target, SPELL_GREEN_BEAM);
 
-                            //Correctly update our target
-                            me->SetTarget(target->GetGUID());
-                        }
+                    //        //Correctly update our target
+                    //        me->SetTarget(target->GetGUID());
+                    //    }
 
-                        //Beam every 3 seconds
-                        BeamTimer = 3000;
-                    } else BeamTimer -= diff;
+                    //    //Beam every 3 seconds
+                    //    BeamTimer = 3000;
+                    //} else BeamTimer -= diff;
 
                     //ClawTentacleTimer
                     if (ClawTentacleTimer <= diff)
@@ -289,12 +302,16 @@ public:
                             //Spawn claw tentacle on the random target
                             Spawned = me->SummonCreature(NPC_CLAW_TENTACLE, *target, TEMPSUMMON_CORPSE_DESPAWN, 500);
 
-                            if (Spawned && Spawned->AI())
-                                Spawned->AI()->AttackStart(target);
+							if (Spawned && Spawned->AI())
+							{
+								std::vector<Creature*> claw;
+								claw.push_back(Spawned);
+								Spawned->AI()->AttackStart(target);
+							}
                         }
 
                         //One claw tentacle every 12.5 seconds
-                        ClawTentacleTimer = 12500;
+                        ClawTentacleTimer = 25000;
                     } else ClawTentacleTimer -= diff;
 
                     //PhaseTimer
@@ -314,9 +331,11 @@ public:
                         {
                             //Face our target
                             DarkGlareAngle = me->GetAngle(target);
-                            DarkGlareTickTimer = 1000;
+                            DarkGlareTickTimer = 5000;
                             DarkGlareTick = 0;
                             ClockWise = RAND(true, false);
+							float nextEyeAngle = GetRedEyeAngle(DarkGlareTick);
+							BotFleeLineByAngle(me, nextEyeAngle);
                         }
 
                         //Add red coloration to C'thun
@@ -331,7 +350,9 @@ public:
                         PhaseTimer = 35000;
                     } else PhaseTimer -= diff;
 
-                    break;
+					if (BotAttackCreature* pBotAtt = instance->GetBotAttacksCreature(me))
+						pBotAtt->UpdateNeedAttackCreatures(diff, this, true);
+					break;
 
                 case PHASE_EYE_RED_BEAM:
                     if (DarkGlareTick < 35)
@@ -339,10 +360,13 @@ public:
                         if (DarkGlareTickTimer <= diff)
                         {
                             //Set angle and cast
-                            if (ClockWise)
-                                me->SetOrientation(DarkGlareAngle + DarkGlareTick * float(M_PI) / 35);
-                            else
-                                me->SetOrientation(DarkGlareAngle - DarkGlareTick * float(M_PI) / 35);
+							float eyeAngle = GetRedEyeAngle(DarkGlareTick);
+							me->SetOrientation(eyeAngle);
+							me->UpdatePosition(me->GetPosition());
+							//if (ClockWise)
+       //                         me->SetOrientation(DarkGlareAngle + DarkGlareTick * float(M_PI) / 35);
+       //                     else
+       //                         me->SetOrientation(DarkGlareAngle - DarkGlareTick * float(M_PI) / 35);
 
                             me->StopMoving();
 
@@ -351,9 +375,12 @@ public:
 
                             //Increase tick
                             ++DarkGlareTick;
+							float nextEyeAngle = GetRedEyeAngle(DarkGlareTick);
+							BotFleeLineByAngle(me, nextEyeAngle);
 
                             //1 second per tick
-                            DarkGlareTickTimer = 1000;
+                            DarkGlareTickTimer = 5000;
+							PhaseTimer = DarkGlareTickTimer - 500;
                         } else DarkGlareTickTimer -= diff;
                     }
 
@@ -364,7 +391,7 @@ public:
                         instance->SetData(DATA_CTHUN_PHASE, PHASE_EYE_GREEN_BEAM);
 
                         BeamTimer = 3000;
-                        ClawTentacleTimer = 12500;              //4 per Eye beam phase (unsure if they spawn during Dark beam)
+                        ClawTentacleTimer = 20000;              //4 per Eye beam phase (unsure if they spawn during Dark beam)
 
                         me->InterruptNonMeleeSpells(false);
 
@@ -376,7 +403,7 @@ public:
                         me->SetReactState(REACT_AGGRESSIVE);
 
                         //Eye Beam for 50 seconds
-                        PhaseTimer = 50000;
+                        PhaseTimer = 35000;
                     } else PhaseTimer -= diff;
 
                     break;
@@ -559,7 +586,7 @@ public:
                 Unit* unit = ObjectAccessor::GetUnit(*me, i->first);
 
                 //Only units out of stomach
-                if (unit && i->second == false)
+                if (unit && unit->IsAlive() && unit->ToPlayer() && i->second == false)
                     temp.push_back(unit);
 
                 ++i;
@@ -620,8 +647,8 @@ public:
                     EyeTentacleTimer = 30000; // every 30sec in phase 2
                 } else EyeTentacleTimer -= diff;
             }
-
-            switch (currentPhase)
+			
+			switch (currentPhase)
             {
                 //Transition phase
                 case PHASE_CTHUN_TRANSITION:
@@ -646,14 +673,23 @@ public:
                         //Place all units in threat list on outside of stomach
                         Stomach_Map.clear();
 
-                        for (std::list<HostileReference*>::const_iterator i = me->getThreatManager().getThreatList().begin(); i != me->getThreatManager().getThreatList().end(); ++i)
-                            Stomach_Map[(*i)->getUnitGuid()] = false;   //Outside stomach
+						for (std::list<HostileReference*>::const_iterator i = me->getThreatManager().getThreatList().begin(); i != me->getThreatManager().getThreatList().end(); ++i)
+						{
+							ObjectGuid playerGUID = (*i)->getUnitGuid();
+							if (!playerGUID.IsPlayer())
+								continue;
+							Player* player = ObjectAccessor::FindPlayer(playerGUID);
+							if (!player || player->IsPlayerBot() || !player->IsAlive() || player->GetMap() != me->GetMap())
+								continue;
+							Stomach_Map[playerGUID] = false;   //Outside stomach
+							break;
+						}
 
                         //Spawn 2 flesh tentacles
                         FleshTentaclesKilled = 0;
 
                         //Spawn flesh tentacle
-                        for (uint8 i = 0; i < 2; i++)
+                        for (uint8 i = 0; i < 1; i++)
                         {
                             Creature* spawned = me->SummonCreature(NPC_FLESH_TENTACLE, FleshTentaclePos[i], TEMPSUMMON_CORPSE_DESPAWN);
                             if (!spawned)
@@ -663,6 +699,15 @@ public:
                         PhaseTimer = 0;
                     } else PhaseTimer -= diff;
 
+					if (ExistPlayerBotByRange(80))
+					{
+						if (BotAttackCreature* pBotAtt = instance->GetBotAttacksCreature(me))
+						{
+							if (pBotAtt->GetState() == 0)
+								pBotAtt->UpdateNeedAttackCreatures(diff, this, false);
+						}
+					}
+
                     break;
 
                 //Body Phase
@@ -671,12 +716,12 @@ public:
                     me->SetTarget(ObjectGuid::Empty);
 
                     //Weaken
-                    if (FleshTentaclesKilled > 1)
+                    if (FleshTentaclesKilled > 0)
                     {
                         instance->SetData(DATA_CTHUN_PHASE, PHASE_CTHUN_WEAK);
 
                         Talk(EMOTE_WEAKENED);
-                        PhaseTimer = 45000;
+                        PhaseTimer = 60000;
 
                         DoCast(me, SPELL_PURPLE_COLORATION, true);
 
@@ -692,9 +737,12 @@ public:
                             if (unit && i->second == true)
                             {
                                 //Teleport each player out
-                                DoTeleportPlayer(unit, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ() + 10, float(rand32() % 6));
-
-                                //Cast knockback on them
+								Position telePos = GetTickoutStomachPos();
+								DoTeleportPlayer(unit, telePos.GetPositionX(), telePos.GetPositionY(), telePos.GetPositionZ() + 5, float(rand32() % 6));
+								TeleportTargetGroupBot(unit, telePos);
+								if (BotAttackCreature* pBotAtt = instance->GetBotAttacksCreature(me))
+									pBotAtt->SetState(0);
+								//Cast knockback on them
                                 DoCast(unit, SPELL_EXIT_STOMACH_KNOCKBACK, true);
 
                                 //Remove the acid debuff
@@ -729,9 +777,12 @@ public:
                                 if (unit->IsWithinDist3d(&KickPos, 15.0f))
                                 {
                                     //Teleport each player out
-                                    DoTeleportPlayer(unit, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ() + 10, float(rand32() % 6));
-
-                                    //Cast knockback on them
+									Position telePos = GetTickoutStomachPos();
+									DoTeleportPlayer(unit, telePos.GetPositionX(), telePos.GetPositionY(), telePos.GetPositionZ() + 5, float(rand32() % 6));
+									TeleportTargetGroupBot(unit, telePos);
+									if (BotAttackCreature* pBotAtt = instance->GetBotAttacksCreature(me))
+										pBotAtt->SetState(0);
+									//Cast knockback on them
                                     DoCast(unit, SPELL_EXIT_STOMACH_KNOCKBACK, true);
 
                                     //Remove the acid debuff
@@ -772,7 +823,10 @@ public:
                             if (unit)
                             {
                                 DoTeleportPlayer(unit, STOMACH_X, STOMACH_Y, STOMACH_Z, STOMACH_O);
-                            }
+								TeleportTargetGroupBot(unit, Position(STOMACH_X, STOMACH_Y, STOMACH_Z - 8.0f, STOMACH_O), 10.0f);
+								if (BotAttackCreature* pBotAtt = instance->GetBotAttacksCreature(me))
+									pBotAtt->SetState(1);
+							}
 
                             StomachEnterTarget.Clear();
                             StomachEnterVisTimer = 0;
@@ -809,6 +863,15 @@ public:
                         GiantEyeTentacleTimer = 60000;
                     } else GiantEyeTentacleTimer -= diff;
 
+					if (ExistPlayerBotByRange(80))
+					{
+						if (BotAttackCreature* pBotAtt = instance->GetBotAttacksCreature(me))
+						{
+							if (pBotAtt->GetState() == 0)
+								pBotAtt->UpdateNeedAttackCreatures(diff, this, false);
+						}
+					}
+
                     break;
 
                 //Weakened state
@@ -826,7 +889,7 @@ public:
                         FleshTentaclesKilled = 0;
 
                         //Spawn flesh tentacle
-                        for (uint8 i = 0; i < 2; i++)
+                        for (uint8 i = 0; i < 1; i++)
                         {
                             Creature* spawned = me->SummonCreature(NPC_FLESH_TENTACLE, FleshTentaclePos[i], TEMPSUMMON_CORPSE_DESPAWN);
                             if (!spawned)
@@ -834,7 +897,17 @@ public:
                         }
 
                         PhaseTimer = 0;
+						me->SetTarget(ObjectGuid::Empty);
+						ClearBotMeTarget(true);
+						return;
                     } else PhaseTimer -= diff;
+
+					//BotAllTargetMe(true);
+					if (BotAttackCreature* pBotAtt = instance->GetBotAttacksCreature(me))
+					{
+						pBotAtt->SetState(0);
+						pBotAtt->UpdateNeedAttackCreatures(diff, this, true);
+					}
 
                     break;
             }
@@ -880,6 +953,44 @@ public:
                     break;
             }
         }
+
+		void TeleportTargetGroupBot(Unit* pUnit, Position pos, float offset = 0.0f)
+		{
+			if (!pUnit)
+				return;
+			Player* pPlayer = pUnit->ToPlayer();
+			if (!pPlayer)
+				return;
+			Group* pGroup = pPlayer->GetGroup();
+			if (!pGroup || pGroup->isBFGroup())
+				return;
+			Group::MemberSlotList const& memList = pGroup->GetMemberSlots();
+			for (Group::MemberSlot const& slot : memList)
+			{
+				Player* player = ObjectAccessor::FindPlayer(slot.guid);
+				if (!player || !player->IsInWorld() || player == pPlayer || !player->IsPlayerBot())
+					continue;
+				if (BotGroupAI* pGroupAI = dynamic_cast<BotGroupAI*>(player->GetAI()))
+				{
+					float distX = pos.GetPositionX() + frand(-offset, offset);
+					float distY = pos.GetPositionY() + frand(-offset, offset);
+					float distZ = pos.GetPositionZ();
+					pGroupAI->SetTeleport(Position(distX, distY, distZ, pos.GetOrientation()));
+					player->SetSelection(ObjectGuid::Empty);
+				}
+			}
+		}
+
+		Position GetTickoutStomachPos()
+		{
+			float angle = Position::NormalizeOrientation(frand(0, float(M_PI) * 2));
+			float distX = me->GetPositionX() + 25 * std::cosf(angle);
+			float distY = me->GetPositionY() + 25 * std::sinf(angle);
+			float distZ = me->GetPositionZ();
+			distZ = me->GetMap()->GetHeight(me->GetPhaseMask(), distX, distY, distZ);
+			Position resultPos(distX, distY, distZ, me->GetOrientation());
+			return resultPos;
+		}
     };
 
 };
@@ -905,12 +1016,13 @@ public:
             {
                 pPortal->SetReactState(REACT_PASSIVE);
                 Portal = pPortal->GetGUID();
-            }
+				pPortal->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_NON_ATTACKABLE);
+			}
 
             SetCombatMovement(false);
         }
 
-        uint32 MindflayTimer;
+		uint32 MindflayTimer;
         uint32 KillSelfTimer;
         ObjectGuid Portal;
 
@@ -932,7 +1044,7 @@ public:
         void EnterCombat(Unit* /*who*/) override
         {
             DoZoneInCombat();
-        }
+		}
 
         void UpdateAI(uint32 diff) override
         {
@@ -956,8 +1068,16 @@ public:
 
                 //Mindflay every 10 seconds
                 MindflayTimer = 10000;
-            } else MindflayTimer -= diff;
-        }
+
+				InstanceScript* instance = me->GetInstanceScript();
+				if (instance && ExistPlayerBotByRange(80))
+				{
+					if (BotAttackCreature* pBotAtt = instance->GetBotAttacksCreature(NULL))
+						pBotAtt->AddNewCreatureNeedAttack(me, 5);
+				}
+			}
+			else MindflayTimer -= diff;
+		}
     };
 
 };
@@ -981,13 +1101,7 @@ public:
             EvadeTimer = 5000;
 
             SetCombatMovement(false);
-
-            if (Creature* pPortal = me->SummonCreature(NPC_SMALL_PORTAL, *me, TEMPSUMMON_CORPSE_DESPAWN))
-            {
-                pPortal->SetReactState(REACT_PASSIVE);
-                Portal = pPortal->GetGUID();
-            }
-        }
+		}
 
         uint32 GroundRuptureTimer;
         uint32 HamstringTimer;
@@ -1011,7 +1125,14 @@ public:
         void EnterCombat(Unit* /*who*/) override
         {
             DoZoneInCombat();
-        }
+
+			InstanceScript* instance = me->GetInstanceScript();
+			if (instance && ExistPlayerBotByRange(80))
+			{
+				if (BotAttackCreature* pBotAtt = instance->GetBotAttacksCreature(NULL))
+					pBotAtt->AddNewCreatureNeedAttack(me, 5);
+			}
+		}
 
         void UpdateAI(uint32 diff) override
         {
@@ -1044,7 +1165,8 @@ public:
                         {
                             pPortal->SetReactState(REACT_PASSIVE);
                             Portal = pPortal->GetGUID();
-                        }
+							pPortal->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_NON_ATTACKABLE);
+						}
 
                         GroundRuptureTimer = 500;
                         HamstringTimer = 2000;
@@ -1061,7 +1183,14 @@ public:
             {
                 DoCastVictim(SPELL_GROUND_RUPTURE);
                 GroundRuptureTimer = 30000;
-            } else GroundRuptureTimer -= diff;
+
+				if (Creature* pPortal = me->SummonCreature(NPC_SMALL_PORTAL, *me, TEMPSUMMON_CORPSE_DESPAWN))
+				{
+					pPortal->SetReactState(REACT_PASSIVE);
+					Portal = pPortal->GetGUID();
+				}
+			}
+			else GroundRuptureTimer -= diff;
 
             //HamstringTimer
             if (HamstringTimer <= diff)
@@ -1101,8 +1230,9 @@ public:
             {
                 pPortal->SetReactState(REACT_PASSIVE);
                 Portal = pPortal->GetGUID();
-            }
-        }
+				pPortal->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_NON_ATTACKABLE);
+			}
+		}
 
         uint32 GroundRuptureTimer;
         uint32 ThrashTimer;
@@ -1128,7 +1258,7 @@ public:
         void EnterCombat(Unit* /*who*/) override
         {
             DoZoneInCombat();
-        }
+		}
 
         void UpdateAI(uint32 diff) override
         {
@@ -1178,7 +1308,15 @@ public:
             {
                 DoCastVictim(SPELL_GROUND_RUPTURE);
                 GroundRuptureTimer = 30000;
-            } else GroundRuptureTimer -= diff;
+
+				InstanceScript* instance = me->GetInstanceScript();
+				if (instance && ExistPlayerBotByRange(80))
+				{
+					if (BotAttackCreature* pBotAtt = instance->GetBotAttacksCreature(NULL))
+						pBotAtt->AddNewCreatureNeedAttack(me, 15);
+				}
+			}
+			else GroundRuptureTimer -= diff;
 
             //ThrashTimer
             if (ThrashTimer <= diff)
@@ -1214,7 +1352,7 @@ public:
     {
         giant_eye_tentacleAI(Creature* creature) : ScriptedAI(creature)
         {
-            BeamTimer = 500;
+            BeamTimer = 2000;
 
             SetCombatMovement(false);
 
@@ -1222,8 +1360,9 @@ public:
             {
                 pPortal->SetReactState(REACT_PASSIVE);
                 Portal = pPortal->GetGUID();
-            }
-        }
+				pPortal->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_NON_ATTACKABLE);
+			}
+		}
 
         uint32 BeamTimer;
         ObjectGuid Portal;
@@ -1243,7 +1382,7 @@ public:
         void EnterCombat(Unit* /*who*/) override
         {
             DoZoneInCombat();
-        }
+		}
 
         void UpdateAI(uint32 diff) override
         {
@@ -1255,12 +1394,20 @@ public:
             if (BeamTimer <= diff)
             {
                 Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0);
-                if (target && !target->HasAura(SPELL_DIGESTIVE_ACID))
+                if (target && !target->HasAura(SPELL_DIGESTIVE_ACID) && me->GetDistance(target->GetPosition()) < 30)
                     DoCast(target, SPELL_GREEN_BEAM);
 
                 //Beam every 2 seconds
-                BeamTimer = 2100;
-            } else BeamTimer -= diff;
+                BeamTimer = 6000;
+
+				InstanceScript* instance = me->GetInstanceScript();
+				if (instance && ExistPlayerBotByRange(80))
+				{
+					if (BotAttackCreature* pBotAtt = instance->GetBotAttacksCreature(NULL))
+						pBotAtt->AddNewCreatureNeedAttack(me, 5);
+				}
+			}
+			else BeamTimer -= diff;
         }
     };
 
@@ -1278,9 +1425,20 @@ public:
 
     struct flesh_tentacleAI : public ScriptedAI
     {
-        flesh_tentacleAI(Creature* creature) : ScriptedAI(creature)
+		uint32 BotTimer;
+
+		void Reset() override
+		{
+			//Green Beam half a second after we spawn
+			BotTimer = 2000;
+		}
+
+		flesh_tentacleAI(Creature* creature) : ScriptedAI(creature)
         {
-            SetCombatMovement(false);
+			BotTimer = 2000;
+			SetCombatMovement(false);
+			me->SetMaxHealth(me->GetMaxHealth() * 3);
+			me->SetFullHealth();
         }
 
         void JustDied(Unit* /*killer*/) override
@@ -1290,7 +1448,27 @@ public:
                     if (summoner->IsAIEnabled)
                         summoner->GetAI()->DoAction(ACTION_FLESH_TENTACLE_KILLED);
         }
-    };
+
+		void UpdateAI(uint32 diff) override
+		{
+			if (BotTimer <= diff)
+			{
+				BotTimer = 2000;
+				InstanceScript* instance = me->GetInstanceScript();
+				if (instance)
+				{
+					if (BotAttackCreature* pBotAtt = instance->GetBotAttacksCreature(NULL))
+					{
+						if (pBotAtt->GetState() == 1)
+						{
+							BotAllTargetMe(true);
+						}
+					}
+				}
+			}
+			else BotTimer -= diff;
+		}
+	};
 
 };
 

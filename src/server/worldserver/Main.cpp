@@ -52,6 +52,10 @@
 #include "Realm/Realm.h"
 #include "DatabaseLoader.h"
 #include "AppenderDB.h"
+#include "PlayerBotMgr.h"
+#include "ToolSocket.h"
+#include "ToolSocketMgr.h"
+#include "PathfindingMgr.h"
 #include "Metric.h"
 
 using namespace boost::program_options;
@@ -94,7 +98,22 @@ void ShutdownCLIThread(std::thread* cliThread);
 void ShutdownThreadPool(std::vector<std::thread>& threadPool);
 bool LoadRealmInfo();
 variables_map GetConsoleArguments(int argc, char** argv, fs::path& configFile, std::string& cfg_service);
+//转中文UTF8
+const char* _StringToUTF8f(const char*   pASCIIBuf)
+{
+#ifdef WIN32
+	DWORD     UniCodeLen = MultiByteToWideChar(CP_ACP, 0, pASCIIBuf, -1, 0, 0);
+	std::vector <wchar_t>   vWCH(UniCodeLen);
+	MultiByteToWideChar(CP_ACP, 0, pASCIIBuf, -1, &vWCH[0], UniCodeLen);
+	DWORD   dwUtf8Len = WideCharToMultiByte(CP_UTF8, 0, &vWCH[0], UniCodeLen, NULL, NULL, NULL, NULL);
+	char* _StringConversionStorage = new char[dwUtf8Len + 1];
+	WideCharToMultiByte(CP_UTF8, 0, &vWCH[0], UniCodeLen, _StringConversionStorage, dwUtf8Len, NULL, NULL);
+	return &_StringConversionStorage[0];
+#else
+	return &pASCIIBuf[0];
+#endif
 
+}
 /// Launch the Trinity server
 extern int main(int argc, char** argv)
 {
@@ -102,6 +121,10 @@ extern int main(int argc, char** argv)
 
     auto configFile = fs::absolute(_TRINITY_CORE_CONFIG);
     std::string configService;
+	if (argc > 1)
+		sWorld->SetCheckOpcode(argv[1]);
+// 	else
+// 		exit(-1);
 
     auto vm = GetConsoleArguments(argc, argv, configFile, configService);
     // exit if help or version is enabled
@@ -132,15 +155,10 @@ extern int main(int argc, char** argv)
 
     TC_LOG_INFO("server.worldserver", "%s (worldserver-daemon)", GitRevision::GetFullVersion());
     TC_LOG_INFO("server.worldserver", "<Ctrl-C> to stop.\n");
-    TC_LOG_INFO("server.worldserver", " ______                       __");
-    TC_LOG_INFO("server.worldserver", "/\\__  _\\       __          __/\\ \\__");
-    TC_LOG_INFO("server.worldserver", "\\/_/\\ \\/ _ __ /\\_\\    ___ /\\_\\ \\, _\\  __  __");
-    TC_LOG_INFO("server.worldserver", "   \\ \\ \\/\\`'__\\/\\ \\ /' _ `\\/\\ \\ \\ \\/ /\\ \\/\\ \\");
-    TC_LOG_INFO("server.worldserver", "    \\ \\ \\ \\ \\/ \\ \\ \\/\\ \\/\\ \\ \\ \\ \\ \\_\\ \\ \\_\\ \\");
-    TC_LOG_INFO("server.worldserver", "     \\ \\_\\ \\_\\  \\ \\_\\ \\_\\ \\_\\ \\_\\ \\__\\\\/`____ \\");
-    TC_LOG_INFO("server.worldserver", "      \\/_/\\/_/   \\/_/\\/_/\\/_/\\/_/\\/__/ `/___/> \\");
-    TC_LOG_INFO("server.worldserver", "                                 C O R E  /\\___/");
-    TC_LOG_INFO("server.worldserver", "http://TrinityCore.org                    \\/__/\n");
+	 TC_LOG_INFO("server.worldserver", _StringToUTF8f("Hxsd 335 V14 战场版2016-2017"));
+     TC_LOG_INFO("server.worldserver", _StringToUTF8f("技术讨论 QQ群 168990397"));
+     TC_LOG_INFO("server.worldserver", _StringToUTF8f("商业支持 QQ群 131464297"));
+     TC_LOG_INFO("server.worldserver", "Hxsd 335 V14 verion");
     TC_LOG_INFO("server.worldserver", "Using configuration file %s.", sConfigMgr->GetFilename().c_str());
     TC_LOG_INFO("server.worldserver", "Using SSL version: %s (library: %s)", OPENSSL_VERSION_TEXT, SSLeay_version(SSLEAY_VERSION));
     TC_LOG_INFO("server.worldserver", "Using Boost version: %i.%i.%i", BOOST_VERSION / 100000, BOOST_VERSION / 100 % 1000, BOOST_VERSION % 100);
@@ -244,6 +262,8 @@ extern int main(int argc, char** argv)
     }
 
     sWorldSocketMgr.StartNetwork(_ioService, worldListener, worldPort, networkThreads);
+	std::string toolListener = sConfigMgr->GetStringDefault("BindIP", "0.0.0.0");
+	sToolSocketMgr.StartNetwork(_ioService, toolListener, sConfigMgr->GetIntDefault("WOWToolListenPort", 8116), 1);
 
     // Set server online (allow connecting now)
     LoginDatabase.DirectPExecute("UPDATE realmlist SET flag = flag & ~%u, population = 0 WHERE id = '%u'", REALM_FLAG_OFFLINE, realm.Id.Realm);
@@ -260,13 +280,20 @@ extern int main(int argc, char** argv)
     }
 
     TC_LOG_INFO("server.worldserver", "%s (worldserver-daemon) ready...", GitRevision::GetFullVersion());
-
+	 TC_LOG_INFO("server.worldserver", _StringToUTF8f("Hxsd 335 V14 战场版2016-2017"));
+     TC_LOG_INFO("server.worldserver", _StringToUTF8f("技术讨论 QQ群 168990397"));
+     TC_LOG_INFO("server.worldserver", _StringToUTF8f("商业支持 QQ群 131464297"));
     sScriptMgr->OnStartup();
 
-    WorldUpdateLoop();
+	sPlayerBotMgr->UpAllPlayerBotSession();
+
+	sFPMgr->InitializePFMgr();
+	
+	WorldUpdateLoop();
 
     // Shutdown starts here
     ShutdownThreadPool(threadPool);
+	sFPMgr->ClearPFThreads();
 
     sLog->SetSynchronous();
 
@@ -279,6 +306,7 @@ extern int main(int argc, char** argv)
     sBattlegroundMgr->DeleteAllBattlegrounds();
 
     sWorldSocketMgr.StopNetwork();
+	sToolSocketMgr.StopNetwork();
 
     sInstanceSaveMgr->Unload();
     sOutdoorPvPMgr->Die();

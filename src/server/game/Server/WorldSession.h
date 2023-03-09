@@ -245,6 +245,31 @@ struct PacketCounter
     uint32 amountCounter;
 };
 
+//
+struct TC_GAME_API NpcBotMap
+{
+    friend class Player;
+    protected:
+		NpcBotMap() : m_guid(ObjectGuid::Empty), m_entry(0), m_race(0), m_class(0), m_creature(NULL), m_reviveTimer(0)
+        {
+            for (uint8 i = 0; i != 18; ++i)
+                equips[i] = 0;
+        }
+		ObjectGuid m_guid;
+        uint32 m_entry;
+        uint8  m_race;
+        uint8  m_class;
+        Creature* m_creature;
+        uint32 m_reviveTimer;
+        uint32 equips[18];
+
+    public:
+        ObjectGuid _Guid() const { return m_guid; }
+        Creature* _Cre() const { return m_creature; }
+        uint32 const getEquips(uint8 slot) const { return equips[slot]; }
+};
+//end bot mods
+
 /// Player session in the World
 class TC_GAME_API WorldSession
 {
@@ -321,7 +346,7 @@ class TC_GAME_API WorldSession
         void KickPlayer();
 
         void QueuePacket(WorldPacket* new_packet);
-        bool Update(uint32 diff, PacketFilter& updater);
+        virtual bool Update(uint32 diff, PacketFilter& updater);
 
         /// Handle the authentication waiting queue (to be completed)
         void SendAuthWaitQue(uint32 position);
@@ -963,6 +988,12 @@ class TC_GAME_API WorldSession
         void HandleEnterPlayerVehicle(WorldPacket& data);
         void HandleUpdateProjectilePosition(WorldPacket& recvPacket);
         void HandleUpdateMissileTrajectory(WorldPacket& recvPacket);
+
+		bool HasSocket() { return m_Socket != NULL; }
+		virtual bool IsBotSession() { return false; }
+		virtual bool HasSchedules() { return false; }
+		virtual bool HasBGSchedule() { return false; }
+		virtual bool IsAccountBotSession() { return false; }
 
     private:
         void InitializeQueryCallbackParameters();

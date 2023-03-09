@@ -47,6 +47,9 @@
 #include "World.h"
 #include "WorldPacket.h"
 #include "Transport.h"
+#include "Config.h"
+// npcbot
+#include "bot_ai.h"
 
 TrainerSpell const* TrainerSpellData::Find(uint32 spell_id) const
 {
@@ -191,6 +194,10 @@ m_originalEntry(0), m_homePosition(), m_transportHomePosition(), m_creatureInfo(
     for (uint8 i = 0; i < MAX_CREATURE_SPELLS; ++i)
         m_spells[i] = 0;
 
+//hxsd
+    for (uint8 i=0; i < 12; ++i)
+        m_spells2[i] = 0;
+
     DisableReputationGain = false;
 
     m_SightDistance = sWorld->getFloatConfig(CONFIG_SIGHT_MONSTER);
@@ -199,6 +206,15 @@ m_originalEntry(0), m_homePosition(), m_transportHomePosition(), m_creatureInfo(
     ResetLootMode(); // restore default loot mode
     m_TriggerJustRespawned = false;
     m_isTempWorldObject = false;
+
+	//bot
+	m_bot_owner = NULL;
+	m_creature_owner = NULL;
+	m_bots_pet = NULL;
+	m_bot_class = CLASS_NONE;
+	bot_AI = NULL;
+	m_canUpdate = true;
+	//end bot
 }
 
 Creature::~Creature()
@@ -280,7 +296,8 @@ void Creature::RemoveCorpse(bool setSpawnTime)
 {
     if (getDeathState() != CORPSE)
         return;
-
+	if (bot_AI)
+		return;
     m_corpseRemoveTime = time(NULL);
     setDeathState(DEAD);
     RemoveAllAuras();
@@ -376,7 +393,66 @@ bool Creature::InitEntry(uint32 entry, CreatureData const* data /*= nullptr*/)
     }
 
     SetName(normalInfo->Name);                              // at normal entry always
+//hxsd
+if (data  && GetEntry()>=170001 && GetEntry()<=170500)
+{
+	if (data->lvl >0 && data->lvl<=85)                    // use default from the template
+{
+//    SetName(data->nname);                              // at normal entry always
+ setFaction(data->nname);
+SetLevel(data->lvl);
+    uint32 health = 60+(data->lvl*30);
+if (data->lvl >=20)
+health = 60+(data->lvl*40);
+if (data->lvl >=40)
+health = 60+(data->lvl*60);
+if (data->lvl >=60)
+health = 60+(data->lvl*100);
+if (data->lvl >=70)
+health = 60+(data->lvl*225);
+if (data->lvl >80)
+health = 60+(data->lvl*300);
 
+int32 isok = sConfigMgr->GetIntDefault("pknpc_add", 1);
+if (isok<1) isok=1;
+if (isok >=1) health=health * isok;
+setDeathState(ALIVE);
+    //SetCreateHealth(health);
+    SetMaxHealth(health);
+    SetHealth(health);
+    SetFullHealth();
+    //ResetPlayerDamageReq();
+    
+    uint32 lvl = data->lvl;
+    uint32 dmg = lvl+(lvl*3);
+                if (lvl > 20)
+			dmg = (lvl * 8);
+		if (lvl > 40)
+			dmg =  (lvl * 12);
+		if (lvl > 60)
+			dmg = (lvl * 18);
+//		if (lvl > 80)
+//			dmg = (lvl * 40);
+
+dmg=dmg * isok;
+		//if (lvl >= 86)
+		//	dmg = dmg + (lvl * 300);
+		SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, dmg);
+		SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, dmg);
+		//SetBaseWeaponDamage(OFF_ATTACK, MINDAMAGE, dmg);
+		//SetBaseWeaponDamage(OFF_ATTACK, MAXDAMAGE, dmg);
+		SetBaseWeaponDamage(RANGED_ATTACK, MINDAMAGE, dmg);
+		SetBaseWeaponDamage(RANGED_ATTACK, MAXDAMAGE, dmg);
+/*		SetStatFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE, dmg);
+		SetStatFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE, dmg);
+		SetStatFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, dmg);
+		SetStatFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, dmg);*/
+		SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, dmg);
+
+	        UpdateAttackPowerAndDamage();
+}
+SetFullHealth();
+}
     SetFloatValue(UNIT_MOD_CAST_SPEED, 1.0f);
 
     SetSpeedRate(MOVE_WALK,   cinfo->speed_walk);
@@ -396,6 +472,20 @@ bool Creature::InitEntry(uint32 entry, CreatureData const* data /*= nullptr*/)
 
     for (uint8 i=0; i < MAX_CREATURE_SPELLS; ++i)
         m_spells[i] = GetCreatureTemplate()->spells[i];
+
+        m_spells2[0] = GetCreatureTemplate()->spells2[0];
+        m_spells2[1] = GetCreatureTemplate()->spells2[1];
+        m_spells2[2] = GetCreatureTemplate()->spells2[2];
+        m_spells2[3] = GetCreatureTemplate()->spells2[3];
+        m_spells2[4] = GetCreatureTemplate()->spells2[4];
+        m_spells2[5] = GetCreatureTemplate()->spells2[5];
+        m_spells2[6] = GetCreatureTemplate()->spells2[6];
+        m_spells2[7] = GetCreatureTemplate()->spells2[7];
+        m_spells2[8] = GetCreatureTemplate()->spells2[8];
+        m_spells2[9] = GetCreatureTemplate()->spells2[9];
+        m_spells2[10] = GetCreatureTemplate()->spells2[10];
+        m_spells2[11] = GetCreatureTemplate()->spells2[11];
+
 
     return true;
 }
@@ -483,7 +573,68 @@ bool Creature::UpdateEntry(uint32 entry, CreatureData const* data /*= nullptr*/)
 
     if (cInfo->InhabitType & INHABIT_ROOT)
         SetControlled(true, UNIT_STATE_ROOT);
+//hxsd
+if (data  && GetEntry()>=170001 && GetEntry()<=170500)
+{
+	if (data->lvl >0 && data->lvl <=85)                    // use default from the template
+{
+    //SetName(data->nname);                              // at normal entry always
+setFaction(data->nname);
+SetLevel(data->lvl);
+     uint32 health = 60+(data->lvl*30);
+if (data->lvl >=20)
+health = 60+(data->lvl*40);
+if (data->lvl >=40)
+health = 60+(data->lvl*60);
+if (data->lvl >=60)
+health = 60+(data->lvl*100);
+if (data->lvl >=70)
+health = 60+(data->lvl*225);
+if (data->lvl >80)
+health = 60+(data->lvl*300);
+int32 isok = sConfigMgr->GetIntDefault("pknpc_add", 1);
+if (isok<1) isok=1;
+if (isok >=1) health=health * isok;
+setDeathState(ALIVE);
+    //SetCreateHealth(health);
+    SetMaxHealth(health);
+    SetHealth(health);
+    SetFullHealth();
+    //ResetPlayerDamageReq();
 
+uint32 lvl = data->lvl;
+ uint32 dmg = lvl+(lvl*3);
+                if (lvl > 20)
+			dmg = (lvl * 8);
+		if (lvl > 40)
+			dmg =  (lvl * 12);
+		if (lvl > 60)
+			dmg = (lvl * 18);
+		//if (lvl > 80)
+		//	dmg = (lvl * 40);
+
+dmg =dmg * isok;
+
+		//if (lvl >= 86)
+		//	dmg = dmg + (lvl * 300);
+		SetBaseWeaponDamage(BASE_ATTACK, MINDAMAGE, dmg);
+		SetBaseWeaponDamage(BASE_ATTACK, MAXDAMAGE, dmg);
+		//SetBaseWeaponDamage(OFF_ATTACK, MINDAMAGE, dmg);
+		//SetBaseWeaponDamage(OFF_ATTACK, MAXDAMAGE, dmg);
+		SetBaseWeaponDamage(RANGED_ATTACK, MINDAMAGE, dmg);
+		SetBaseWeaponDamage(RANGED_ATTACK, MAXDAMAGE, dmg);
+/*		SetStatFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE, dmg);
+		SetStatFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE, dmg);
+		SetStatFloatValue(UNIT_FIELD_MINRANGEDDAMAGE, dmg);
+		SetStatFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE, dmg);*/
+		SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, dmg);
+	        UpdateAttackPowerAndDamage();
+
+
+
+}
+SetFullHealth();
+}
     UpdateMovementFlags();
     LoadCreaturesAddon();
     return true;
@@ -491,6 +642,11 @@ bool Creature::UpdateEntry(uint32 entry, CreatureData const* data /*= nullptr*/)
 
 void Creature::Update(uint32 diff)
 {
+	//: update helper
+	if (!m_canUpdate && bot_AI)
+		return;
+	//end
+
     if (IsAIEnabled && m_TriggerJustRespawned)
     {
         m_TriggerJustRespawned = false;
@@ -673,9 +829,12 @@ void Creature::Update(uint32 diff)
             if (CanNotReachTarget() && !IsInEvadeMode() && !GetMap()->IsRaid())
             {
                 m_cannotReachTimer += diff;
-                if (m_cannotReachTimer >= CREATURE_NOPATH_EVADE_TIME)
+                if (m_cannotReachTimer >= (CREATURE_NOPATH_EVADE_TIME*2))
                     if (IsAIEnabled)
+            {
                         AI()->EnterEvadeMode(CreatureAI::EVADE_REASON_NO_PATH);
+            //TC_LOG_ERROR("misc", "evade m_cannotReachTimer ");
+            }
             }
             break;
         }
@@ -870,7 +1029,7 @@ bool Creature::Create(ObjectGuid::LowType guidlow, Map* map, uint32 phaseMask, u
     // invalid position, triggering a crash about Auras not removed in the destructor
     if (!IsPositionValid())
     {
-        TC_LOG_ERROR("entities.unit", "Creature::Create(): given coordinates for creature (guidlow %d, entry %d) are not valid (X: %f, Y: %f, Z: %f, O: %f)", guidlow, entry, x, y, z, ang);
+//        TC_LOG_ERROR("entities.unit", "Creature::Create(): given coordinates for creature (guidlow %d, entry %d) are not valid (X: %f, Y: %f, Z: %f, O: %f)", guidlow, entry, x, y, z, ang);
         return false;
     }
 
@@ -1164,10 +1323,48 @@ void Creature::SelectLevel()
 
     uint32 rank = IsPet() ? 0 : cInfo->rank;
 
+
+
+    uint32 bg_minlevel = 0;
+    uint32 bg_maxlevel = 0;
+    uint32 bg_level = 0;
+    float bg_mindmg = 0;
+    float bg_maxdmg = 0;
+
     // level
     uint8 minlevel = std::min(cInfo->maxlevel, cInfo->minlevel);
     uint8 maxlevel = std::max(cInfo->maxlevel, cInfo->minlevel);
     uint8 level = minlevel == maxlevel ? minlevel : urand(minlevel, maxlevel);
+
+
+  if (bg_level)
+        level = bg_level;
+uint8 lvl=0;
+
+if (m_spawnId && GetEntry()>=170001 && GetEntry()<=170500)
+    {
+    	
+        if (CreatureData const* data = sObjectMgr->GetCreatureData(m_spawnId))
+        {
+        	if ((data && m_spawnId>=600000  && m_spawnId<=700000) || (GetEntry()>=170001 && GetEntry()<=170500))
+{
+        	lvl = data->lvl;
+            if (lvl>=1 && lvl<=90)
+            {
+            level = lvl;
+            uint32 faction = data->nname;
+     if (faction>0 && faction<=3000)
+{
+//if (faction!=35 && faction!=11 && faction!=85)
+//faction=2136;
+
+    setFaction(faction);
+ }       
+}
+        }
+ }
+    }
+
     SetLevel(level);
 
     CreatureBaseStats const* stats = sObjectMgr->GetCreatureBaseStats(level, cInfo->unit_class);
@@ -1182,6 +1379,31 @@ void Creature::SelectLevel()
     SetMaxHealth(health);
     SetHealth(health);
     ResetPlayerDamageReq();
+
+
+if (lvl>=1 && lvl<=90 && GetEntry()>=170001 && GetEntry()<=170500)
+{
+     uint32 health = 60+(lvl*30);
+if (lvl >=20)
+health = 60+(lvl*40);
+if (lvl >=40)
+health = 60+(lvl*60);
+if (lvl >=60)
+health = 60+(lvl*100);
+if (lvl >=70)
+health = 60+(lvl*225);
+if (lvl >80)
+health = 60+(lvl*300);
+int32 isok = sConfigMgr->GetIntDefault("pknpc_add", 1);
+if (isok<1) isok=1;
+if (isok >=1) health=health * isok;
+}
+
+    SetCreateHealth(health);
+    SetMaxHealth(health);
+    SetHealth(health);
+    ResetPlayerDamageReq();
+SetFullHealth();
 
     // mana
     uint32 mana = stats->GenerateMana(cInfo);
@@ -1402,6 +1624,11 @@ void Creature::SetCanDualWield(bool value)
 
 void Creature::LoadEquipment(int8 id, bool force /*= true*/)
 {
+	//: prevent loading equipment for bots
+	if (GetEntry() >= BOT_ENTRY_BEGIN && GetEntry() <= BOT_ENTRY_END) //temp hack
+		return;
+	//end
+
     if (id == 0)
     {
         if (force)
@@ -2167,17 +2394,25 @@ void Creature::SaveRespawnTime()
 bool Creature::CanCreatureAttack(Unit const* victim, bool /*force*/) const
 {
     if (!victim->IsInMap(this))
+{
+ //TC_LOG_ERROR("misc", "unit evade Isinmap ");
         return false;
-
+}
     if (!IsValidAttackTarget(victim))
+{
+ //TC_LOG_ERROR("misc", "unit evade IsValidAttackTarget ");
         return false;
-
+}
     if (!victim->isInAccessiblePlaceFor(this))
+{
+ //TC_LOG_ERROR("misc", "unit evade isInAccessiblePlaceFor ");
         return false;
-
+}
     if (IsAIEnabled && !AI()->CanAIAttack(victim))
+{
+ //TC_LOG_ERROR("misc", "unit evade CanAIAttack ");
         return false;
-
+}
     if (GetMap()->IsDungeon())
         return true;
 
@@ -2334,6 +2569,8 @@ void Creature::SetInCombatWithZone()
 
 uint32 Creature::GetShieldBlockValue() const                  //dunno mob block value
 {
+	if (bot_AI)
+		return bot_AI->GetShieldBlockValue();
     return (getLevel()/2 + uint32(GetStat(STAT_STRENGTH)/20));
 }
 
@@ -2925,4 +3162,171 @@ void Creature::ClearTextRepeatGroup(uint8 textGroup)
     CreatureTextRepeatGroup::iterator groupItr = m_textRepeat.find(textGroup);
     if (groupItr != m_textRepeat.end())
         groupItr->second.clear();
+}
+
+uint8 Creature::GetBotClass() const
+{
+	switch (m_bot_class)
+	{
+	case DRUID_BEAR_FORM:
+	case DRUID_CAT_FORM:
+		//case TRAVEL:
+		//case FLY:
+		return CLASS_DRUID;
+	default:
+		return m_bot_class;
+	}
+}
+
+void Creature::SetIAmABot(bool bot)
+{
+	if (!bot)
+	{
+		bot_AI->UnsummonAll();
+		IsAIEnabled = false;
+		bot_AI = NULL;
+		SetUInt64Value(UNIT_FIELD_CREATEDBY, 0);
+	}
+}
+
+void Creature::SetBotsPetDied()
+{
+	if (!m_bots_pet)
+		return;
+
+	m_bots_pet->SetCharmerGUID(ObjectGuid::Empty);
+	m_bots_pet->SetCreatureOwner(NULL);
+	//m_bots_pet->GetBotPetAI()->SetCreatureOwner(NULL);
+	m_bots_pet->SetIAmABot(false);
+	m_bot_owner->SetMinion((Minion*)m_bots_pet, false);
+	m_bots_pet->CleanupsBeforeDelete();
+	m_bots_pet->AddObjectToRemoveList();
+	m_bots_pet = NULL;
+}
+
+uint8 Creature::GetBotRoles() const
+{
+	return bot_AI ? bot_AI->GetBotRoles() : 0;
+}
+
+void Creature::SetBotCommandState(CommandStates st, bool force)
+{
+	if (bot_AI && IsAIEnabled)
+		bot_AI->SetBotCommandState(st, force);
+}
+CommandStates Creature::GetBotCommandState() const
+{
+	return bot_AI ? bot_AI->GetBotCommandState() : COMMAND_ABANDON;
+}
+//Bot damage mods
+void Creature::ApplyBotDamageMultiplierMelee(uint32& damage, CalcDamageInfo& damageinfo) const
+{
+	if (bot_AI)
+		bot_AI->ApplyBotDamageMultiplierMelee(damage, damageinfo);
+}
+void Creature::ApplyBotDamageMultiplierMelee(int32& damage, SpellNonMeleeDamage& damageinfo, SpellInfo const* spellInfo, WeaponAttackType attackType, bool& crit) const
+{
+	if (bot_AI)
+		bot_AI->ApplyBotDamageMultiplierMelee(damage, damageinfo, spellInfo, attackType, crit);
+}
+void Creature::ApplyBotDamageMultiplierSpell(int32& damage, SpellNonMeleeDamage& damageinfo, SpellInfo const* spellInfo, WeaponAttackType attackType, bool& crit) const
+{
+	if (bot_AI)
+		bot_AI->ApplyBotDamageMultiplierSpell(damage, damageinfo, spellInfo, attackType, crit);
+}
+
+void Creature::ApplyBotDamageMultiplierEffect(SpellInfo const* spellInfo, uint8 effect_index, float &value) const
+{
+	if (bot_AI)
+		bot_AI->ApplyBotDamageMultiplierEffect(spellInfo, effect_index, value);
+}
+
+bool Creature::GetIAmABot() const
+{
+	return bot_AI && bot_AI->IsMinionAI();
+}
+
+bool Creature::GetIAmABotsPet() const
+{
+	return bot_AI && bot_AI->IsPetAI();
+}
+
+bot_minion_ai* Creature::GetBotMinionAI() const
+{
+	return IsAIEnabled && bot_AI && bot_AI->IsMinionAI() ? const_cast<bot_minion_ai*>(bot_AI->GetMinionAI()) : NULL;
+}
+
+bot_pet_ai* Creature::GetBotPetAI() const
+{
+	return IsAIEnabled && bot_AI && bot_AI->IsPetAI() ? const_cast<bot_pet_ai*>(bot_AI->GetPetAI()) : NULL;
+}
+
+void Creature::InitBotAI(bool asPet)
+{
+	ASSERT(!bot_AI);
+
+	if (asPet)
+		bot_AI = (bot_pet_ai*)AI();
+	else
+		bot_AI = (bot_minion_ai*)AI();
+}
+
+void Creature::SetBotShouldUpdateStats()
+{
+	if (bot_AI)
+		bot_AI->SetShouldUpdateStats();
+}
+
+void Creature::OnBotSummon(Creature* summon)
+{
+	if (bot_AI)
+		bot_AI->OnBotSummon(summon);
+}
+
+void Creature::OnBotDespawn(Creature* summon)
+{
+	if (bot_AI)
+		bot_AI->OnBotDespawn(summon);
+}
+
+void Creature::RemoveBotItemBonuses(uint8 slot)
+{
+	if (bot_AI)
+		bot_AI->RemoveItemBonuses(slot);
+}
+void Creature::ApplyBotItemBonuses(uint8 slot)
+{
+	if (bot_AI)
+		bot_AI->ApplyItemBonuses(slot);
+}
+bool Creature::CanUseOffHand() const
+{
+	return bot_AI && bot_AI->CanUseOffHand();
+}
+bool Creature::CanUseRanged() const
+{
+	return bot_AI && bot_AI->CanUseRanged();
+}
+bool Creature::CanEquip(ItemTemplate const* item, uint8 slot) const
+{
+	return bot_AI && bot_AI->CanEquip(item, slot);
+}
+bool Creature::Unequip(uint8 slot) const
+{
+	return bot_AI && bot_AI->Unequip(slot);
+}
+bool Creature::Equip(uint32 itemId, uint8 slot) const
+{
+	return bot_AI && bot_AI->Equip(itemId, slot);
+}
+bool Creature::ResetEquipment(uint8 slot) const
+{
+	return bot_AI && bot_AI->ResetEquipment(slot);
+}
+
+bool Creature::IsQuestBot() const
+{
+	return
+		m_creatureInfo->Entry >= 71000 && m_creatureInfo->Entry < 72000 &&
+		(m_creatureInfo->unit_flags2 & UNIT_FLAG2_ALLOW_ENEMY_INTERACT);
 }

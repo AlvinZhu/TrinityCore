@@ -136,6 +136,11 @@ public:
                 case EVENT_BERSERK:
                     Talk(SAY_ENRAGE);
                     DoCast(me, SPELL_BERSERK, true);
+                        
+            if ( irand(0,5)==0)
+{
+ me->RemoveAurasDueToSpell(SPELL_TIDAL_SHIELD);
+}
                     events.DelayEvents(15000, GCD_YELL);
                     break;
                 case EVENT_SPINE:
@@ -152,15 +157,25 @@ public:
                         //must let target summon, otherwise you cannot click the spine
                         target->SummonGameObject(GO_NAJENTUS_SPINE, *target, G3D::Quat(), 30);
                         Talk(SAY_NEEDLE);
+                        
+            if (target && target->HasAura(SPELL_IMPALING_SPINE) && irand(0,3)==0)
+{
+ me->RemoveAurasDueToSpell(SPELL_TIDAL_SHIELD);
+                target->RemoveAurasDueToSpell(SPELL_IMPALING_SPINE);                        
+}
                         events.DelayEvents(1500, GCD_CAST);
                         events.DelayEvents(15000, GCD_YELL);
                     }
-                    events.ScheduleEvent(EVENT_SPINE, 21000, GCD_CAST);
+                    events.ScheduleEvent(EVENT_SPINE, 38000, GCD_CAST);
                     return;
                 }
                 case EVENT_NEEDLE:
                     {
                         //DoCast(me, SPELL_NEEDLE_SPINE, true);
+Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1);
+            if (target && target->HasAura(SPELL_IMPALING_SPINE) && irand(0,3)==0)
+                target->RemoveAurasDueToSpell(SPELL_IMPALING_SPINE);                        
+
                         std::list<Unit*> targets;
                         SelectTargetList(targets, 3, SELECT_TARGET_RANDOM, 80, true);
                         for (std::list<Unit*>::const_iterator i = targets.begin(); i != targets.end(); ++i)

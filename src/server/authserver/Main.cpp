@@ -78,6 +78,22 @@ boost::asio::deadline_timer* _dbPingTimer;
 uint32 _dbPingInterval;
 boost::asio::deadline_timer* _banExpiryCheckTimer;
 uint32 _banExpiryCheckInterval;
+//转中文UTF8
+const char* _StringToUTF8e(const char*   pASCIIBuf)
+{
+#ifdef WIN32
+	DWORD     UniCodeLen = MultiByteToWideChar(CP_ACP, 0, pASCIIBuf, -1, 0, 0);
+	std::vector <wchar_t>   vWCH(UniCodeLen);
+	MultiByteToWideChar(CP_ACP, 0, pASCIIBuf, -1, &vWCH[0], UniCodeLen);
+	DWORD   dwUtf8Len = WideCharToMultiByte(CP_UTF8, 0, &vWCH[0], UniCodeLen, NULL, NULL, NULL, NULL);
+	char* _StringConversionStorage = new char[dwUtf8Len + 1];
+	WideCharToMultiByte(CP_UTF8, 0, &vWCH[0], UniCodeLen, _StringConversionStorage, dwUtf8Len, NULL, NULL);
+	return &_StringConversionStorage[0];
+#else
+	return &pASCIIBuf[0];
+#endif
+
+}
 
 int main(int argc, char** argv)
 {
@@ -113,6 +129,12 @@ int main(int argc, char** argv)
 
     TC_LOG_INFO("server.authserver", "%s (authserver)", GitRevision::GetFullVersion());
     TC_LOG_INFO("server.authserver", "<Ctrl-C> to stop.\n");
+	 TC_LOG_INFO("server.authserver", _StringToUTF8e("Hxsd 335 V14 战场版2016-2017"));
+     TC_LOG_INFO("server.authserver", _StringToUTF8e("技术讨论 QQ群 168990397"));
+     TC_LOG_INFO("server.authserver", _StringToUTF8e("商业支持 QQ群 131464297"));
+     TC_LOG_INFO("server.authserver", "Hxsd 335 V14 verion");    
+
+    
     TC_LOG_INFO("server.authserver", "Using configuration file %s.", sConfigMgr->GetFilename().c_str());
     TC_LOG_INFO("server.authserver", "Using SSL version: %s (library: %s)", OPENSSL_VERSION_TEXT, SSLeay_version(SSLEAY_VERSION));
     TC_LOG_INFO("server.authserver", "Using Boost version: %i.%i.%i", BOOST_VERSION / 100000, BOOST_VERSION / 100 % 1000, BOOST_VERSION % 100);

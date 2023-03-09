@@ -25,6 +25,20 @@
 #define PET_FOCUS_REGEN_INTERVAL 4 * IN_MILLISECONDS
 #define HAPPINESS_LEVEL_SIZE        333000
 
+struct TalentEntry;
+class PetTalentEntry
+{
+public:
+	PetTalentEntry(const TalentEntry* entry) : talentEntry(entry)
+	{
+	}
+
+	bool operator < (const PetTalentEntry &tal) const;
+
+public:
+	const TalentEntry* talentEntry;
+};
+
 struct PetSpell
 {
     ActiveStates active;
@@ -49,7 +63,7 @@ class TC_GAME_API Pet : public Guardian
         void SetDisplayId(uint32 modelId) override;
 
         PetType getPetType() const { return m_petType; }
-        void setPetType(PetType type) { m_petType = type; }
+		void setPetType(PetType type) { m_petType = type; GatherPetTalents(); }
         bool isControlled() const { return getPetType() == SUMMON_PET || getPetType() == HUNTER_PET; }
         bool isTemporarySummoned() const { return m_duration > 0; }
 
@@ -146,6 +160,10 @@ class TC_GAME_API Pet : public Guardian
 
         Player* GetOwner() const;
 
+		void GatherPetTalents();
+		void FlushTalentsByPoints();
+		void SettingAllSpellAutocast(bool autocast, uint32 excludeSpell = 0);
+
     protected:
         uint32  m_happinessTimer;
         PetType m_petType;
@@ -153,6 +171,7 @@ class TC_GAME_API Pet : public Guardian
         uint64  m_auraRaidUpdateMask;
         bool    m_loading;
         uint32  m_focusRegenTimer;
+		std::list<PetTalentEntry> m_TalentList;
 
         DeclinedName *m_declinedname;
 

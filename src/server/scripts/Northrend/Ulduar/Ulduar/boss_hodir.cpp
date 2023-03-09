@@ -24,6 +24,7 @@
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
 #include "ulduar.h"
+#include "BotGroupAI.h"
 
 /* @todo Achievements
           Storm Cloud (Shaman ability)
@@ -234,7 +235,7 @@ class npc_flash_freeze : public CreatureScript
                 me->AddThreat(summoner, 250.0f);
                 if (Unit* target = ObjectAccessor::GetUnit(*me, targetGUID))
                 {
-                    DoCast(target, SPELL_BLOCK_OF_ICE, true);
+                    //DoCast(target, SPELL_BLOCK_OF_ICE, true);
                     // Prevents to have Ice Block on other place than target is
                     me->NearTeleportTo(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), target->GetOrientation());
                     if (target->GetTypeId() == TYPEID_PLAYER)
@@ -262,10 +263,11 @@ class npc_ice_block : public CreatureScript
                 instance = me->GetInstanceScript();
                 me->SetDisplayId(me->GetCreatureTemplate()->Modelid2);
                 me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_REMOVE_CLIENT_CONTROL | UNIT_FLAG_STUNNED | UNIT_FLAG_PACIFIED);
+				botCommandTimer = 2000;
             }
 
             InstanceScript* instance;
-
+			uint32 botCommandTimer;
             ObjectGuid targetGUID;
 
             void IsSummonedBy(Unit* summoner) override
@@ -302,7 +304,24 @@ class npc_ice_block : public CreatureScript
                     }
                 }
             }
-        };
+
+			void UpdateAI(uint32 diff) override
+			{
+				if (!instance || instance->GetBossState(BOSS_HODIR) != IN_PROGRESS)
+					return;
+
+				if (botCommandTimer <= diff)
+				{
+					botCommandTimer = 2000;
+					if (BotAttackCreature* pBotAttack = instance->GetBotAttacksCreature(NULL))
+					{
+						pBotAttack->AddNewCreatureNeedAttack(me, RAID_MODE(10, 25));
+					}
+				}
+				else
+					botCommandTimer -= diff;
+			}
+		};
 
         CreatureAI* GetAI(Creature* creature) const override
         {
@@ -326,6 +345,7 @@ class boss_hodir : public CreatureScript
             void Initialize()
             {
                 gettingColdInHereTimer = 0;
+				botMovementTimer = 0;
                 gettingColdInHere = false;
                 cheeseTheFreeze = false;
                 iHaveTheCoolestFriends = false;
@@ -333,6 +353,7 @@ class boss_hodir : public CreatureScript
             }
 
             uint32 gettingColdInHereTimer;
+			uint32 botMovementTimer;
 
             bool gettingColdInHere;
             bool cheeseTheFreeze;
@@ -358,7 +379,8 @@ class boss_hodir : public CreatureScript
                 DoCast(me, SPELL_BITING_COLD, true);
 
                 gettingColdInHereTimer = 1000;
-                gettingColdInHere = true;
+				botMovementTimer = 3000;
+				gettingColdInHere = true;
                 cheeseTheFreeze = true;
                 iHaveTheCoolestFriends = true;
                 iCouldSayThatThisCacheWasRare = true;
@@ -369,7 +391,20 @@ class boss_hodir : public CreatureScript
                 events.ScheduleEvent(EVENT_FLASH_FREEZE, 45000);
                 events.ScheduleEvent(EVENT_RARE_CACHE, 180000);
                 events.ScheduleEvent(EVENT_BERSERK, 480000);
-            }
+				if (InstanceScript* inst = me->GetInstanceScript())
+				{
+					BotAttackCreature* pBotAttack = inst->GetBotAttacksCreature(me);
+					if (pBotAttack)
+						pBotAttack->ClearCreatures();
+				}
+				std::list<Player*> playersNearby;
+				me->GetPlayerListInGrid(playersNearby, 200);
+				for (Player* player : playersNearby)
+				{
+					if (BotGroupAI* pGroupAI = dynamic_cast<BotGroupAI*>(player->GetAI()))
+						pGroupAI->AddWaitSpecialAura(SPELL_BLOCK_OF_ICE);
+				}
+			}
 
             void KilledUnit(Unit* who) override
             {
@@ -420,6 +455,20 @@ class boss_hodir : public CreatureScript
 
                 events.Update(diff);
 
+				if (botMovementTimer <= diff)
+				{
+					botMovementTimer = 3000;
+					BotRndCruxMovement(3.0f);
+					if (InstanceScript* inst = me->GetInstanceScript())
+					{
+						BotAttackCreature* pBotAttack = inst->GetBotAttacksCreature(me);
+						if (pBotAttack)
+							pBotAttack->UpdateNeedAttackCreatures(botMovementTimer, this, true);
+					}
+				}
+				else
+					botMovementTimer -= diff;
+
                 if (me->HasUnitState(UNIT_STATE_CASTING))
                     return;
 
@@ -428,12 +477,12 @@ class boss_hodir : public CreatureScript
                     switch (eventId)
                     {
                         case EVENT_FREEZE:
-                            DoCastAOE(SPELL_FREEZE);
+                            //DoCastAOE(SPELL_FREEZE);
                             events.ScheduleEvent(EVENT_FREEZE, urand(30000, 45000));
                             break;
                         case EVENT_ICICLE:
-                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
-                                DoCast(target, SPELL_ICICLE);
+							//if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true))
+							//	DoCast(target, SPELL_ICICLE);
                             events.ScheduleEvent(EVENT_ICICLE, RAID_MODE(5500, 3500));
                             break;
                         case EVENT_FLASH_FREEZE:
@@ -447,11 +496,11 @@ class boss_hodir : public CreatureScript
                             break;
                         case EVENT_FLASH_FREEZE_EFFECT:
                         {
-                            std::list<Creature*> IcicleSnowdriftList;
-                            GetCreatureListWithEntryInGrid(IcicleSnowdriftList, me, NPC_SNOWPACKED_ICICLE, 100.0f);
-                            for (std::list<Creature*>::iterator itr = IcicleSnowdriftList.begin(); itr != IcicleSnowdriftList.end(); ++itr)
-                                (*itr)->CastSpell(me, SPELL_FLASH_FREEZE_VISUAL, true);
-                            FlashFreeze();
+							std::list<Creature*> IcicleSnowdriftList;
+							GetCreatureListWithEntryInGrid(IcicleSnowdriftList, me, NPC_SNOWPACKED_ICICLE, 100.0f);
+							for (std::list<Creature*>::iterator itr = IcicleSnowdriftList.begin(); itr != IcicleSnowdriftList.end(); ++itr)
+								(*itr)->CastSpell(me, SPELL_FLASH_FREEZE_VISUAL, true);
+							FlashFreeze();
                             events.CancelEvent(EVENT_FLASH_FREEZE_EFFECT);
                             events.ScheduleEvent(EVENT_FLASH_FREEZE, urand(25000, 35000));
                             break;

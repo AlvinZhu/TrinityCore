@@ -19,6 +19,7 @@
 #define Trinity_game_Position_h__
 
 #include "Common.h"
+#include <G3D/Vector3.h>
 
 class ByteBuffer;
 
@@ -28,6 +29,8 @@ struct TC_GAME_API Position
         : m_positionX(x), m_positionY(y), m_positionZ(z), m_orientation(NormalizeOrientation(o)) { }
 
     Position(Position const& loc) { Relocate(loc); }
+
+	Position(G3D::Vector3 const& v3) : m_positionX(v3.x), m_positionY(v3.y), m_positionZ(v3.z), m_orientation(0) {}
 
     struct PositionXYStreamer
     {
@@ -115,6 +118,10 @@ public:
     }
 
     Position GetPosition() const { return *this; }
+	G3D::Vector3 GetVector3() const
+	{
+		return G3D::Vector3(m_positionX, m_positionY, m_positionZ);
+	}
 
     Position::PositionXYStreamer PositionXYStream() { return PositionXYStreamer(*this); }
     Position::PositionXYZStreamer PositionXYZStream() { return PositionXYZStreamer(*this); }

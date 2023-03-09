@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2016 TrinityCore <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2017 TrinityCore <http://www.trinitycore.org/>
  * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 #include "Timer.h"
 #include "GameObjectModel.h"
 #include "ModelInstance.h"
+#include "ModelIgnoreFlags.h"
 
 #include <G3D/AABox.h>
 #include <G3D/Ray.h>

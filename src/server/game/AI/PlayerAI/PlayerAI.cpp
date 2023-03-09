@@ -1288,14 +1288,15 @@ void SimpleCharmedPlayerAI::UpdateAI(const uint32 diff)
             if (IsRangedAttacker())
             {
                 _chaseCloser = !me->IsWithinLOSInMap(target);
-                if (_chaseCloser)
-                    AttackStart(target);
-                else
-                    AttackStartCaster(target, CASTER_CHASE_DISTANCE);
+ //hxsd
+               // if (_chaseCloser)
+               //     AttackStart(target);
+               // else
+               //     AttackStartCaster(target, CASTER_CHASE_DISTANCE);
             }
-            else
-                AttackStart(target);
-            _forceFacing = true;
+ // else
+             //   AttackStart(target);
+            //_forceFacing = true;
         }
 
         if (me->IsStopped() && !me->HasUnitState(UNIT_STATE_CANNOT_TURN))
@@ -1342,7 +1343,9 @@ void SimpleCharmedPlayerAI::UpdateAI(const uint32 diff)
         me->CastStop();
         me->StopMoving();
         me->GetMotionMaster()->Clear();
-        me->GetMotionMaster()->MoveFollow(charmer, PET_FOLLOW_DIST, PET_FOLLOW_ANGLE);
+//hxsd
+//if (charmer && !_isnan(PET_FOLLOW_DIST) && !_isnan(PET_FOLLOW_ANGLE))
+//        me->GetMotionMaster()->MoveFollow(charmer, PET_FOLLOW_DIST, PET_FOLLOW_ANGLE);
     }
 }
 

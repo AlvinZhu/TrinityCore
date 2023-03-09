@@ -209,9 +209,9 @@ class boss_blood_council_controller : public CreatureScript
 
                 if (!instance->CheckRequiredBosses(DATA_BLOOD_PRINCE_COUNCIL, who->ToPlayer()))
                 {
-                    EnterEvadeMode();
-                    instance->DoCastSpellOnPlayers(LIGHT_S_HAMMER_TELEPORT);
-                    return;
+//                    EnterEvadeMode();
+  //                  instance->DoCastSpellOnPlayers(LIGHT_S_HAMMER_TELEPORT);
+    //                return;
                 }
 
                 instance->SetBossState(DATA_BLOOD_PRINCE_COUNCIL, IN_PROGRESS);

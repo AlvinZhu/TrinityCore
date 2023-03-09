@@ -1,5 +1,5 @@
-/*
- * Copyright (C) 2008-2016 TrinityCore <http://www.trinitycore.org/>
+ /*
+ * Copyright (C) 2008-2015 TrinityCore <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -73,6 +73,16 @@ enum Phases
     PHASE_SKELETON  = 2,
     PHASE_GHOST     = 3
 };
+enum Says
+{
+    SAY_AGGRO               = 1,
+    SAY_KILL                = 2,
+    SAY_SKELETON            = 3,
+    SAY_GHOST               = 4,
+    SAY_DEATH               = 5,
+    SAY_DIE               = 7,
+};
+
 
 class boss_black_knight : public CreatureScript
 {
@@ -149,6 +159,20 @@ public:
         {
             summons.Despawn(summon);
         }
+        
+
+         void EnterCombat(Unit* /*who*/) 
+        {
+         
+            Talk(SAY_AGGRO);
+
+        }
+        
+        void KilledUnit(Unit* target)
+        {
+            if (target->GetTypeId() == TYPEID_PLAYER)
+                Talk(SAY_KILL);
+        }
 
         void UpdateAI(uint32 uiDiff) override
         {
@@ -172,8 +196,11 @@ public:
             switch (uiPhase)
             {
                 case PHASE_UNDEAD:
+                //Talk(SAY_SKELETON);
+                //break;
                 case PHASE_SKELETON:
                 {
+                	
                     if (uiIcyTouchTimer <= uiDiff)
                     {
                         DoCastVictim(SPELL_ICY_TOUCH);
@@ -288,9 +315,13 @@ public:
 
         void JustDied(Unit* /*killer*/) override
         {
+            Talk(SAY_DIE);
             DoCast(me, SPELL_KILL_CREDIT);
-
-            instance->SetData(BOSS_BLACK_KNIGHT, DONE);
+            if (instance)
+            {
+                instance->DoUpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, 68663);
+                instance->SetData(BOSS_BLACK_KNIGHT, DONE);
+            }
         }
     };
 

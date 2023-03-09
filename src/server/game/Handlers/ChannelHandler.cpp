@@ -47,8 +47,8 @@ void WorldSession::HandleJoinChannel(WorldPacket& recvPacket)
     if (channelName.empty())
         return;
 
-    if (isdigit(channelName[0]))
-        return;
+    //if (isdigit(channelName[0]))
+    //    return;
 
     if (ChannelMgr* cMgr = ChannelMgr::forTeam(GetPlayer()->GetTeam()))
     {

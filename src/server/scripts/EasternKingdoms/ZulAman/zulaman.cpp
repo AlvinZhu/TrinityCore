@@ -121,7 +121,7 @@ class npc_forest_frog : public CreatureScript
 ## npc_zulaman_hostage
 ######*/
 
-#define GOSSIP_HOSTAGE1        "I am glad to help you."
+#define GOSSIP_HOSTAGE1        _StringToUTF8("我真心感谢你.")
 
 static uint32 HostageEntry[] = {23790, 23999, 24024, 24001};
 static uint32 ChestEntry[] = {186648, 187021, 186672, 186667};
@@ -162,7 +162,12 @@ class npc_zulaman_hostage : public CreatureScript
                 {
                     if (HostageEntry[i] == entry)
                     {
-                        creature->SummonGameObject(ChestEntry[i], Position(x - 2, y, z, 0.f), G3D::Quat(), 0);
+                        
+                        if (GameObject* go = creature->SummonGameObject(ChestEntry[i], Position(x - 2, y, z, 0.f), G3D::Quat(), 0))
+{
+go->RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_LOCKED);
+go->RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_NOT_SELECTABLE);
+}
                         break;
                     }
                 }
@@ -332,18 +337,18 @@ class npc_harrison_jones : public CreatureScript
                                 // This is temp workaround.
                                 instance->SetData(DATA_GONGEVENT, IN_PROGRESS); // to be removed.
 
-                                if (instance->GetData(DATA_GONGEVENT) == IN_PROGRESS)
-                                {
+                                //if (instance->GetData(DATA_GONGEVENT) == IN_PROGRESS)
+                                //{
                                     // Players are Now Saved to instance at SPECIAL (Player should be notified?)
                                     me->GetMotionMaster()->MovePath(HARRISON_MOVE_2, false);
                                     _gongEvent = GONG_EVENT_5;
                                     _gongTimer = 5000;
-                                }
-                                else
-                                {
-                                    _gongTimer = 1000;
-                                    _gongEvent = GONG_EVENT_9;
-                                }
+                                //}
+                               // else
+                               // {
+                               //     _gongTimer = 1000;
+                               //     _gongEvent = GONG_EVENT_9;
+                               // }
                                 break;
                             case GONG_EVENT_5:
                                 me->SetEntry(NPC_HARRISON_JONES_1);

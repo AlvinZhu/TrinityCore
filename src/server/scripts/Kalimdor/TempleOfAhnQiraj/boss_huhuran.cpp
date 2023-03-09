@@ -25,6 +25,7 @@ EndScriptData */
 
 #include "ScriptMgr.h"
 #include "ScriptedCreature.h"
+#include "BotGroupAI.h"
 
 enum Huhuran
 {
@@ -100,30 +101,41 @@ public:
                 DoCast(me, SPELL_FRENZY);
                 Talk(EMOTE_FRENZY_KILL);
                 Frenzy = true;
-                PoisonBolt_Timer = 3000;
-                Frenzy_Timer = urand(25000, 35000);
+                PoisonBolt_Timer = 20000;
+                Frenzy_Timer = urand(20000, 30000);
             } else Frenzy_Timer -= diff;
 
             // Wyvern Timer
             if (Wyvern_Timer <= diff)
             {
-                if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0))
-                    DoCast(target, SPELL_WYVERNSTING);
-                Wyvern_Timer = urand(15000, 32000);
+				if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0))
+				{
+					DoCast(target, SPELL_WYVERNSTING);
+					if (Player* player = target->ToPlayer())
+					{
+						if (BotGroupAI* pGroupAI = dynamic_cast<BotGroupAI*>(player->GetAI()))
+							pGroupAI->AddWaitSpecialAura(SPELL_WYVERNSTING);
+					}
+				}
+                Wyvern_Timer = urand(15000, 30000);
             } else Wyvern_Timer -= diff;
 
             //Spit Timer
             if (Spit_Timer <= diff)
             {
                 DoCastVictim(SPELL_ACIDSPIT);
-                Spit_Timer = urand(5000, 10000);
+				if (!Berserk)
+					BotAllFullDispelByDecPoison();
+				Spit_Timer = urand(25000, 30000);
             } else Spit_Timer -= diff;
 
             //NoxiousPoison_Timer
             if (NoxiousPoison_Timer <= diff)
             {
                 DoCastVictim(SPELL_NOXIOUSPOISON);
-                NoxiousPoison_Timer = urand(12000, 24000);
+				if (!Berserk)
+					BotAllFullDispelByDecPoison();
+				NoxiousPoison_Timer = urand(20000, 30000);
             } else NoxiousPoison_Timer -= diff;
 
             //PoisonBolt only if frenzy or berserk
@@ -132,7 +144,9 @@ public:
                 if (PoisonBolt_Timer <= diff)
                 {
                     DoCastVictim(SPELL_POISONBOLT);
-                    PoisonBolt_Timer = 3000;
+					if (!Berserk)
+						BotAllFullDispelByDecPoison();
+					PoisonBolt_Timer = 15000;
                 } else PoisonBolt_Timer -= diff;
             }
 
@@ -144,12 +158,13 @@ public:
                 FrenzyBack_Timer = 15000;
             } else FrenzyBack_Timer -= diff;
 
-            if (!Berserk && HealthBelowPct(31))
+            if (!Berserk && HealthBelowPct(15))
             {
                 me->InterruptNonMeleeSpells(false);
                 Talk(EMOTE_BERSERK);
                 DoCast(me, SPELL_BERSERK);
                 Berserk = true;
+				BotAllFullDispel(false);
             }
 
             DoMeleeAttackIfReady();

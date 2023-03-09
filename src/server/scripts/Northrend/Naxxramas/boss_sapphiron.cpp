@@ -112,7 +112,7 @@ class boss_sapphiron : public CreatureScript
 
             void InitializeAI() override
             {
-                if (instance->GetBossState(BOSS_SAPPHIRON) == DONE)
+				if (!instance || instance->GetBossState(BOSS_SAPPHIRON) == DONE)
                     return;
 
                 _canTheHundredClub = true;
@@ -131,7 +131,8 @@ class boss_sapphiron : public CreatureScript
             {
                 if (events.IsInPhase(PHASE_FLIGHT))
                 {
-                    instance->DoRemoveAurasDueToSpellOnPlayers(SPELL_ICEBOLT);
+					if (instance)
+						instance->DoRemoveAurasDueToSpellOnPlayers(SPELL_ICEBOLT);
                     me->SetReactState(REACT_AGGRESSIVE);
                     if (me->IsHovering())
                     {

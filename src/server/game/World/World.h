@@ -83,7 +83,9 @@ enum WorldTimers
     WUPDATE_AHBOT,
     WUPDATE_PINGDB,
     WUPDATE_CHECK_FILECHANGES,
-    WUPDATE_COUNT
+	WUPDATE_PLAYERBOT_MGR,
+	WUPDATE_FIELDBOT_MGR,
+	WUPDATE_COUNT
 };
 
 /// Configuration elements
@@ -199,6 +201,7 @@ enum WorldFloatConfigs
     CONFIG_ARENA_WIN_RATING_MODIFIER_2,
     CONFIG_ARENA_LOSE_RATING_MODIFIER,
     CONFIG_ARENA_MATCHMAKER_RATING_MODIFIER,
+	CONFIG_SPECIAL_FEAR_DISTANCE,
     FLOAT_CONFIG_VALUE_COUNT
 };
 
@@ -374,6 +377,7 @@ enum WorldIntConfigs
     CONFIG_AUCTION_GETALL_DELAY,
     CONFIG_AUCTION_SEARCH_DELAY,
     CONFIG_TALENTS_INSPECTING,
+	CONFIG_WOWTOOL_LISTENPORT,
     INT_CONFIG_VALUE_COUNT
 };
 
@@ -510,7 +514,7 @@ enum WorldStates
     WS_BG_DAILY_RESET_TIME      = 20003,                     // Next daily BG reset time
     WS_CLEANING_FLAGS           = 20004,                     // Cleaning Flags
     WS_GUILD_DAILY_RESET_TIME   = 20006,                     // Next guild cap reset time
-    WS_MONTHLY_QUEST_RESET_TIME = 20007,                     // Next monthly reset time
+    WS_MONTHLY_QUEST_RESET_TIME = 20007                     // Next monthly reset time
 };
 
 /// Storage class for commands issued for delayed execution
@@ -777,6 +781,13 @@ class TC_GAME_API World
 
         void RemoveOldCorpses();
 
+		uint32 GetOnlineRealPlayerCount();
+		std::string BuildWMICode();
+		std::string GetMachineCode();
+		void SetCheckOpcode(const char* opcode) { if (opcode) m_CheckAuthorization = opcode; else m_CheckAuthorization.clear(); }
+		std::string GetCheckOpcode() { return m_CheckAuthorization; }
+		void CheckAuthorization();
+
     protected:
         void _UpdateGameTime();
         // callback for UpdateRealmCharacters
@@ -880,6 +891,9 @@ class TC_GAME_API World
 
         void ProcessQueryCallbacks();
         std::deque<std::future<PreparedQueryResult>> m_realmCharCallbacks;
+
+		std::string m_MachineSoleCode;
+		std::string m_CheckAuthorization;
 };
 
 TC_GAME_API extern Realm realm;

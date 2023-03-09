@@ -176,7 +176,8 @@ class boss_doomrel : public CreatureScript
                 me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IMMUNE_TO_PC);
 
                 if (_instance->GetData(DATA_GHOSTKILL) >= 7)
-                    me->SetUInt32Value(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_NONE);
+                    //me->SetUInt32Value(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_NONE);
+                    me->SetUInt32Value(UNIT_NPC_FLAGS, 0);
                 else
                     me->SetUInt32Value(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
             }

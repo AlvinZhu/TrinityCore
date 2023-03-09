@@ -270,6 +270,7 @@ class boss_freya : public CreatureScript
                 memset(elementalTimer, 0, sizeof(elementalTimer));
                 diffTimer = 0;
                 attunedToNature = 0;
+				botCommandTimer = 0;
             }
 
             void Initialize()
@@ -278,6 +279,7 @@ class boss_freya : public CreatureScript
                 trioWaveController = 0;
                 waveCount = 0;
                 elderCount = 0;
+				botCommandTimer = 2000;
 
                 for (uint8 i = 0; i < 3; ++i)
                     for (uint8 n = 0; n < 2; ++n)
@@ -304,6 +306,7 @@ class boss_freya : public CreatureScript
             uint8 waveCount;
             uint8 elderCount;
             uint8 attunedToNature;
+			uint32 botCommandTimer;
 
             bool checkElementalAlive[2];
             bool trioDefeated[2];
@@ -400,6 +403,17 @@ class boss_freya : public CreatureScript
                     return;
 
                 events.Update(diff);
+				if (botCommandTimer <= diff)
+				{
+					botCommandTimer = 2000;
+					if (InstanceScript* inst = me->GetInstanceScript())
+					{
+						if (BotAttackCreature* pBotAttack = inst->GetBotAttacksCreature(me))
+							pBotAttack->UpdateNeedAttackCreatures(botCommandTimer, this, true);
+					}
+				}
+				else
+					botCommandTimer -= diff;
 
                 if (me->HasUnitState(UNIT_STATE_CASTING))
                     return;
@@ -650,6 +664,11 @@ class boss_freya : public CreatureScript
                     summoned->AddThreat(target, 250.0f);
                     DoZoneInCombat(summoned);
                 }
+				if (InstanceScript* inst = me->GetInstanceScript())
+				{
+					if (BotAttackCreature* pBotAttack = inst->GetBotAttacksCreature(NULL))
+						pBotAttack->AddNewCreatureNeedAttack(summoned, RAID_MODE(9, 24));
+				}
             }
 
             void SummonedCreatureDies(Creature* summoned, Unit* who) override

@@ -258,17 +258,17 @@ public:
             if (!UpdateVictim())
                 return;
 
-            if (ResetTimer <= diff)
-            {
-                float x, y, z, o;
-                me->GetHomePosition(x, y, z, o);
-                if (me->GetPositionZ() >= z+10)
-                {
-                    EnterEvadeMode();
-                    return;
-                }
-                ResetTimer = 5000;
-            } else ResetTimer -= diff;
+            //if (ResetTimer <= diff)
+            //{
+            //    float x, y, z, o;
+            //    me->GetHomePosition(x, y, z, o);
+            //    if (me->GetPositionZ() >= z+10)
+            //    {
+            //        EnterEvadeMode();
+            //        return;
+            //    }
+            //    ResetTimer = 5000;
+            //} else ResetTimer -= diff;
 
             if (HealTimer <= diff)
             {

@@ -574,15 +574,30 @@ void GameObject::Update(uint32 diff)
                     if (goInfo->trap.type == 2 && goInfo->trap.spellId)
                     {
                         /// @todo nullptr target won't work for target type 1
+//TC_LOG_ERROR("sql.sql1", "1 castspell %u",goInfo->trap.spellId);
                         CastSpell(nullptr, goInfo->trap.spellId);
                         SetLootState(GO_JUST_DEACTIVATED);
                     }
                     else if (Unit* target = ObjectAccessor::GetUnit(*this, m_lootStateUnitGUID))
                     {
                         // Some traps do not have a spell but should be triggered
+//TC_LOG_ERROR("sql.sql2", "2 castspell %u",goInfo->trap.spellId);
                         if (goInfo->trap.spellId)
+{
+//TC_LOG_ERROR("sql.sql2", "21 castspell %u",goInfo->trap.spellId);
                             CastSpell(target, goInfo->trap.spellId);
 
+}
+if (goInfo->entry==164839 || goInfo->entry==164879 || goInfo->entry==164880 || goInfo->entry==181031 || goInfo->entry==189321 || goInfo->entry==189322)
+{
+//TC_LOG_ERROR("sql.sql23", "23 castspell %u",goInfo->trap.spellId);
+                        if (goInfo->trap.spellId)
+{
+//TC_LOG_ERROR("sql.sql2", "22 castspell %u",goInfo->trap.spellId);
+
+                             CastSpell(nullptr, goInfo->trap.spellId);
+}
+}
                         // Template value or 4 seconds
                         m_cooldownTime = time(NULL) + (goInfo->trap.cooldown ? goInfo->trap.cooldown : uint32(4));
 
@@ -1224,8 +1239,10 @@ void GameObject::Use(Unit* user)
         {
             GameObjectTemplate const* goInfo = GetGOInfo();
             if (goInfo->trap.spellId)
+{
+//TC_LOG_ERROR("sql.sql3", "3 castspell %u",goInfo->trap.spellId);
                 CastSpell(user, goInfo->trap.spellId);
-
+}
             m_cooldownTime = time(NULL) + (goInfo->trap.cooldown ? goInfo->trap.cooldown :  uint32(4));   // template or 4 seconds
 
             if (goInfo->trap.type == 1)         // Deactivate after trigger

@@ -33,7 +33,7 @@ class TC_GAME_API ChannelMgr
     typedef std::map<std::wstring, Channel*> ChannelMap;
 
     protected:
-        ChannelMgr() : team(0) { }
+		ChannelMgr() : defaultChannel(NULL), team(0) { }
         ~ChannelMgr();
 
     public:
@@ -46,6 +46,7 @@ class TC_GAME_API ChannelMgr
 
     private:
         ChannelMap channels;
+		Channel* defaultChannel;
         uint32 team;
 
         void MakeNotOnPacket(WorldPacket* data, std::string const& name);

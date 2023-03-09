@@ -236,8 +236,11 @@ public:
     //add spawn of creature
     static bool HandleNpcAddCommand(ChatHandler* handler, char const* args)
     {
-        if (!*args)
-            return false;
+		//std::string text;
+		//consoleToUtf8(std::string("|cffff8800该命令无法使用，请使用npc add temp召唤NPC|r"), text);
+		//sWorld->SendGlobalText(text.c_str(), NULL);
+		if (!*args)
+            return true;
 
         char* charID = handler->extractKeyFromLink((char*)args, "Hcreature_entry");
         if (!charID)

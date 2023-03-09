@@ -44,6 +44,9 @@
 #include "MoveSpline.h"
 #include "WardenMac.h"
 #include "Metric.h"
+#include "PlayerBotMgr.h"
+#include "FieldBotMgr.h"
+#include "OnlineMgr.h"
 
 #include <zlib.h>
 
@@ -265,7 +268,7 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
 
     ///- Before we process anything:
     /// If necessary, kick the player from the character select screen
-    if (IsConnectionIdle())
+    if (!IsBotSession() && IsConnectionIdle())
         m_Socket->CloseSocket();
 
     ///- Retrieve packets from the receive queue and call the appropriate handlers
@@ -279,7 +282,8 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
 
     while (m_Socket && _recvQueue.next(packet, updater))
     {
-        OpcodeHandler const& opHandle = opcodeTable[packet->GetOpcode()];
+		uint16 opcode = packet->GetOpcode();
+		OpcodeHandler const& opHandle = opcodeTable[opcode];
         try
         {
             switch (opHandle.status)
@@ -412,7 +416,7 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
             }
         }
 
-        if (!m_Socket)
+        if (!IsBotSession() && !m_Socket)
             return false;                                       //Will remove this session from the world session map
     }
 
@@ -422,6 +426,20 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
 /// %Log the player out
 void WorldSession::LogoutPlayer(bool save)
 {
+	uint8 nBotCount = 0;
+	if (_player)
+	{
+		//remove npcbots but do not delete from DB so they can be reacqured on next login
+		for (uint8 i = 0; i != _player->GetMaxNpcBots(); ++i)
+		{
+			if (_player->GetBotMap(i)->_Guid())
+			{
+				_player->RemoveBot(_player->GetBotMap(i)->_Guid(), true, false);
+				++nBotCount;
+			}
+		}
+	}
+
     // finish pending transfers before starting the logout
     while (_player && _player->IsBeingTeleportedFar())
         HandleMoveWorldportAckOpcode();
@@ -513,6 +531,7 @@ void WorldSession::LogoutPlayer(bool save)
             }
             _player->SaveToDB();
         }
+		ObjectGuid logoutPlayerGUID = _player->GetGUID();
 
         ///- Leave all channels before player delete...
         _player->CleanupChannels();
@@ -522,14 +541,23 @@ void WorldSession::LogoutPlayer(bool save)
 
         // remove player from the group if he is:
         // a) in group; b) not in raid group; c) logging out normally (not being kicked or disconnected)
-        if (_player->GetGroup() && !_player->GetGroup()->isRaidGroup() && m_Socket)
-            _player->RemoveFromGroup();
+		// force not remove from group
+        //if (_player->GetGroup() && !_player->GetGroup()->isRaidGroup() && m_Socket)
+        //    _player->RemoveFromGroup();
+		//Ñô¹â-´ý¶¨
+// 		if (_player->GetGroup() && !_player->GetGroup()->isRaidGroup() && m_Socket)
+// 			//bot d) if has no NpcBots or not in instance (trying to save instance)
+// 			if (nBotCount == 0 || !_player->GetMap()->Instanceable())
+// 				//end bot
+// 				_player->RemoveFromGroup();
 
         //! Send update to group and reset stored max enchanting level
-        if (_player->GetGroup())
+		if (_player->GetGroup())
         {
             _player->GetGroup()->SendUpdate();
             _player->GetGroup()->ResetMaxEnchantingLevel();
+			if (!IsBotSession())
+				sPlayerBotMgr->LogoutAllGroupPlayerBot(_player->GetGroup(), false);
         }
 
         //! Broadcast a logout message to the player's friends
@@ -563,7 +591,13 @@ void WorldSession::LogoutPlayer(bool save)
         PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_ACCOUNT_ONLINE);
         stmt->setUInt32(0, GetAccountId());
         CharacterDatabase.Execute(stmt);
-    }
+
+		if (IsBotSession())
+			sPlayerBotMgr->OnPlayerBotLogout(this);
+		else
+			sFieldBotMgr->OnRealPlayerLogout(logoutPlayerGUID);
+		sOnlineMgr->CharaterOffline(GetAccountId());
+	}
 
     m_playerLogout = false;
     m_playerSave = false;
@@ -1280,11 +1314,12 @@ bool WorldSession::HasPermission(uint32 permission)
     if (!_RBACData)
         LoadPermissions();
 
-    bool hasPermission = _RBACData->HasPermission(permission);
+	bool hasPermission = sAccountMgr->HasPermission(GetAccountId(), permission, GetSecurity());
+    //bool hasPermission = _RBACData->HasPermission(permission);
     TC_LOG_DEBUG("rbac", "WorldSession::HasPermission [AccountId: %u, Name: %s, realmId: %d]",
                    _RBACData->GetId(), _RBACData->GetName().c_str(), realm.Id.Realm);
 
-    return hasPermission;
+	return hasPermission;
 }
 
 void WorldSession::InvalidateRBACData()
@@ -1432,6 +1467,7 @@ uint32 WorldSession::DosProtection::GetMaxPacketCounterAllowed(uint16 opcode) co
         case CMSG_MESSAGECHAT:                          //   0               3.5
         case CMSG_INSPECT:                              //   0               3.5
         case CMSG_AREA_SPIRIT_HEALER_QUERY:             // not profiled
+		case CMSG_GET_MIRRORIMAGE_DATA :
         case CMSG_STANDSTATECHANGE:                     // not profiled
         case MSG_RANDOM_ROLL:                           // not profiled
         case CMSG_TIME_SYNC_RESP:                       // not profiled

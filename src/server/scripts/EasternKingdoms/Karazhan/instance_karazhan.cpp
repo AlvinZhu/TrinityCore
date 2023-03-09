@@ -67,7 +67,10 @@ public:
             SetBossNumber(EncounterCount);
 
             // 1 - OZ, 2 - HOOD, 3 - RAJ, this never gets altered.
-            OperaEvent = urand(EVENT_OZ, EVENT_RAJ);
+			if (urand(0, 99) < 50)
+				OperaEvent = EVENT_OZ;// urand(EVENT_OZ, EVENT_RAJ);
+			else
+				OperaEvent = EVENT_RAJ;
             OzDeathCount = 0;
             OptionalBossCount = 0;
         }
@@ -159,9 +162,28 @@ public:
                         UpdateEncounterState(ENCOUNTER_CREDIT_KILL_CREATURE, 16812, NULL);
                     }
                     break;
-                case DATA_CHESS:
-                    if (state == DONE)
-                        DoRespawnGameObject(DustCoveredChest, DAY);
+				case DATA_NETHERSPITE:
+                //case DATA_CHESS:
+					if (state == DONE)
+					{
+						if (GameObject* chest = instance->GetGameObject(DustCoveredChest))
+						{
+							GameObject* go = chest->SummonGameObject(GO_DUST_COVERED_CHEST, chest->GetPosition(), G3D::Matrix3::fromEulerAnglesZYX(chest->GetOrientation(), 0.f, 0.f), 0);
+							if (go)
+							{
+								std::list<Player*> playersNearby;
+								chest->GetPlayerListInGrid(playersNearby, 500);
+								for (Player* p : playersNearby)
+								{
+									if (p->IsPlayerBot())
+										continue;
+									go->SetOwnerGUID(p->GetGUID());
+									break;
+								}
+							}
+						}
+					}
+                        //DoRespawnGameObject(DustCoveredChest, DAY);
                     break;
                 default:
                     break;
@@ -223,7 +245,7 @@ public:
                     break;
                 case GO_DUST_COVERED_CHEST:
                     DustCoveredChest = go->GetGUID();
-                    break;
+					break;
             }
 
             switch (OperaEvent)
